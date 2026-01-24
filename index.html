@@ -16,7 +16,6 @@
             color: white;
             font-family: 'Arial Black', sans-serif;
             pointer-events: none;
-            text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
             z-index: 10;
         }
     </style>
@@ -42,94 +41,90 @@
         const game = new Phaser.Game(config);
         let player, isMoving = false, gameStatus = 'WAITING';
         let finishLine = 100, startTime, elapsedTime = 0;
-        let lastMoveTime = 0;
+        let greenLightSound, redLightSound, eliminateSound;
 
         function preload() {
-            // Placeholder karakter
             this.load.image('player', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+            
+            // SESLER: Bunlar açık kaynaklı, hızlı yüklenen ses efektleri
+            this.load.audio('green', 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'); // Zil sesi
+            this.load.audio('red', 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');   // Uyarı sesi
+            this.load.audio('fail', 'https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3'); // Elenme sesi
         }
 
         function create() {
             const centerX = config.width / 2;
-            
-            // Arka plan (Kum rengi)
             this.add.rectangle(centerX, config.height/2, config.width, config.height, 0xc2a385);
-            
-            // Bitiş Çizgisi
             this.add.rectangle(centerX, finishLine, config.width, 10, 0xffffff);
-            
-            // Oyuncu
-            player = this.add.sprite(centerX, config.height - 100, 'player');
-            player.setScale(1.2);
+            player = this.add.sprite(centerX, config.height - 100, 'player').setScale(1.2);
 
-            // Tıklama Olayları
+            // Sesleri tanımla
+            greenLightSound = this.sound.add('green');
+            redLightSound = this.sound.add('red');
+            eliminateSound = this.sound.add('fail');
+
             this.input.on('pointerdown', () => {
                 if (gameStatus === 'WAITING') {
+                    // İlk dokunuşta ses motorunu uyandır
+                    this.sound.context.resume();
                     startAction();
                 } else if (gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN') {
                     isMoving = true;
                 }
             });
 
-            this.input.on('pointerup', () => {
-                isMoving = false;
-            });
+            this.input.on('pointerup', () => { isMoving = false; });
         }
 
         function startAction() {
             gameStatus = 'GREEN';
             startTime = Date.now();
-            document.getElementById('status').innerText = "KOŞ!";
-            document.getElementById('status').style.color = "#2ecc71";
+            greenLightSound.play(); // Başlangıç sesi
             startCycle();
         }
 
         function startCycle() {
             if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
 
-            // Işık Değişimi
             gameStatus = (gameStatus === 'GREEN') ? 'RED' : 'GREEN';
             
             let statusEl = document.getElementById('status');
             statusEl.innerText = (gameStatus === 'GREEN') ? "YEŞİL!" : "DUR!";
             statusEl.style.color = (gameStatus === 'GREEN') ? "#2ecc71" : "#e74c3c";
 
-            if (gameStatus === 'RED') {
+            // Duruma göre ses çal
+            if (gameStatus === 'GREEN') {
+                greenLightSound.play();
+            } else {
+                redLightSound.play();
                 tg.HapticFeedback.notificationOccurred('warning');
             }
 
-            // Süre Ayarı (SQUID GAME mantığı: Bebek şarkısı biterken durulur)
-            let nextChange = (gameStatus === 'GREEN') ? (2000 + Math.random() * 3000) : (1500 + Math.random() * 1500);
+            let nextChange = (gameStatus === 'GREEN') ? (2000 + Math.random() * 2000) : (1000 + Math.random() * 1500);
             setTimeout(startCycle, nextChange);
         }
 
         function update() {
             if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN' || gameStatus === 'WAITING') return;
 
-            // Kronometre Güncelleme
             elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
             document.getElementById('timer').innerText = `Süre: ${elapsedTime}s`;
 
             if (isMoving) {
-                player.y -= 3; // İlerleme hızı
-
-                // KIRMIZI IŞIKTA HAREKET KONTROLÜ
+                player.y -= 3;
                 if (gameStatus === 'RED') {
                     gameStatus = 'ELIMINATED';
+                    eliminateSound.play(); // Elenme sesi
                     document.getElementById('status').innerText = "ELENDİN!";
                     tg.HapticFeedback.notificationOccurred('error');
                     player.setTint(0xff0000);
-                    player.setAngle(90); // Yere düşme efekti
+                    player.setAngle(90);
                 }
             }
 
-            // KAZANMA KONTROLÜ
             if (player.y <= finishLine) {
                 gameStatus = 'WIN';
-                const finalTime = elapsedTime;
-                document.getElementById('status').innerText = "BAŞARDIN!";
-                tg.HapticFeedback.notificationOccurred('success');
-                tg.showAlert(`Tebrikler! ${finalTime} saniyede bitirdin. Liderlik tablosuna eklendin!`);
+                tg.showAlert(`Tebrikler! ${elapsedTime}s sürede bitirdin.`);
             }
         }
     </script>
