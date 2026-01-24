@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skill Survive - Pro</title>
+    <title>Skill Survive - SSL Fixed</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -11,12 +11,12 @@
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
         #ui {
             position: absolute; top: 20px; width: 100%; text-align: center;
-            color: white; font-family: 'Arial Black', sans-serif; pointer-events: none; z-index: 10;
+            color: white; font-family: sans-serif; pointer-events: none; z-index: 10;
         }
         #leaderboard-btn {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            padding: 12px 25px; background: #ff0055; color: white; border: 2px solid white;
-            border-radius: 20px; font-weight: bold; display: none; cursor: pointer; pointer-events: auto;
+            padding: 12px 25px; background: #ff0055; color: white; border-radius: 20px;
+            font-weight: bold; display: none; cursor: pointer; pointer-events: auto;
         }
     </style>
 </head>
@@ -28,7 +28,6 @@
     <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 SKORLAR</button>
 
     <script>
-        // --- SUPABASE AYARLARI ---
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
         const tg = window.Telegram.WebApp; tg.expand();
@@ -43,44 +42,36 @@
         };
 
         const game = new Phaser.Game(config);
-        let player, doll, ground, gameStatus = 'WAITING', isMoving = false;
+        let player, doll, gameStatus = 'WAITING', isMoving = false;
         let startTime, elapsedTime = 0, finishLine = 120, canMove = false;
 
         function preload() {
-            // TELEFONDA ÇALIŞMASI İÇİN TAM YOL (URL) OLUŞTURMA
-            const currentPath = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+            // SSL Hatasını önlemek için dinamik yol belirleme
+            // Bu yöntem resimleri doğrudan sunucunun kök klasöründen çeker
+            this.load.setPath('./'); 
             
-            // GitHub/Vercel üzerindeki resimlerin isimleri birebir aynı olmalı (küçük harf!)
-            this.load.image('player', currentPath + 'player.png');
-            this.load.image('doll', currentPath + 'doll.png');
-            this.load.image('ground', currentPath + 'ground.png');
+            this.load.image('player', 'player.png');
+            this.load.image('doll', 'doll.png');
+            this.load.image('ground', 'ground.png');
         }
 
         function create() {
             const w = config.width; const h = config.height; const cx = w / 2;
-
-            // Zemin (Görsel varsa tileSprite olarak yükle)
+            
+            // Zemin dokusu (eğer ground.png varsa)
             if (this.textures.exists('ground')) {
-                ground = this.add.tileSprite(cx, h/2, w, h, 'ground').setAlpha(0.8);
+                this.add.tileSprite(cx, h/2, w, h, 'ground').setAlpha(0.7);
             }
 
-            // Bitiş Çizgisi
-            this.add.rectangle(cx, finishLine, w, 15, 0xffffff);
+            this.add.rectangle(cx, finishLine, w, 10, 0xffffff);
+            doll = this.add.sprite(cx, finishLine - 60, 'doll').setScale(0.7);
+            player = this.add.sprite(cx, h - 100, 'player').setScale(1.1);
 
-            // Bebek
-            doll = this.add.sprite(cx, finishLine - 70, 'doll').setScale(0.7);
-
-            // Oyuncu
-            player = this.add.sprite(cx, h - 100, 'player').setScale(1.2);
-
-            // Dokunma Kontrolü (Mobil Uyumlu)
             this.input.on('pointerdown', () => {
                 if (gameStatus === 'WAITING') {
                     gameStatus = 'GREEN'; startTime = Date.now();
-                    document.getElementById('status').innerText = "GEÇ!";
-                    document.getElementById('status').style.color = "#00ff00";
-                    // Başlangıçta ani hareketi ve elenmeyi önlemek için küçük gecikme
-                    setTimeout(() => { canMove = true; }, 250);
+                    document.getElementById('status').innerText = "KOŞ!";
+                    setTimeout(() => { canMove = true; }, 300);
                     startCycle();
                 } else if (gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN' && canMove) {
                     isMoving = true;
@@ -91,47 +82,35 @@
 
         function startCycle() {
             if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
-            
             gameStatus = (gameStatus === 'GREEN') ? 'RED' : 'GREEN';
             const s = document.getElementById('status');
-
-            if (gameStatus === 'GREEN') {
-                s.innerText = "GEÇ!"; s.style.color = "#00ff00";
-                doll.setFlipX(false);
-            } else {
-                s.innerText = "DUR!"; s.style.color = "#ff0000";
+            s.innerText = (gameStatus === 'GREEN') ? "GEÇ!" : "DUR!";
+            s.style.color = (gameStatus === 'GREEN') ? "#00ff00" : "#ff0000";
+            if (gameStatus === 'RED') {
                 doll.setFlipX(true);
                 tg.HapticFeedback.notificationOccurred('warning');
+            } else {
+                doll.setFlipX(false);
             }
-
-            let delay = (gameStatus === 'GREEN') ? (2000 + Math.random() * 2500) : (1000 + Math.random() * 1500);
+            let delay = (gameStatus === 'GREEN') ? (2000 + Math.random() * 2000) : (1000 + Math.random() * 1500);
             setTimeout(() => startCycle.call(this), delay);
         }
 
         function update() {
             if (gameStatus === 'WAITING' || gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
-
             elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
             document.getElementById('timer').innerText = `Süre: ${elapsedTime}s`;
 
             if (isMoving && canMove) {
                 player.y -= 3.5;
-                // Koşu yalpalaması
-                player.angle = Math.sin(Date.now() * 0.01) * 7;
-                
-                // Zemin kaydırma efekti (eğer ground yüklenmişse)
-                if(ground) ground.tilePositionY += 2;
-
+                player.angle = Math.sin(Date.now() * 0.01) * 5;
                 if (gameStatus === 'RED') {
                     gameStatus = 'ELIMINATED';
                     document.getElementById('status').innerText = "ELENDİN!";
                     player.setTint(0xff0000); player.angle = 90;
                     tg.HapticFeedback.notificationOccurred('error');
                 }
-            } else {
-                player.angle = 0;
             }
-
             if (player.y <= finishLine) {
                 gameStatus = 'WIN';
                 saveScore(elapsedTime);
@@ -140,18 +119,10 @@
 
         async function saveScore(f) {
             const u = tg.initDataUnsafe?.user;
-            const data = { 
-                telegram_id: u?.id || Math.floor(Math.random()*999999), 
-                username: u?.first_name || "Oyuncu", 
-                score: parseFloat(f) 
-            };
-            const { error } = await _supabase.from('leaderboard').insert([data]);
-            if (!error) {
-                tg.showAlert(`TEBRİKLER! Süre: ${f}s`);
-                document.getElementById('leaderboard-btn').style.display = 'block';
-            } else {
-                console.error(error);
-            }
+            const data = { telegram_id: u?.id || Math.floor(Math.random()*999), username: u?.first_name || "Oyuncu", score: parseFloat(f) };
+            await _supabase.from('leaderboard').insert([data]);
+            tg.showAlert(`TEBRİKLER! Süre: ${f}s`);
+            document.getElementById('leaderboard-btn').style.display = 'block';
         }
 
         async function showLeaderboard() {
