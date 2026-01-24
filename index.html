@@ -3,119 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skill Survive</title>
+    <title>Skill Survive - Oyun</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: radial-gradient(circle, #1a1a1a 0%, #000000 100%);
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .header {
-            margin-top: 50px;
-            text-align: center;
-        }
-
-        .title {
-            font-size: 3rem;
-            font-weight: bold;
-            letter-spacing: 5px;
-            color: #ff0055; /* Squid Game pembesi/kırmızısı */
-            text-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
-        }
-
-        .user-info {
-            margin-top: 20px;
-            font-size: 1.2rem;
-            color: #ccc;
-        }
-
-        .main-container {
+        body { margin: 0; background: #000; overflow: hidden; }
+        canvas { display: block; margin: 0 auto; }
+        #ui-layer {
+            position: absolute;
+            top: 10px;
             width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            text-align: center;
+            color: white;
+            font-family: sans-serif;
+            pointer-events: none;
         }
-
-        .play-button {
-            background-color: transparent;
-            border: 2px solid #00ffcc;
-            color: #00ffcc;
-            padding: 20px 60px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
-            margin-bottom: 20px;
-        }
-
-        .play-button:active {
-            transform: scale(0.95);
-            background-color: #00ffcc;
-            color: black;
-        }
-
-        .footer {
-            margin-bottom: 30px;
-            font-size: 0.8rem;
-            opacity: 0.5;
-        }
-
-        /* Basit bir nabız animasyonu */
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        .pulse { animation: pulse 2s infinite; }
     </style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="title">SKILL SURVIVE</div>
-        <div id="username" class="user-info">Yükleniyor...</div>
-    </div>
-
-    <div class="main-container">
-        <button class="play-button pulse" onclick="startGame()">OYUNA BAŞLA</button>
-        <p style="color: #666;">Günlük Hak: 5/5</p>
-    </div>
-
-    <div class="footer">
-        © 2024 Skill Survive - Türkiye'nin Beceri Platformu
+    <div id="ui-layer">
+        <h2 id="status">HAZIR OL!</h2>
+        <p id="info">Ekrana Basılı Tutarak Koş</p>
     </div>
 
     <script>
-        // Telegram Web App API'sini başlatıyoruz
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Ekranı tam boyuta getir
+        tg.expand();
 
-        // Kullanıcı adını Telegram'dan çekiyoruz
-        const user = tg.initDataUnsafe?.user;
-        if (user) {
-            document.getElementById('username').innerText = `Hoş geldin, ${user.first_name}!`;
-        } else {
-            document.getElementById('username').innerText = "Hoş geldin Oyuncu!";
+        const config = {
+            type: Phaser.AUTO,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            backgroundColor: '#222',
+            parent: 'phaser-example',
+            scene: { preload: preload, create: create, update: update }
+        };
+
+        const game = new Phaser.Game(config);
+        let player;
+        let isMoving = false;
+        let gameStatus = 'WAITING'; // WAITING, GREEN, RED, ELIMINATED, WIN
+        let finishLine = 100;
+        let lightTimer;
+
+        function preload() {
+            // Şimdilik basit şekiller kullanacağız, ilerde görsel ekleriz
         }
 
-        function startGame() {
-            // Telefona hafif bir titreşim ver (Beceri hissi için önemli)
-            tg.HapticFeedback.impactOccurred('heavy');
+        function create() {
+            const centerX = config.width / 2;
             
-            alert("Yakında! İlk oyun: Kırmızı Işık - Yeşil Işık turnuvasına hazırlan.");
-            // Burada ilerde oyun sahnemize geçiş yapacağız
+            // Bitiş Çizgisi
+            this.add.rectangle(centerX, finishLine, config.width, 10, 0x00ff00);
+            
+            // Oyuncu (Kırmızı bir kare)
+            player = this.add.rectangle(centerX, config.height - 100, 40, 40, 0xff0055);
+            
+            // Giriş Kontrolleri
+            this.input.on('pointerdown', () => { if(gameStatus !== 'ELIMINATED') isMoving = true; });
+            this.input.on('pointerup', () => { isMoving = false; });
+
+            // Oyun Döngüsünü Başlat
+            startLightCycle();
+        }
+
+        function startLightCycle() {
+            let nextState = (gameStatus === 'GREEN') ? 'RED' : 'GREEN';
+            gameStatus = nextState;
+            
+            document.getElementById('status').innerText = (gameStatus === 'GREEN') ? "YEŞİL IŞIK - KOŞ!" : "KIRMIZI IŞIK - DUR!";
+            document.getElementById('status').style.color = (gameStatus === 'GREEN') ? "#00ff00" : "#ff0000";
+
+            if (gameStatus === 'RED') tg.HapticFeedback.notificationOccurred('warning');
+
+            // Rastgele sürelerde ışık değiştir (2-4 saniye arası)
+            let duration = Math.random() * 2000 + 1500;
+            setTimeout(startLightCycle, duration);
+        }
+
+        function update() {
+            if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
+
+            if (isMoving) {
+                player.y -= 2; // Oyuncuyu yukarı hareket ettir
+
+                // KIRMIZI IŞIKTA HAREKET KONTROLÜ (BECERİ KAYBI)
+                if (gameStatus === 'RED') {
+                    gameStatus = 'ELIMINATED';
+                    document.getElementById('status').innerText = "ELENDİN!";
+                    tg.HapticFeedback.notificationOccurred('error');
+                    player.setFillStyle(0x555555); // Karakteri gri yap (öldü)
+                }
+            }
+
+            // KAZANMA KONTROLÜ
+            if (player.y <= finishLine) {
+                gameStatus = 'WIN';
+                document.getElementById('status').innerText = "TEBRİKLER! KAZANDIN!";
+                tg.HapticFeedback.notificationOccurred('success');
+            }
         }
     </script>
 </body>
