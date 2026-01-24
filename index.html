@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skill Survive</title>
+    <title>Skill Survive - Final</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -18,40 +18,42 @@
             font-family: 'Arial Black', sans-serif;
             pointer-events: none;
             z-index: 10;
-            text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
         }
+        .status-text { font-size: 2.5rem; text-shadow: 0 0 15px rgba(255,0,0,0.8); transition: all 0.2s; }
+        #timer { font-size: 1.2rem; margin-top: 10px; opacity: 0.8; }
         #leaderboard-btn {
             position: absolute;
             bottom: 30px;
-            right: 20px;
-            padding: 12px 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
             background: #ff0055;
             color: white;
-            border: 2px solid white;
-            border-radius: 8px;
-            pointer-events: auto;
-            display: none; /* Kazanınca açılır */
+            border: none;
+            border-radius: 30px;
             font-weight: bold;
+            display: none;
             cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 5px 15px rgba(255,0,85,0.4);
         }
     </style>
 </head>
 <body>
     <div id="ui-layer">
-        <h1 id="status">BAŞLAMAK İÇİN TIKLA</h1>
+        <div id="status" class="status-text">BAŞLAMAK İÇİN DOKUN</div>
         <div id="timer">Süre: 0.00s</div>
     </div>
-    <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 SKORLAR</button>
+    <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 LİDERLİK TABLOSU</button>
 
     <script>
-        // --- SENİN BİLGİLERİN ---
+        // --- AYARLAR ---
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
 
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Supabase Başlatma (Güvenli Yöntem)
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
         const config = {
@@ -59,7 +61,6 @@
             width: window.innerWidth,
             height: window.innerHeight,
             backgroundColor: '#2c3e50',
-            parent: document.body,
             scene: { preload: preload, create: create, update: update }
         };
 
@@ -68,114 +69,112 @@
         let finishLine = 120, startTime, elapsedTime = 0;
 
         function preload() {
-            // Karakter görseli
+            // Karakter ve Zemin Görselleri (Placeholder sprite)
             this.load.image('player', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+            this.load.image('doll', 'https://labs.phaser.io/assets/sprites/apple.png'); // Geçici bebek görseli
         }
 
         function create() {
             const centerX = config.width / 2;
             
-            // Oyun Alanı (Kum Rengi)
-            this.add.rectangle(centerX, config.height/2, config.width, config.height, 0xc2a385);
-            // Bitiş Çizgisi
-            this.add.rectangle(centerX, finishLine, config.width, 10, 0xffffff);
+            // Gerçekçi Kum Zemin
+            this.add.rectangle(centerX, config.height/2, config.width, config.height, 0xd4a373);
             
-            // Karakter
-            player = this.add.sprite(centerX, config.height - 100, 'player').setScale(1.2);
+            // Bitiş Çizgisi (Beyaz Şerit)
+            this.add.rectangle(centerX, finishLine, config.width, 15, 0xffffff);
+            
+            // Bebek Temsili
+            this.add.sprite(centerX, finishLine - 40, 'doll').setScale(2);
 
-            // Kontroller (Tıklama ve Dokunma)
+            // Oyuncu
+            player = this.add.sprite(centerX, config.height - 100, 'player').setScale(1.5);
+
             this.input.on('pointerdown', () => {
                 if (gameStatus === 'WAITING') {
                     gameStatus = 'GREEN';
                     startTime = Date.now();
                     document.getElementById('status').innerText = "KOŞ!";
-                    document.getElementById('status').style.color = "#2ecc71";
+                    document.getElementById('status').style.color = "#00ffcc";
                     startCycle();
                 } else if (gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN') {
                     isMoving = true;
                 }
             });
-
             this.input.on('pointerup', () => { isMoving = false; });
         }
 
         function startCycle() {
             if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
 
-            // Işık Değişimi
             gameStatus = (gameStatus === 'GREEN') ? 'RED' : 'GREEN';
             const statusEl = document.getElementById('status');
             
-            statusEl.innerText = (gameStatus === 'GREEN') ? "YEŞİL!" : "DUR!";
-            statusEl.style.color = (gameStatus === 'GREEN') ? "#2ecc71" : "#e74c3c";
-
-            if (gameStatus === 'RED') {
-                tg.HapticFeedback.notificationOccurred('warning');
+            if(gameStatus === 'GREEN') {
+                statusEl.innerText = "YEŞİL IŞIK!";
+                statusEl.style.color = "#00ffcc";
+            } else {
+                statusEl.innerText = "DUR!";
+                statusEl.style.color = "#ff0055";
+                tg.HapticFeedback.impactOccurred('heavy');
             }
 
-            // Rastgele sürelerde değişim
-            let delay = (gameStatus === 'GREEN') ? (2000 + Math.random() * 2500) : (1200 + Math.random() * 1200);
+            let delay = (gameStatus === 'GREEN') ? (2000 + Math.random() * 2000) : (1000 + Math.random() * 1000);
             setTimeout(startCycle, delay);
         }
 
         function update() {
             if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN' || gameStatus === 'WAITING') return;
 
-            // Kronometre
             elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
             document.getElementById('timer').innerText = `Süre: ${elapsedTime}s`;
 
             if (isMoving) {
-                player.y -= 2.8; // Hareket hızı
-                
-                // Kırmızı ışıkta hareket cezası
+                player.y -= 3;
+                player.setAngle(Math.sin(Date.now() / 50) * 5); // Koşma sallantısı
+
                 if (gameStatus === 'RED') {
                     gameStatus = 'ELIMINATED';
                     document.getElementById('status').innerText = "ELENDİN!";
                     tg.HapticFeedback.notificationOccurred('error');
-                    player.setTint(0xff0000); // Kırmızıya boya
-                    player.setAngle(90);      // Devrildi efekti
+                    player.setTint(0xff0000);
+                    player.setAngle(90);
                 }
+            } else {
+                player.setAngle(0);
             }
 
-            // Kazanma durumu
             if (player.y <= finishLine) {
                 gameStatus = 'WIN';
                 saveScore(elapsedTime);
             }
         }
 
-        // Veritabanına Yazma
         async function saveScore(finalTime) {
             const user = tg.initDataUnsafe?.user;
             const userData = {
-                telegram_id: user?.id || Math.floor(Math.random() * 1000000),
-                username: user?.first_name || "Bilinmeyen Oyuncu",
+                telegram_id: user?.id || 12345,
+                username: user?.first_name || "Gizli Yarışmacı",
                 score: parseFloat(finalTime)
             };
 
             const { error } = await _supabase.from('leaderboard').insert([userData]);
 
-            if (error) {
-                console.error("DB Hatası:", error.message);
-                tg.showAlert("Skor Veritabanına Yazılamadı!");
-            } else {
-                tg.showAlert(`TEBRİKLER! Süre: ${finalTime}s. Skorun kaydedildi.`);
+            if (!error) {
+                tg.showAlert(`TEBRİKLER!\nHasta kaldın.\nSüren: ${finalTime}s`);
                 document.getElementById('leaderboard-btn').style.display = 'block';
             }
         }
 
-        // Skorları Çekme
         async function showLeaderboard() {
-            const { data, error } = await _supabase
+            const { data } = await _supabase
                 .from('leaderboard')
                 .select('*')
                 .order('score', { ascending: true })
                 .limit(5);
 
             if (data) {
-                let list = data.map((item, i) => `${i+1}. ${item.username}: ${item.score}s`).join('\n');
-                tg.showConfirm("LİDERLİK TABLOSU (TOP 5):\n\n" + list);
+                let list = data.map((it, i) => `${i+1}. ${it.username}: ${it.score}s`).join('\n');
+                tg.showConfirm("🏆 EN HIZLI 5 YARIŞMACI:\n\n" + list);
             }
         }
     </script>
