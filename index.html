@@ -18,137 +18,164 @@
             font-family: 'Arial Black', sans-serif;
             pointer-events: none;
             z-index: 10;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
         }
         #leaderboard-btn {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             right: 20px;
-            padding: 10px;
-            background: rgba(255, 0, 85, 0.7);
+            padding: 12px 20px;
+            background: #ff0055;
             color: white;
-            border: none;
-            border-radius: 5px;
+            border: 2px solid white;
+            border-radius: 8px;
             pointer-events: auto;
-            display: none;
+            display: none; /* Kazanınca açılır */
+            font-weight: bold;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
     <div id="ui-layer">
-        <h1 id="status">BAŞLAMAK İÇİN DOKUN</h1>
+        <h1 id="status">BAŞLAMAK İÇİN TIKLA</h1>
         <div id="timer">Süre: 0.00s</div>
     </div>
-    <button id="leaderboard-btn" onclick="showLeaderboard()">Skorlar</button>
+    <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 SKORLAR</button>
 
     <script>
+        // --- SENİN BİLGİLERİN ---
+        const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
+        const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
+
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // --- SUPABASE AYARLARI ---
-        const SUPABASE_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Supabase Başlatma (Güvenli Yöntem)
+        const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
         const config = {
             type: Phaser.AUTO,
             width: window.innerWidth,
             height: window.innerHeight,
             backgroundColor: '#2c3e50',
+            parent: document.body,
             scene: { preload: preload, create: create, update: update }
         };
 
         const game = new Phaser.Game(config);
         let player, isMoving = false, gameStatus = 'WAITING';
-        let finishLine = 100, startTime, elapsedTime = 0;
+        let finishLine = 120, startTime, elapsedTime = 0;
 
         function preload() {
+            // Karakter görseli
             this.load.image('player', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
         }
 
         function create() {
             const centerX = config.width / 2;
+            
+            // Oyun Alanı (Kum Rengi)
             this.add.rectangle(centerX, config.height/2, config.width, config.height, 0xc2a385);
+            // Bitiş Çizgisi
             this.add.rectangle(centerX, finishLine, config.width, 10, 0xffffff);
+            
+            // Karakter
             player = this.add.sprite(centerX, config.height - 100, 'player').setScale(1.2);
 
+            // Kontroller (Tıklama ve Dokunma)
             this.input.on('pointerdown', () => {
-                if (gameStatus === 'WAITING') { startAction(); }
-                else if (gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN') { isMoving = true; }
+                if (gameStatus === 'WAITING') {
+                    gameStatus = 'GREEN';
+                    startTime = Date.now();
+                    document.getElementById('status').innerText = "KOŞ!";
+                    document.getElementById('status').style.color = "#2ecc71";
+                    startCycle();
+                } else if (gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN') {
+                    isMoving = true;
+                }
             });
-            this.input.on('pointerup', () => { isMoving = false; });
-        }
 
-        function startAction() {
-            gameStatus = 'GREEN';
-            startTime = Date.now();
-            document.getElementById('status').innerText = "KOŞ!";
-            startCycle();
+            this.input.on('pointerup', () => { isMoving = false; });
         }
 
         function startCycle() {
             if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
+
+            // Işık Değişimi
             gameStatus = (gameStatus === 'GREEN') ? 'RED' : 'GREEN';
-            let statusEl = document.getElementById('status');
+            const statusEl = document.getElementById('status');
+            
             statusEl.innerText = (gameStatus === 'GREEN') ? "YEŞİL!" : "DUR!";
             statusEl.style.color = (gameStatus === 'GREEN') ? "#2ecc71" : "#e74c3c";
-            
-            let nextChange = (gameStatus === 'GREEN') ? (2000 + Math.random() * 2000) : (1200 + Math.random() * 1000);
-            setTimeout(startCycle, nextChange);
+
+            if (gameStatus === 'RED') {
+                tg.HapticFeedback.notificationOccurred('warning');
+            }
+
+            // Rastgele sürelerde değişim
+            let delay = (gameStatus === 'GREEN') ? (2000 + Math.random() * 2500) : (1200 + Math.random() * 1200);
+            setTimeout(startCycle, delay);
         }
 
         function update() {
             if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN' || gameStatus === 'WAITING') return;
+
+            // Kronometre
             elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
             document.getElementById('timer').innerText = `Süre: ${elapsedTime}s`;
 
             if (isMoving) {
-                player.y -= 3;
+                player.y -= 2.8; // Hareket hızı
+                
+                // Kırmızı ışıkta hareket cezası
                 if (gameStatus === 'RED') {
                     gameStatus = 'ELIMINATED';
-                    document.getElementById('status').innerText = "VURULDUN!";
-                    player.setTint(0xff0000);
+                    document.getElementById('status').innerText = "ELENDİN!";
+                    tg.HapticFeedback.notificationOccurred('error');
+                    player.setTint(0xff0000); // Kırmızıya boya
+                    player.setAngle(90);      // Devrildi efekti
                 }
             }
 
+            // Kazanma durumu
             if (player.y <= finishLine) {
                 gameStatus = 'WIN';
                 saveScore(elapsedTime);
             }
         }
 
-        // --- SKORU VERİTABANINA KAYDETME ---
+        // Veritabanına Yazma
         async function saveScore(finalTime) {
             const user = tg.initDataUnsafe?.user;
             const userData = {
-                telegram_id: user?.id || 0,
-                username: user?.first_name || "Gizli Oyuncu",
+                telegram_id: user?.id || Math.floor(Math.random() * 1000000),
+                username: user?.first_name || "Bilinmeyen Oyuncu",
                 score: parseFloat(finalTime)
             };
 
-            const { data, error } = await supabase
-                .from('leaderboard')
-                .insert([userData]);
+            const { error } = await _supabase.from('leaderboard').insert([userData]);
 
             if (error) {
-                console.error("Hata:", error);
-                tg.showAlert("Skor kaydedilemedi!");
+                console.error("DB Hatası:", error.message);
+                tg.showAlert("Skor Veritabanına Yazılamadı!");
             } else {
-                tg.showAlert(`Tebrikler ${userData.username}! Skorun (${finalTime}s) kaydedildi.`);
+                tg.showAlert(`TEBRİKLER! Süre: ${finalTime}s. Skorun kaydedildi.`);
                 document.getElementById('leaderboard-btn').style.display = 'block';
             }
         }
 
-        // --- LİDERLİK TABLOSUNU GÖSTERME ---
+        // Skorları Çekme
         async function showLeaderboard() {
-            const { data, error } = await supabase
+            const { data, error } = await _supabase
                 .from('leaderboard')
                 .select('*')
                 .order('score', { ascending: true })
                 .limit(5);
 
             if (data) {
-                let list = data.map((item, index) => `${index+1}. ${item.username}: ${item.score}s`).join('\n');
-                tg.showConfirm("EN İYİ 5 SKOR:\n\n" + list);
+                let list = data.map((item, i) => `${i+1}. ${item.username}: ${item.score}s`).join('\n');
+                tg.showConfirm("LİDERLİK TABLOSU (TOP 5):\n\n" + list);
             }
         }
     </script>
