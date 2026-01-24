@@ -3,27 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skill Survive - Prototip</title>
+    <title>Skill Survive</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; }
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
         #ui-layer {
             position: absolute;
             top: 20px;
             width: 100%;
             text-align: center;
             color: white;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Arial Black', sans-serif;
             pointer-events: none;
-            text-shadow: 2px 2px 5px black;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+            z-index: 10;
         }
     </style>
 </head>
 <body>
     <div id="ui-layer">
-        <h1 id="status" style="font-size: 2.5rem;">HAZIR OL!</h1>
-        <div id="timer" style="font-size: 1.5rem;">Süre: 0.00s</div>
+        <h1 id="status">BAŞLAMAK İÇİN DOKUN</h1>
+        <div id="timer">Süre: 0.00s</div>
     </div>
 
     <script>
@@ -34,93 +35,101 @@
             type: Phaser.AUTO,
             width: window.innerWidth,
             height: window.innerHeight,
-            backgroundColor: '#34495e',
+            backgroundColor: '#2c3e50',
             scene: { preload: preload, create: create, update: update }
         };
 
         const game = new Phaser.Game(config);
         let player, isMoving = false, gameStatus = 'WAITING';
-        let finishLine = 120, startTime, elapsedTime = 0;
-        let dollVoice;
+        let finishLine = 100, startTime, elapsedTime = 0;
+        let lastMoveTime = 0;
 
         function preload() {
-            // Karakter ve Zemin için geçici görseller (Placeholder)
+            // Placeholder karakter
             this.load.image('player', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
-            // Bebek sesi (Örnek bir robotik ses linki - ilerde kendi sesini yüklersin)
-            this.load.audio('doll', 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
         }
 
         function create() {
             const centerX = config.width / 2;
             
-            // Kum zemin efekti
-            this.add.rectangle(centerX, config.height/2, config.width, config.height, 0xe67e22, 0.3);
+            // Arka plan (Kum rengi)
+            this.add.rectangle(centerX, config.height/2, config.width, config.height, 0xc2a385);
             
-            // Bitiş çizgisi (Beyaz çizgi)
-            this.add.rectangle(centerX, finishLine, config.width, 5, 0xffffff);
+            // Bitiş Çizgisi
+            this.add.rectangle(centerX, finishLine, config.width, 10, 0xffffff);
+            
+            // Oyuncu
+            player = this.add.sprite(centerX, config.height - 100, 'player');
+            player.setScale(1.2);
 
-            // Oyuncu Sprite
-            player = this.add.sprite(centerX, config.height - 80, 'player');
-            player.setScale(1.5);
-
-            // Input
-            this.input.on('pointerdown', () => { 
-                if(gameStatus === 'WAITING') {
-                    gameStatus = 'GREEN';
-                    startTime = Date.now();
-                    startCycle();
+            // Tıklama Olayları
+            this.input.on('pointerdown', () => {
+                if (gameStatus === 'WAITING') {
+                    startAction();
+                } else if (gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN') {
+                    isMoving = true;
                 }
-                if(gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN') isMoving = true; 
             });
-            this.input.on('pointerup', () => { isMoving = false; });
+
+            this.input.on('pointerup', () => {
+                isMoving = false;
+            });
+        }
+
+        function startAction() {
+            gameStatus = 'GREEN';
+            startTime = Date.now();
+            document.getElementById('status').innerText = "KOŞ!";
+            document.getElementById('status').style.color = "#2ecc71";
+            startCycle();
         }
 
         function startCycle() {
-            if(gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
+            if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
 
-            // Işık değişimi
-            let nextState = (gameStatus === 'GREEN') ? 'RED' : 'GREEN';
-            gameStatus = nextState;
-
+            // Işık Değişimi
+            gameStatus = (gameStatus === 'GREEN') ? 'RED' : 'GREEN';
+            
             let statusEl = document.getElementById('status');
             statusEl.innerText = (gameStatus === 'GREEN') ? "YEŞİL!" : "DUR!";
             statusEl.style.color = (gameStatus === 'GREEN') ? "#2ecc71" : "#e74c3c";
 
-            if(gameStatus === 'RED') {
-                tg.HapticFeedback.impactOccurred('heavy');
+            if (gameStatus === 'RED') {
+                tg.HapticFeedback.notificationOccurred('warning');
             }
 
-            // Rastgele süre (Yeşil ışık daha uzun, kırmızı ışık ani olabilir)
-            let duration = (gameStatus === 'GREEN') ? (Math.random() * 2000 + 2000) : (Math.random() * 1000 + 1000);
-            setTimeout(startCycle, duration);
+            // Süre Ayarı (SQUID GAME mantığı: Bebek şarkısı biterken durulur)
+            let nextChange = (gameStatus === 'GREEN') ? (2000 + Math.random() * 3000) : (1500 + Math.random() * 1500);
+            setTimeout(startCycle, nextChange);
         }
 
         function update() {
-            if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
+            if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN' || gameStatus === 'WAITING') return;
 
-            if (gameStatus !== 'WAITING') {
-                elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
-                document.getElementById('timer').innerText = `Süre: ${elapsedTime}s`;
-            }
+            // Kronometre Güncelleme
+            elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+            document.getElementById('timer').innerText = `Süre: ${elapsedTime}s`;
 
             if (isMoving) {
-                player.y -= 2.5; // Koşma hızı
+                player.y -= 3; // İlerleme hızı
 
+                // KIRMIZI IŞIKTA HAREKET KONTROLÜ
                 if (gameStatus === 'RED') {
                     gameStatus = 'ELIMINATED';
-                    document.getElementById('status').innerText = "VURULDUN!";
+                    document.getElementById('status').innerText = "ELENDİN!";
                     tg.HapticFeedback.notificationOccurred('error');
-                    player.setAngle(90); // Yere düşme efekti
                     player.setTint(0xff0000);
+                    player.setAngle(90); // Yere düşme efekti
                 }
             }
 
+            // KAZANMA KONTROLÜ
             if (player.y <= finishLine) {
                 gameStatus = 'WIN';
-                document.getElementById('status').innerText = "HAYATTA KALDIN!";
+                const finalTime = elapsedTime;
+                document.getElementById('status').innerText = "BAŞARDIN!";
                 tg.HapticFeedback.notificationOccurred('success');
-                // Telegram üzerinden bir popup göster
-                tg.showAlert(`Tebrikler! Yarışı ${elapsedTime} saniyede bitirdin.`);
+                tg.showAlert(`Tebrikler! ${finalTime} saniyede bitirdin. Liderlik tablosuna eklendin!`);
             }
         }
     </script>
