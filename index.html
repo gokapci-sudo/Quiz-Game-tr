@@ -3,39 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skill Survive - Elite Edition</title>
+    <title>Skill Survive - Local Assets</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
         #ui {
-            position: absolute; top: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 10; font-family: 'Courier New', Courier, monospace;
+            position: absolute; top: 20px; width: 100%; text-align: center;
+            color: white; font-family: 'Arial Black', sans-serif; pointer-events: none; z-index: 10;
         }
-        .display-box {
-            margin-top: 30px; text-align: center;
-        }
-        #status { font-size: 3rem; font-weight: bold; text-shadow: 0 0 20px rgba(255,255,255,0.5); margin: 0; }
-        #timer { font-size: 1.5rem; color: #f1c40f; letter-spacing: 2px; }
         #leaderboard-btn {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            padding: 15px 35px; background: #ed0678; color: white; border: 3px solid white;
-            border-radius: 0px; font-weight: bold; display: none; cursor: pointer;
-            pointer-events: auto; font-family: 'Courier New'; box-shadow: 10px 10px 0px #000;
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            padding: 12px 25px; background: #ff0055; color: white; border-radius: 20px;
+            font-weight: bold; display: none; cursor: pointer; pointer-events: auto;
         }
     </style>
 </head>
 <body>
     <div id="ui">
-        <div class="display-box">
-            <h1 id="status">HAZIR OL</h1>
-            <div id="timer">00:00.00</div>
-        </div>
+        <h1 id="status">DOKUN VE BAŞLA</h1>
+        <div id="timer">Süre: 0.00s</div>
     </div>
-    <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 RANKING</button>
+    <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 SKORLAR</button>
 
     <script>
+        // --- SUPABASE AYARLARI ---
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
         const tg = window.Telegram.WebApp; tg.expand();
@@ -43,64 +36,52 @@
 
         const config = {
             type: Phaser.AUTO,
-            width: window.innerWidth, height: window.innerHeight,
-            backgroundColor: '#d35400',
-            scene: { create: create, update: update }
+            width: window.innerWidth,
+            height: window.innerHeight,
+            backgroundColor: '#d4a373',
+            scene: { preload: preload, create: create, update: update }
         };
 
         const game = new Phaser.Game(config);
-        let player, playerNum, towerLight, gameStatus = 'WAITING', isMoving = false;
-        let startTime, elapsedTime = 0, finishLine = 150, canMove = false;
-        let dustEmitter, bgOverlay;
+        let player, doll, gameStatus = 'WAITING', isMoving = false;
+        let startTime, elapsedTime = 0, finishLine = 120, canMove = false;
+
+        function preload() {
+            // GÖRSEL YOLLARI: GitHub'daki dosya isimlerinle aynı olmalı
+            this.load.image('player', 'player.png'); // Karakterin
+            this.load.image('doll', 'doll.png');     // Dev Bebek
+            this.load.image('ground', 'ground.png'); // Yer dokusu
+        }
 
         function create() {
             const w = config.width; const h = config.height; const cx = w / 2;
 
-            // 1. DİNAMİK ARKA PLAN (Yol ve Duvarlar)
-            let g = this.add.graphics();
-            g.fillStyle(0xc2a385, 1); g.fillRect(0, 0, w, h); // Kum
-            g.fillStyle(0xed0678, 1); g.fillRect(0, 0, 40, h); g.fillRect(w - 40, 0, 40, h); // Pembe Duvarlar
-            g.lineStyle(4, 0xffffff, 0.3);
-            for(let i = 0; i < h; i+=100) g.strokeLineShape(new Phaser.Geom.Line(40, i, w-40, i)); // Yol Çizgileri
+            // Arka plan dokusu (Eğer varsa)
+            if (this.textures.exists('ground')) {
+                this.add.tileSprite(cx, h/2, w, h, 'ground').setAlpha(0.6);
+            }
 
-            // Bitiş Hattı (Neon)
-            g.lineStyle(10, 0xffffff, 1); g.strokeLineShape(new Phaser.Geom.Line(40, finishLine, w-40, finishLine));
+            // Bitiş Çizgisi
+            this.add.rectangle(cx, finishLine, w, 10, 0xffffff);
 
-            // 2. KULE TASARIMI
-            this.add.rectangle(cx, finishLine - 80, 100, 120, 0x2c3e50).setStrokeStyle(4, 0x000000);
-            towerLight = this.add.circle(cx, finishLine - 90, 30, 0x7f8c8d);
-            towerLight.setStrokeStyle(5, 0xffffff);
+            // Bebek
+            doll = this.add.sprite(cx, finishLine - 60, 'doll').setScale(0.6);
 
-            // 3. OYUNCU (456 Numaralı)
-            player = this.add.container(cx, h - 120);
-            let body = this.add.rectangle(0, 0, 50, 75, 0x16a085).setStrokeStyle(3, 0xffffff);
-            let head = this.add.circle(0, -50, 20, 0xffdbac).setStrokeStyle(2, 0x000000);
-            playerNum = this.add.text(-15, -10, "456", { fontSize: '14px', color: '#fff', fontStyle: 'bold' });
-            player.add([body, head, playerNum]);
+            // Oyuncu
+            player = this.add.sprite(cx, h - 100, 'player').setScale(1.2);
 
-            // Toz Partikülleri
-            dustEmitter = this.add.particles(0, 30, 'dust', {
-                speed: { min: -20, max: 20 }, angle: { min: 0, max: 360 },
-                scale: { start: 0.5, end: 0 }, alpha: { start: 0.5, end: 0 },
-                lifespan: 500, frequency: -1, blendMode: 'ADD'
-            });
-            player.add(dustEmitter);
-
-            // Ekran Parlama Efekti (Overlay)
-            bgOverlay = this.add.rectangle(cx, h/2, w, h, 0xff0000, 0).setDepth(100);
-
-            // 4. KONTROLLER
+            // Dokunma Kontrolü
             this.input.on('pointerdown', () => {
                 if (gameStatus === 'WAITING') {
                     gameStatus = 'GREEN'; startTime = Date.now();
                     document.getElementById('status').innerText = "KOŞ!";
                     setTimeout(() => { canMove = true; }, 150);
                     startCycle();
-                } else if (gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN') {
-                    isMoving = true; dustEmitter.start();
+                } else if (gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN' && canMove) {
+                    isMoving = true;
                 }
             });
-            this.input.on('pointerup', () => { isMoving = false; dustEmitter.stop(); });
+            this.input.on('pointerup', () => { isMoving = false; });
         }
 
         function startCycle() {
@@ -109,52 +90,48 @@
             const s = document.getElementById('status');
 
             if (gameStatus === 'GREEN') {
-                s.innerText = "GEÇ"; s.style.color = "#2ecc71";
-                towerLight.setFillStyle(0x2ecc71);
-                this.tweens.add({ targets: bgOverlay, alpha: 0, duration: 200 });
+                s.innerText = "YEŞİL!"; s.style.color = "#00ff00";
+                doll.setFlipX(false); // Bebek önüne döner
             } else {
-                s.innerText = "DUR"; s.style.color = "#e74c3c";
-                towerLight.setFillStyle(0xe74c3c);
-                bgOverlay.setAlpha(0.2); // Kırmızı alarm efekti
+                s.innerText = "DUR!"; s.style.color = "#ff0000";
+                doll.setFlipX(true);  // Bebek arkasını döner
                 tg.HapticFeedback.notificationOccurred('warning');
             }
 
-            let next = gameStatus === 'GREEN' ? (2000 + Math.random() * 2500) : (1000 + Math.random() * 1500);
-            setTimeout(() => startCycle.call(this), next);
+            let delay = (gameStatus === 'GREEN') ? (2000 + Math.random() * 2000) : (1000 + Math.random() * 1500);
+            setTimeout(() => startCycle.call(this), delay);
         }
 
         function update() {
             if (gameStatus === 'WAITING' || gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
 
             elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
-            document.getElementById('timer').innerText = elapsedTime + "s";
+            document.getElementById('timer').innerText = `Süre: ${elapsedTime}s`;
 
             if (isMoving && canMove) {
-                player.y -= 3.8;
-                player.angle = Math.sin(Date.now() * 0.015) * 6; // Koşu yalpalama
+                player.y -= 3.5;
+                player.angle = Math.sin(Date.now() * 0.01) * 5; // Yürüme sallantısı
 
                 if (gameStatus === 'RED') {
                     gameStatus = 'ELIMINATED';
-                    document.getElementById('status').innerText = "ELENDİN";
-                    player.list[0].setFillStyle(0x000000); // Siyah (yanık) efekti
-                    player.angle = 90; bgOverlay.setAlpha(0.5);
+                    document.getElementById('status').innerText = "ELENDİN!";
+                    player.setTint(0xff0000); player.angle = 90;
                     tg.HapticFeedback.notificationOccurred('error');
-                    dustEmitter.stop();
                 }
             } else { player.angle = 0; }
 
             if (player.y <= finishLine) {
-                gameStatus = 'WIN'; dustEmitter.stop();
+                gameStatus = 'WIN';
                 saveScore(elapsedTime);
             }
         }
 
         async function saveScore(f) {
             const u = tg.initDataUnsafe?.user;
-            const data = { telegram_id: u?.id || Math.floor(Math.random()*1000000), username: u?.first_name || "P456", score: parseFloat(f) };
+            const data = { telegram_id: u?.id || 123, username: u?.first_name || "Oyuncu", score: parseFloat(f) };
             const { error } = await _supabase.from('leaderboard').insert([data]);
             if (!error) {
-                tg.showAlert(`HAYATTA KALDIN!\nSüre: ${f}s`);
+                tg.showAlert(`BAŞARDIN! Skor: ${f}s`);
                 document.getElementById('leaderboard-btn').style.display = 'block';
             }
         }
@@ -163,7 +140,7 @@
             const { data } = await _supabase.from('leaderboard').select('*').order('score', { ascending: true }).limit(5);
             if (data) {
                 let list = data.map((item, i) => `${i+1}. ${item.username}: ${item.score}s`).join('\n');
-                tg.showConfirm("🏆 LİDERLER TABLOSU:\n\n" + list);
+                tg.showConfirm("🏆 SKOR TABLOSU:\n\n" + list);
             }
         }
     </script>
