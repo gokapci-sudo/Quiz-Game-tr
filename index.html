@@ -3,27 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skill Survive - Oyun</title>
+    <title>Skill Survive - Prototip</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; background: #000; overflow: hidden; }
-        canvas { display: block; margin: 0 auto; }
         #ui-layer {
             position: absolute;
-            top: 10px;
+            top: 20px;
             width: 100%;
             text-align: center;
             color: white;
-            font-family: sans-serif;
+            font-family: 'Courier New', Courier, monospace;
             pointer-events: none;
+            text-shadow: 2px 2px 5px black;
         }
     </style>
 </head>
 <body>
     <div id="ui-layer">
-        <h2 id="status">HAZIR OL!</h2>
-        <p id="info">Ekrana Basılı Tutarak Koş</p>
+        <h1 id="status" style="font-size: 2.5rem;">HAZIR OL!</h1>
+        <div id="timer" style="font-size: 1.5rem;">Süre: 0.00s</div>
     </div>
 
     <script>
@@ -34,73 +34,93 @@
             type: Phaser.AUTO,
             width: window.innerWidth,
             height: window.innerHeight,
-            backgroundColor: '#222',
-            parent: 'phaser-example',
+            backgroundColor: '#34495e',
             scene: { preload: preload, create: create, update: update }
         };
 
         const game = new Phaser.Game(config);
-        let player;
-        let isMoving = false;
-        let gameStatus = 'WAITING'; // WAITING, GREEN, RED, ELIMINATED, WIN
-        let finishLine = 100;
-        let lightTimer;
+        let player, isMoving = false, gameStatus = 'WAITING';
+        let finishLine = 120, startTime, elapsedTime = 0;
+        let dollVoice;
 
         function preload() {
-            // Şimdilik basit şekiller kullanacağız, ilerde görsel ekleriz
+            // Karakter ve Zemin için geçici görseller (Placeholder)
+            this.load.image('player', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+            // Bebek sesi (Örnek bir robotik ses linki - ilerde kendi sesini yüklersin)
+            this.load.audio('doll', 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
         }
 
         function create() {
             const centerX = config.width / 2;
             
-            // Bitiş Çizgisi
-            this.add.rectangle(centerX, finishLine, config.width, 10, 0x00ff00);
+            // Kum zemin efekti
+            this.add.rectangle(centerX, config.height/2, config.width, config.height, 0xe67e22, 0.3);
             
-            // Oyuncu (Kırmızı bir kare)
-            player = this.add.rectangle(centerX, config.height - 100, 40, 40, 0xff0055);
-            
-            // Giriş Kontrolleri
-            this.input.on('pointerdown', () => { if(gameStatus !== 'ELIMINATED') isMoving = true; });
-            this.input.on('pointerup', () => { isMoving = false; });
+            // Bitiş çizgisi (Beyaz çizgi)
+            this.add.rectangle(centerX, finishLine, config.width, 5, 0xffffff);
 
-            // Oyun Döngüsünü Başlat
-            startLightCycle();
+            // Oyuncu Sprite
+            player = this.add.sprite(centerX, config.height - 80, 'player');
+            player.setScale(1.5);
+
+            // Input
+            this.input.on('pointerdown', () => { 
+                if(gameStatus === 'WAITING') {
+                    gameStatus = 'GREEN';
+                    startTime = Date.now();
+                    startCycle();
+                }
+                if(gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN') isMoving = true; 
+            });
+            this.input.on('pointerup', () => { isMoving = false; });
         }
 
-        function startLightCycle() {
+        function startCycle() {
+            if(gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
+
+            // Işık değişimi
             let nextState = (gameStatus === 'GREEN') ? 'RED' : 'GREEN';
             gameStatus = nextState;
-            
-            document.getElementById('status').innerText = (gameStatus === 'GREEN') ? "YEŞİL IŞIK - KOŞ!" : "KIRMIZI IŞIK - DUR!";
-            document.getElementById('status').style.color = (gameStatus === 'GREEN') ? "#00ff00" : "#ff0000";
 
-            if (gameStatus === 'RED') tg.HapticFeedback.notificationOccurred('warning');
+            let statusEl = document.getElementById('status');
+            statusEl.innerText = (gameStatus === 'GREEN') ? "YEŞİL!" : "DUR!";
+            statusEl.style.color = (gameStatus === 'GREEN') ? "#2ecc71" : "#e74c3c";
 
-            // Rastgele sürelerde ışık değiştir (2-4 saniye arası)
-            let duration = Math.random() * 2000 + 1500;
-            setTimeout(startLightCycle, duration);
+            if(gameStatus === 'RED') {
+                tg.HapticFeedback.impactOccurred('heavy');
+            }
+
+            // Rastgele süre (Yeşil ışık daha uzun, kırmızı ışık ani olabilir)
+            let duration = (gameStatus === 'GREEN') ? (Math.random() * 2000 + 2000) : (Math.random() * 1000 + 1000);
+            setTimeout(startCycle, duration);
         }
 
         function update() {
             if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
 
-            if (isMoving) {
-                player.y -= 2; // Oyuncuyu yukarı hareket ettir
+            if (gameStatus !== 'WAITING') {
+                elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
+                document.getElementById('timer').innerText = `Süre: ${elapsedTime}s`;
+            }
 
-                // KIRMIZI IŞIKTA HAREKET KONTROLÜ (BECERİ KAYBI)
+            if (isMoving) {
+                player.y -= 2.5; // Koşma hızı
+
                 if (gameStatus === 'RED') {
                     gameStatus = 'ELIMINATED';
-                    document.getElementById('status').innerText = "ELENDİN!";
+                    document.getElementById('status').innerText = "VURULDUN!";
                     tg.HapticFeedback.notificationOccurred('error');
-                    player.setFillStyle(0x555555); // Karakteri gri yap (öldü)
+                    player.setAngle(90); // Yere düşme efekti
+                    player.setTint(0xff0000);
                 }
             }
 
-            // KAZANMA KONTROLÜ
             if (player.y <= finishLine) {
                 gameStatus = 'WIN';
-                document.getElementById('status').innerText = "TEBRİKLER! KAZANDIN!";
+                document.getElementById('status').innerText = "HAYATTA KALDIN!";
                 tg.HapticFeedback.notificationOccurred('success');
+                // Telegram üzerinden bir popup göster
+                tg.showAlert(`Tebrikler! Yarışı ${elapsedTime} saniyede bitirdin.`);
             }
         }
     </script>
