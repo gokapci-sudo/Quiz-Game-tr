@@ -3,32 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Drift: Speedrun</title>
+    <title>Gravity Switch: Speedrun</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { margin: 0; background: #050505; overflow: hidden; touch-action: none; }
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
         #ui {
-            position: absolute; top: 20px; width: 100%; text-align: center;
-            color: #00f2ff; font-family: 'Courier New', monospace; pointer-events: none; z-index: 10;
+            position: absolute; top: 10px; width: 100%; text-align: center;
+            color: #fff; font-family: 'Arial Black', sans-serif; pointer-events: none; z-index: 10;
         }
-        .stat { font-size: 1.5rem; text-shadow: 0 0 10px #00f2ff; }
         #leaderboard-btn {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            padding: 15px 30px; background: transparent; color: #00f2ff; 
-            border: 2px solid #00f2ff; border-radius: 5px; font-weight: bold;
-            display: none; cursor: pointer; pointer-events: auto;
-            text-shadow: 0 0 5px #00f2ff; box-shadow: 0 0 10px #00f2ff;
+            padding: 15px 30px; background: #fff; color: #000; border: none;
+            border-radius: 5px; font-weight: bold; display: none; cursor: pointer; pointer-events: auto;
         }
     </style>
 </head>
 <body>
     <div id="ui">
-        <div id="msg">BAŞLAMAK İÇİN DOKUN</div>
-        <div id="timer" class="stat">00.00s</div>
+        <h2 id="status">DOKUN VE BAŞLA</h2>
+        <div id="timer">00:00.00</div>
     </div>
-    <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 EN İYİLER</button>
+    <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 REKORLAR</button>
 
     <script>
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
@@ -40,81 +37,68 @@
             type: Phaser.AUTO,
             width: window.innerWidth,
             height: window.innerHeight,
-            backgroundColor: '#050505',
+            physics: { default: 'arcade', arcade: { gravity: { y: 1200 } } },
             scene: { create: create, update: update }
         };
 
         const game = new Phaser.Game(config);
         let player, obstacles, gameStatus = 'WAITING';
-        let startTime, elapsedTime = 0, finishLine = 3000; // 3000 birim yol
-        let speed = 5, distanceTraveled = 0;
+        let startTime, elapsedTime = 0, distance = 0, finishLine = 5000;
 
         function create() {
             const w = config.width; const h = config.height;
             
-            // Yol Çizgileri (Derinlik Hissi)
-            this.grid = this.add.grid(w/2, h/2, w*2, h*2, 50, 50, 0x000000, 0, 0x00f2ff, 0.1);
+            // Zemin ve Tavan (Kodla çizim)
+            this.add.rectangle(w/2, 20, w, 40, 0x333333);
+            this.add.rectangle(w/2, h - 20, w, 40, 0x333333);
 
             // Oyuncu (Neon Kare)
-            player = this.add.rectangle(w/2, h - 100, 30, 30, 0x00f2ff);
-            player.setStrokeStyle(3, 0xffffff);
-            
-            // Engeller Grubu
-            obstacles = this.add.group();
+            player = this.add.rectangle(80, h/2, 30, 30, 0x00ffff);
+            player.setStrokeStyle(2, 0xffffff);
+            this.physics.add.existing(player);
+            player.body.setCollideWorldBounds(true);
 
-            // Kontroller
-            this.input.on('pointerdown', (pointer) => {
+            // Engeller
+            obstacles = this.physics.add.group();
+
+            // Kontrol: Dokununca Yerçekimi Değişir
+            this.input.on('pointerdown', () => {
                 if (gameStatus === 'WAITING') {
                     gameStatus = 'PLAYING';
                     startTime = Date.now();
-                    document.getElementById('msg').innerText = "HIZLAN!";
+                    document.getElementById('status').innerText = "HIZLI OL!";
+                } else if (gameStatus === 'PLAYING') {
+                    player.body.setGravityY(player.body.gravity.y * -2 || -2400); // Ters çevir
+                    player.body.gravity.y = -player.body.gravity.y;
+                    tg.HapticFeedback.impactOccurred('light');
                 }
+            });
+
+            // Çarpışma
+            this.physics.add.overlap(player, obstacles, () => {
+                this.cameras.main.shake(200, 0.02);
+                distance -= 300; // Ceza olarak geriye atar (süreyi uzatır)
+                tg.HapticFeedback.notificationOccurred('error');
             });
         }
 
         function update() {
             if (gameStatus !== 'PLAYING') return;
 
-            const w = config.width; const h = config.height;
-
-            // Zamanı güncelle
             elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
             document.getElementById('timer').innerText = elapsedTime + "s";
 
-            // Oyuncuyu parmağa doğru hareket ettir (Yatayda)
-            if (this.input.activePointer.isDown) {
-                let targetX = this.input.activePointer.x;
-                player.x = Phaser.Math.Linear(player.x, targetX, 0.2);
-            }
-
-            // Engelleri Oluştur (Rastgele)
-            if (Phaser.Math.Between(0, 100) < 5) {
-                let obs = this.add.rectangle(Phaser.Math.Between(50, w-50), -50, 40, 40, 0xff0055);
-                obs.setStrokeStyle(2, 0xffffff);
+            // Engelleri oluştur
+            if (Phaser.Math.Between(0, 100) < 3) {
+                let isTop = Math.random() > 0.5;
+                let obs = this.add.rectangle(config.width + 50, isTop ? 60 : config.height - 60, 40, 80, 0xff0055);
+                this.physics.add.existing(obs);
+                obs.body.setVelocityX(-400);
                 obstacles.add(obs);
             }
 
-            // Engelleri Hareket Ettir
-            obstacles.children.iterate((obs) => {
-                if (obs) {
-                    obs.y += speed;
-                    // Çarpışma Kontrolü
-                    if (Phaser.Geom.Intersects.RectangleToRectangle(player.getBounds(), obs.getBounds())) {
-                        obs.destroy();
-                        startTime -= 1000; // 1 saniye ceza (süreyi geri çekerek toplam süreyi artırır)
-                        this.cameras.main.shake(100, 0.01);
-                        tg.HapticFeedback.impactOccurred('heavy');
-                    }
-                    if (obs.y > h) obs.destroy();
-                }
-            });
-
-            // Yolu İlerlet
-            distanceTraveled += speed;
-            this.grid.y += speed % 50;
-
-            // Bitiş Kontrolü
-            if (distanceTraveled >= finishLine) {
+            distance += 5; // İlerleme hızı
+            if (distance >= finishLine) {
                 gameStatus = 'WIN';
                 saveScore(elapsedTime);
             }
@@ -124,12 +108,12 @@
             const u = tg.initDataUnsafe?.user;
             const data = { 
                 telegram_id: u?.id || Math.floor(Math.random()*999), 
-                username: u?.first_name || "Racer", 
+                username: u?.first_name || "Ghost", 
                 score: parseFloat(f) 
             };
-            const { error } = await _supabase.from('leaderboard').insert([data]);
-            document.getElementById('msg').innerText = "FİNİŞ!";
-            tg.showAlert(`YARIŞ BİTTİ!\nSüren: ${f}s`);
+            await _supabase.from('leaderboard').insert([data]);
+            document.getElementById('status').innerText = "BİTTİ!";
+            tg.showAlert(`REKORUN: ${f}s`);
             document.getElementById('leaderboard-btn').style.display = 'block';
         }
 
