@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Skill Survive</title>
+    <title>Skill Survive - Squid Game Edition</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -15,25 +15,33 @@
             width: 100%;
             text-align: center;
             color: white;
-            font-family: 'Arial Black', sans-serif;
+            font-family: 'Press Start 2P', cursive; /* Piksel fontu denenebilir */
             pointer-events: none;
             z-index: 10;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
         }
+        #status { font-size: 2.5rem; text-shadow: 0 0 15px rgba(255,0,0,0.8); transition: all 0.2s; }
+        #timer { font-size: 1.5rem; margin-top: 10px; opacity: 0.8; }
         #leaderboard-btn {
             position: absolute;
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 12px 25px;
+            padding: 15px 30px;
             background: #ff0055;
             color: white;
-            border: 2px solid white;
-            border-radius: 20px;
+            border: none;
+            border-radius: 30px;
             font-weight: bold;
             display: none;
             cursor: pointer;
             pointer-events: auto;
+            box-shadow: 0 5px 15px rgba(255,0,85,0.4);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1rem;
         }
+        /* Özel font için CSS */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
     </style>
 </head>
 <body>
@@ -44,6 +52,7 @@
     <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 SKORLAR</button>
 
     <script>
+        // --- KONFİGÜRASYON ---
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
 
@@ -56,29 +65,60 @@
             type: Phaser.AUTO,
             width: window.innerWidth,
             height: window.innerHeight,
-            backgroundColor: '#d4a373',
+            backgroundColor: '#87CEEB', // Gökyüzü rengi
             scene: { preload: preload, create: create, update: update }
         };
 
         const game = new Phaser.Game(config);
-        let player, isMoving = false, gameStatus = 'WAITING';
-        let finishLine = 100, startTime, elapsedTime = 0;
+        let player, doll, isMoving = false, gameStatus = 'WAITING';
+        let finishLine = 120, startTime, elapsedTime = 0;
+        let redLightSound, greenLightSound, eliminatedSound;
 
         function preload() {
-            this.load.image('player', 'https://labs.phaser.io/assets/sprites/phaser-dude.png');
+            // Karakter ve Bebek görselleri (görseldeki gibi)
+            this.load.image('player', 'https://i.imgur.com/K1Xw3g1.png'); // Yeşil kıyafetli koşan adam
+            this.load.image('doll', 'https://i.imgur.com/gK9pD3r.png');   // Squid Game Bebek
+            this.load.image('ground', 'https://i.imgur.com/nJg3Fj1.png'); // Çatlamış kum dokusu
+
+            // Sesler
+            this.load.audio('redLightSound', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'); // Örnek ses
+            this.load.audio('greenLightSound', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3'); // Örnek ses
+            this.load.audio('eliminatedSound', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3'); // Örnek ses
         }
 
         function create() {
             const centerX = config.width / 2;
-            this.add.rectangle(centerX, finishLine, config.width, 10, 0xffffff);
-            player = this.add.sprite(centerX, config.height - 100, 'player').setScale(1.3);
+            const screenHeight = config.height;
 
+            // Arka Plan Gökyüzü (backgroundColor ile ayarlandı)
+
+            // Kum zemini - çatlamış doku (arka plandan biraz yukarıda başlar)
+            this.add.tileSprite(centerX, screenHeight, config.width, screenHeight * 0.8, 'ground')
+                .setOrigin(0.5, 1)
+                .setScale(1.2);
+
+            // Bitiş Çizgisi (Beyaz Şerit)
+            this.add.rectangle(centerX, finishLine, config.width, 15, 0xffffff);
+            
+            // Dev Bebek
+            doll = this.add.sprite(centerX, finishLine - 100, 'doll').setScale(0.8);
+
+            // Oyuncu (yeşil kostümlü)
+            player = this.add.sprite(centerX, screenHeight - 150, 'player').setScale(0.2); // Boyutunu ayarladım
+
+            // Sesleri tanımlama
+            redLightSound = this.sound.add('redLightSound');
+            greenLightSound = this.sound.add('greenLightSound');
+            eliminatedSound = this.sound.add('eliminatedSound');
+
+            // Kontroller (Tıklama ve Dokunma)
             this.input.on('pointerdown', () => {
                 if (gameStatus === 'WAITING') {
                     gameStatus = 'GREEN';
                     startTime = Date.now();
                     document.getElementById('status').innerText = "KOŞ!";
-                    document.getElementById('status').style.color = "#00ff00";
+                    document.getElementById('status').style.color = "#00ff00"; // Yeşil
+                    greenLightSound.play();
                     startCycle();
                 } else if (gameStatus !== 'ELIMINATED' && gameStatus !== 'WIN') {
                     isMoving = true;
@@ -89,27 +129,53 @@
 
         function startCycle() {
             if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN') return;
+
             gameStatus = (gameStatus === 'GREEN') ? 'RED' : 'GREEN';
             const statusEl = document.getElementById('status');
-            statusEl.innerText = (gameStatus === 'GREEN') ? "YEŞİL!" : "DUR!";
-            statusEl.style.color = (gameStatus === 'GREEN') ? "#00ff00" : "#ff0000";
+            
+            if (gameStatus === 'GREEN') {
+                statusEl.innerText = "KOŞ!";
+                statusEl.style.color = "#00ff00";
+                greenLightSound.play();
+                doll.setFlipX(false); // Bebek karşıya bakar
+            } else {
+                statusEl.innerText = "DUR!";
+                statusEl.style.color = "#ff0000";
+                redLightSound.play();
+                doll.setFlipX(true); // Bebek arkasını döner
+                tg.HapticFeedback.notificationOccurred('warning');
+            }
+            
             let delay = (gameStatus === 'GREEN') ? (2000 + Math.random() * 2000) : (1000 + Math.random() * 1500);
             setTimeout(startCycle, delay);
         }
 
         function update() {
             if (gameStatus === 'ELIMINATED' || gameStatus === 'WIN' || gameStatus === 'WAITING') return;
+
             elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
             document.getElementById('timer').innerText = `Süre: ${elapsedTime}s`;
+            
             if (isMoving) {
-                player.y -= 3;
+                player.y -= 5; // Hızlandırıldı
+                player.setFrame(Math.floor(Date.now() / 100) % 2); // Basit koşu animasyonu (eğer sprite sheet olsaydı daha iyi olurdu)
+                
                 if (gameStatus === 'RED') {
                     gameStatus = 'ELIMINATED';
                     document.getElementById('status').innerText = "ELENDİN!";
-                    player.setTint(0xff0000);
-                    player.setAngle(90);
+                    document.getElementById('status').style.color = "#ff0000";
+                    eliminatedSound.play();
+                    player.setTint(0xff0000); // Kırmızıya boya
+                    player.setAngle(90);      // Devrildi efekti
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+            } else {
+                player.setFrame(0); // Durunca ilk kare
+                if (gameStatus === 'RED') {
+                    // Kırmızı ışıkta durunca doll sallanabilir vs.
                 }
             }
+
             if (player.y <= finishLine) {
                 gameStatus = 'WIN';
                 saveScore(elapsedTime);
@@ -119,28 +185,34 @@
         async function saveScore(finalTime) {
             const user = tg.initDataUnsafe?.user;
             const userData = {
-                telegram_id: user?.id || Math.floor(Math.random() * 999999),
+                telegram_id: user?.id || Math.floor(Math.random() * 999999), // Test için rastgele ID
                 username: user?.first_name || "Yarışmacı",
                 score: parseFloat(finalTime)
             };
 
-            // Hata veren 'upsert' yerine direkt 'insert' kullanıyoruz (en güvenli yol)
-            const { error } = await _supabase.from('leaderboard').insert([userData]);
+            const { error } = await _supabase
+                .from('leaderboard')
+                .insert([userData]); // 'upsert' hatası vermemesi için şimdilik 'insert'
 
             if (error) {
-                console.error(error);
-                tg.showAlert("Kayıt Hatası: " + error.message);
+                console.error("DB Hatası:", error.message);
+                tg.showAlert("Skor kaydedilemedi: " + error.message);
             } else {
-                tg.showAlert(`TEBRİKLER! Skorun: ${finalTime}s`);
+                tg.showAlert(`KAYDEDİLDİ!\nSkorun: ${finalTime}s`);
                 document.getElementById('leaderboard-btn').style.display = 'block';
             }
         }
 
         async function showLeaderboard() {
-            const { data } = await _supabase.from('leaderboard').select('*').order('score', { ascending: true }).limit(5);
+            const { data } = await _supabase
+                .from('leaderboard')
+                .select('*')
+                .order('score', { ascending: true })
+                .limit(5);
+
             if (data) {
                 let list = data.map((item, i) => `${i+1}. ${item.username}: ${item.score}s`).join('\n');
-                tg.showConfirm("LİDERLİK TABLOSU:\n\n" + list);
+                tg.showConfirm("🏆 LİDERLİK TABLOSU:\n\n" + list);
             }
         }
     </script>
