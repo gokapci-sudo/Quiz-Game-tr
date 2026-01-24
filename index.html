@@ -3,29 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gravity Switch: Speedrun</title>
+    <title>Quiz Master: 10 Soru</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; touch-action: none; }
-        #ui {
-            position: absolute; top: 10px; width: 100%; text-align: center;
-            color: #fff; font-family: 'Arial Black', sans-serif; pointer-events: none; z-index: 10;
+        body { margin: 0; background: #0f172a; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        #game-container { padding: 20px; text-align: center; }
+        #timer { font-size: 2rem; color: #38bdf8; font-weight: bold; margin-bottom: 10px; }
+        #question-box { background: #1e293b; padding: 20px; border-radius: 15px; min-height: 100px; margin-bottom: 20px; border: 2px solid #334155; }
+        .option { 
+            display: block; width: 100%; padding: 15px; margin: 10px 0; 
+            background: #334155; border: none; border-radius: 10px; 
+            color: white; font-size: 1.1rem; cursor: pointer; transition: 0.2s;
         }
+        .option:active { transform: scale(0.95); background: #475569; }
         #leaderboard-btn {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            padding: 15px 30px; background: #fff; color: #000; border: none;
-            border-radius: 5px; font-weight: bold; display: none; cursor: pointer; pointer-events: auto;
+            display: none; margin: 20px auto; padding: 12px 25px; 
+            background: #38bdf8; color: #0f172a; border: none; 
+            border-radius: 20px; font-weight: bold; cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <h2 id="status">DOKUN VE BAŞLA</h2>
-        <div id="timer">00:00.00</div>
+    <div id="game-container">
+        <div id="status-bar">Soru: <span id="q-count">0</span>/10</div>
+        <div id="timer">0.00s</div>
+        <div id="question-box">Yarışmaya Hazır mısın?</div>
+        <div id="options-container">
+            <button class="option" onclick="startGame()">BAŞLA!</button>
+        </div>
+        <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 SKORLAR</button>
     </div>
-    <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 REKORLAR</button>
 
     <script>
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
@@ -33,95 +41,87 @@
         const tg = window.Telegram.WebApp; tg.expand();
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
-        const config = {
-            type: Phaser.AUTO,
-            width: window.innerWidth,
-            height: window.innerHeight,
-            physics: { default: 'arcade', arcade: { gravity: { y: 1200 } } },
-            scene: { create: create, update: update }
-        };
+        let questions = [
+            { q: "Dünyanın en büyük okyanusu hangisidir?", a: ["Büyük Okyanus", "Atlas Okyanusu", "Hint Okyanusu"], c: 0 },
+            { q: "Hangi gezegen 'Kızıl Gezegen' olarak bilinir?", a: ["Venüs", "Mars", "Jüpiter"], c: 1 },
+            { q: "Türkiye'nin başkenti neresidir?", a: ["İstanbul", "Ankara", "İzmir"], c: 1 },
+            { q: "Mona Lisa tablosu kime aittir?", a: ["Picasso", "Da Vinci", "Van Gogh"], c: 1 },
+            { q: "Hangisi bir programlama dili değildir?", a: ["Python", "HTML", "Java"], c: 1 },
+            { q: "Güneş sistemindeki en büyük gezegen?", a: ["Satürn", "Neptün", "Jüpiter"], c: 2 },
+            { q: "Su kaç derecede donar?", a: ["0", "10", "100"], c: 0 },
+            { q: "En çok uydusu olan gezegen?", a: ["Mars", "Satürn", "Dünya"], c: 1 },
+            { q: "İstiklal Marşı'nın şairi kimdir?", a: ["Ziya Gökalp", "M. Akif Ersoy", "Namık Kemal"], c: 1 },
+            { q: "Işık hızını temsil eden harf?", a: ["v", "c", "x"], c: 1 }
+        ];
 
-        const game = new Phaser.Game(config);
-        let player, obstacles, gameStatus = 'WAITING';
-        let startTime, elapsedTime = 0, distance = 0, finishLine = 5000;
+        let currentIdx = 0, startTime, timerInterval, penaltyTime = 0;
 
-        function create() {
-            const w = config.width; const h = config.height;
+        function startGame() {
+            currentIdx = 0; penaltyTime = 0; startTime = Date.now();
+            document.getElementById('leaderboard-btn').style.display = 'none';
+            timerInterval = setInterval(updateTimer, 50);
+            nextQuestion();
+        }
+
+        function updateTimer() {
+            let now = ((Date.now() - startTime) / 1000 + penaltyTime).toFixed(2);
+            document.getElementById('timer').innerText = now + "s";
+        }
+
+        function nextQuestion() {
+            if (currentIdx >= 10) return endGame();
             
-            // Zemin ve Tavan (Kodla çizim)
-            this.add.rectangle(w/2, 20, w, 40, 0x333333);
-            this.add.rectangle(w/2, h - 20, w, 40, 0x333333);
-
-            // Oyuncu (Neon Kare)
-            player = this.add.rectangle(80, h/2, 30, 30, 0x00ffff);
-            player.setStrokeStyle(2, 0xffffff);
-            this.physics.add.existing(player);
-            player.body.setCollideWorldBounds(true);
-
-            // Engeller
-            obstacles = this.physics.add.group();
-
-            // Kontrol: Dokununca Yerçekimi Değişir
-            this.input.on('pointerdown', () => {
-                if (gameStatus === 'WAITING') {
-                    gameStatus = 'PLAYING';
-                    startTime = Date.now();
-                    document.getElementById('status').innerText = "HIZLI OL!";
-                } else if (gameStatus === 'PLAYING') {
-                    player.body.setGravityY(player.body.gravity.y * -2 || -2400); // Ters çevir
-                    player.body.gravity.y = -player.body.gravity.y;
-                    tg.HapticFeedback.impactOccurred('light');
-                }
-            });
-
-            // Çarpışma
-            this.physics.add.overlap(player, obstacles, () => {
-                this.cameras.main.shake(200, 0.02);
-                distance -= 300; // Ceza olarak geriye atar (süreyi uzatır)
-                tg.HapticFeedback.notificationOccurred('error');
+            let qData = questions[currentIdx];
+            document.getElementById('q-count').innerText = currentIdx + 1;
+            document.getElementById('question-box').innerText = qData.q;
+            let container = document.getElementById('options-container');
+            container.innerHTML = "";
+            
+            qData.a.forEach((opt, i) => {
+                let btn = document.createElement('button');
+                btn.className = "option";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(i);
+                container.appendChild(btn);
             });
         }
 
-        function update() {
-            if (gameStatus !== 'PLAYING') return;
-
-            elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2);
-            document.getElementById('timer').innerText = elapsedTime + "s";
-
-            // Engelleri oluştur
-            if (Phaser.Math.Between(0, 100) < 3) {
-                let isTop = Math.random() > 0.5;
-                let obs = this.add.rectangle(config.width + 50, isTop ? 60 : config.height - 60, 40, 80, 0xff0055);
-                this.physics.add.existing(obs);
-                obs.body.setVelocityX(-400);
-                obstacles.add(obs);
+        function checkAnswer(idx) {
+            if (idx === questions[currentIdx].c) {
+                tg.HapticFeedback.notificationOccurred('success');
+            } else {
+                penaltyTime += 5; // Yanlış cevapta 5 saniye ceza
+                tg.HapticFeedback.notificationOccurred('error');
             }
+            currentIdx++;
+            nextQuestion();
+        }
 
-            distance += 5; // İlerleme hızı
-            if (distance >= finishLine) {
-                gameStatus = 'WIN';
-                saveScore(elapsedTime);
-            }
+        function endGame() {
+            clearInterval(timerInterval);
+            let finalTime = ((Date.now() - startTime) / 1000 + penaltyTime).toFixed(2);
+            document.getElementById('question-box').innerText = "YARIŞ BİTTİ!";
+            document.getElementById('options-container').innerHTML = `<h3>Süren: ${finalTime}s</h3>`;
+            saveScore(finalTime);
         }
 
         async function saveScore(f) {
             const u = tg.initDataUnsafe?.user;
             const data = { 
                 telegram_id: u?.id || Math.floor(Math.random()*999), 
-                username: u?.first_name || "Ghost", 
+                username: u?.first_name || "Bilgin", 
                 score: parseFloat(f) 
             };
             await _supabase.from('leaderboard').insert([data]);
-            document.getElementById('status').innerText = "BİTTİ!";
-            tg.showAlert(`REKORUN: ${f}s`);
             document.getElementById('leaderboard-btn').style.display = 'block';
+            tg.showAlert(`TEBRİKLER!\nToplam Süre: ${f}s`);
         }
 
         async function showLeaderboard() {
             const { data } = await _supabase.from('leaderboard').select('*').order('score', { ascending: true }).limit(5);
             if (data) {
                 let list = data.map((item, i) => `${i+1}. ${item.username}: ${item.score}s`).join('\n');
-                tg.showConfirm("🚀 EN HIZLILAR:\n\n" + list);
+                tg.showConfirm("🏆 EN HIZLI BİLGİNLER:\n\n" + list);
             }
         }
     </script>
