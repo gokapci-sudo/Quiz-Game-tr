@@ -9,56 +9,48 @@
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
         :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --success: #10b981; --error: #ef4444; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin:0; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; text-align:center; min-height: 100vh; overflow: hidden; }
-        .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; }
+        * { box-sizing: border-box; }
+        body { margin:0; background: var(--bg); color: var(--text); font-family: sans-serif; text-align:center; overflow: hidden; }
+        .screen { display:none; padding: 20px; flex-direction: column; align-items: center; height: 100vh; }
         .screen.active { display:flex; }
-        .card { background:var(--card); padding:20px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 450px; }
-        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; }
+        .card { background:var(--card); padding:20px; border-radius:15px; width: 100%; max-width: 400px; margin: 10px 0; border: 1px solid #334155; }
+        .btn { display:block; width: 100%; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; }
         .btn-blue { background:var(--primary); color:#000; }
         .btn-option { background: #334155; text-align: left; }
-        #ton-connect-btn { margin: 15px 0; min-height: 44px; }
-        .wallet-addr { font-size: 0.75rem; color: #94a3b8; margin-bottom: 5px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px; }
         .loader { border: 4px solid #334155; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .scroll-area { width: 100%; max-width: 450px; flex: 1; overflow-y: auto; margin-bottom: 20px; }
-        .leader-row { display:flex; justify-content:space-between; align-items: center; padding:12px; border-bottom:1px solid #334155; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen" class="screen active">
-        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Sistem Kontrol Ediliyor...</p></div>
+        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Yükleniyor...</p></div>
     </div>
 
     <div id="main-screen" class="screen">
         <div class="card" style="margin-top: 20px;">
-            <h2 id="u-name" style="margin:0">@Oyuncu</h2>
-            <div id="wallet-info" class="wallet-addr">Cüzdan Bağlanmadı</div>
+            <h2 id="u-name">@Oyuncu</h2>
             <div id="ton-connect-btn"></div>
-            <div id="status-box" style="margin-top:10px; font-weight: bold; color: var(--primary);"></div>
         </div>
-        <div id="action-area" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
+        <div id="action-area" style="width: 100%; max-width: 400px;"></div>
         <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
     </div>
 
     <div id="quiz-screen" class="screen">
-        <div id="quiz-timer" style="font-size: 2.5rem; color: var(--gold); font-weight: 800; margin: 20px 0;">15</div>
+        <div id="quiz-timer" style="font-size: 2rem; color: var(--gold); margin: 20px 0;">15</div>
         <div class="card"><h3 id="question-text">...</h3></div>
-        <div id="options-container" style="width: 100%; max-width: 450px;"></div>
+        <div id="options-container" style="width: 100%; max-width: 400px;"></div>
     </div>
 
     <script>
-        const APP_URL = 'https://skill-survive.vercel.app'; 
+        const APP_URL = 'https://skill-survive.vercel.app';
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
-        
         const userId = tg.initDataUnsafe?.user?.id || 123456;
         let user = null;
 
-        // TON Connect UI
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: APP_URL + '/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn'
@@ -68,56 +60,46 @@
             tg.ready(); tg.expand();
             
             try {
-                // HATA BURADAYDI: Sütun ismini dinamik kontrol ediyoruz
-                // Önce telegram_kimliği deniyoruz, hata verirse telegram_id deneyeceğiz.
-                let { data, error } = await _supabase.from('users').select('*').eq('telegram_kimliği', userId).maybeSingle();
+                // Sütun ismini hem 'telegram_kimliği' hem 'telegram_id' olarak esnek bıraktım
+                let { data, error } = await _supabase.from('users').select('*').or(`telegram_kimliği.eq.${userId},telegram_id.eq.${userId}`).maybeSingle();
                 
-                // Eğer telegram_kimliği yoksa (Hata mesajın bunu diyor), otomatik olarak telegram_id'ye düşüyoruz
-                if (error && error.message.includes("telegram_kimliği")) {
-                    console.log("telegram_kimliği bulunamadı, telegram_id deneniyor...");
-                    const retry = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
-                    data = retry.data;
-                    error = retry.error;
-                    window.ID_COL = "telegram_id"; // Kullanılacak sütun adını hafızaya al
-                } else {
-                    window.ID_COL = "telegram_kimliği";
-                }
-
                 if (error) throw error;
                 user = data;
 
                 if (!user) {
-                    const insertData = {};
-                    insertData[window.ID_COL] = userId;
-                    insertData["kullanıcı adı"] = tg.initDataUnsafe?.user?.username || "Oyuncu";
-                    insertData["bileti var"] = true;
-
-                    const { data: n, error: insErr } = await _supabase.from('users').insert([insertData]).select().single();
+                    const { data: n, error: insErr } = await _supabase.from('users').insert([{
+                        "telegram_kimliği": userId,
+                        "kullanıcı adı": tg.initDataUnsafe?.user?.username || "Oyuncu",
+                        "bileti var": true
+                    }]).select().single();
                     if (insErr) throw insErr;
                     user = n;
                 }
-                
                 renderMain();
-            } catch (e) { 
-                document.getElementById('load-msg').innerHTML = `<div style="color:var(--error); padding:20px;">
-                    <b>Bağlantı Sorunu!</b><br><small>${e.message}</small><br>
-                    <button class='btn btn-blue' style='margin-top:10px' onclick='location.reload()'>Tekrar Dene</button>
-                </div>`;
+            } catch (e) {
+                document.getElementById('load-msg').innerText = "Hata: " + e.message;
             }
         }
 
         function renderMain() {
-            document.getElementById('u-name').innerText = `@${user["kullanıcı adı"] || user["username"] || 'Oyuncu'}`;
+            document.getElementById('u-name').innerText = "@" + (user["kullanıcı adı"] || "Oyuncu");
             const actionArea = document.getElementById('action-area');
             const today = new Date().toISOString().split('T')[0];
 
             if (user["son_oynama_tarihi"] === today) {
-                document.getElementById('status-box').innerText = "✅ Bugün yarışma tamamlandı!";
+                actionArea.innerHTML = "<div class='card'>✅ Bugünlük tamam!</div>";
             } else {
-                document.getElementById('status-box').innerText = "🎫 Yarışma Biletin Hazır!";
-                actionArea.innerHTML = `<button class="btn btn-blue" onclick="alert('Sorular Yükleniyor...')">🚀 YARIŞMAYA GİR</button>`;
+                actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA GİR</button>`;
             }
             showScreen('main-screen');
+        }
+
+        async function startQuiz() {
+            showScreen('loading-screen');
+            const { data } = await _supabase.from('questions').select('*').limit(10);
+            // Soru mantığı buraya gelecek...
+            showScreen('quiz-screen');
+            document.getElementById('question-text').innerText = data[0].question;
         }
 
         function showScreen(id) {
