@@ -132,7 +132,7 @@
             const today = getSqlDate();
 
             if (user.last_played_date === today) {
-                actionArea.innerHTML = `<div class="card" style="color:var(--primary)">✅ Bugünün yarışı bitti! Yarın tekrar bekleriz.</div>`;
+                actionArea.innerHTML = `<div class="card" style="color:var(--primary)">✅ Bugünün yarışı bitti! Yarın saat 13:00'da tekrar bekleriz.</div>`;
             } else if (user.has_ticket) {
                 actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA BAŞLA</button>`;
             } else {
@@ -229,3 +229,4 @@
     </script>
 </body>
 </html>
+
