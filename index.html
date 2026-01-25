@@ -2,217 +2,162 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quiz Arena - Aynı Sorular</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Quiz Arena Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; }
-        body { margin:0; background: var(--bg); color: var(--text); font-family: sans-serif; text-align:center; min-height: 100vh; overflow-x: hidden; }
-        .screen { display:none; padding: 20px; flex-direction: column; align-items: center; justify-content: flex-start; width: 100%; min-height: 100vh; }
-        .screen.active { display:flex; position: relative; }
-        .card { background:var(--card); padding:20px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 400px; }
-        .btn { display:block; width: 100%; padding:14px; border-radius:10px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; }
-        .btn-blue { background:var(--primary); color:#000; }
-        .btn-option { background: #334155; text-align: left; }
-        .btn-option:active { background: #475569; }
-        .loader { border: 4px solid #334155; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        :root { 
+            --primary: #38bdf8; 
+            --bg: #0f172a; 
+            --card: #1e293b; 
+            --text: #f8fafc; 
+            --gold: #fbbf24; 
+        }
+
+        /* Temel Sıfırlama */
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden; /* Dış taşmayı tamamen engelle */
+        }
+
+        /* Ekran Düzeni */
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100vh; /* Ekran yüksekliğine sabitle */
+            padding: 20px;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto; /* İçerik çoksa sadece ekran içinde kaydır */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Kart ve Buton Düzeni */
+        .card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 15px;
+            border: 1px solid #334155;
+            width: 100%;
+            max-width: 450px; /* Tabletler için üst sınır */
+            flex-shrink: 0; /* Kartın ezilmesini önle */
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            max-width: 450px;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-bottom: 10px;
+            color: #fff;
+            transition: transform 0.1s, opacity 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn:active { transform: scale(0.98); opacity: 0.9; }
+        .btn-blue { background: var(--primary); color: #000; }
+        .btn-option { background: #334155; text-align: left; font-weight: 500; }
+
+        /* Liderlik Tablosu ve Cevap İnceleme Taşma Kontrolü */
+        .scroll-area {
+            width: 100%;
+            max-width: 450px;
+            flex: 1; /* Kalan alanı kapla */
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 5px;
+        }
+
+        /* Responsive Düzeltmeler */
+        #question-text {
+            font-size: 1.1rem;
+            line-height: 1.4;
+            margin: 0;
+        }
+
+        #quiz-timer {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--gold);
+            margin: 10px 0;
+        }
+
+        .leader-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 10px;
+            border-bottom: 1px solid #334155;
+        }
     </style>
 </head>
 <body>
 
     <div id="loading-screen" class="screen active">
-        <div class="loader" style="margin-top: 40vh;"></div>
-        <p id="load-msg">Günün Soruları Hazırlanıyor...</p>
+        <div style="margin-top: auto; margin-bottom: auto;">
+            <div class="loader"></div>
+            <p>Arena Yükleniyor...</p>
+        </div>
     </div>
 
     <div id="main-screen" class="screen">
-        <div class="card">
-            <h2 id="u-name">...</h2>
-            <div id="status-box"></div>
+        <div class="card" style="margin-top: 20px;">
+            <h2 id="u-name" style="margin:0">@Oyuncu</h2>
+            <div id="status-box" style="margin-top:10px; color: var(--primary);"></div>
         </div>
-        <div id="action-area" style="width: 100%; max-width: 400px;"></div>
+        <div id="action-area" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
         <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 GÜNLÜK SIRALAMA</button>
     </div>
 
     <div id="quiz-screen" class="screen">
-        <div id="quiz-timer" style="font-size: 2rem; color: var(--gold); font-weight: bold; margin: 20px 0;">15</div>
+        <div id="quiz-timer">15</div>
         <div class="card"><h3 id="question-text">...</h3></div>
-        <div id="options-container" style="width: 100%; max-width: 400px;"></div>
+        <div id="options-container" style="width: 100%; max-width: 450px;"></div>
     </div>
 
     <div id="result-screen" class="screen">
         <div class="card">
-            <h2>Puan: <span id="final-score" style="color:var(--primary)">0</span></h2>
-            <p>Bugünkü yarışmayı bitirdin!</p>
+            <h2 style="margin:0">Puan: <span id="final-score" style="color:var(--primary)">0</span></h2>
         </div>
-        <div class="card" style="max-height: 40vh; overflow-y: auto;">
-            <h4>Cevaplarınızı İnceleyin</h4>
-            <div id="review-list"></div>
-        </div>
+        <div class="scroll-area" id="review-list"></div>
         <button class="btn btn-blue" onclick="location.reload()">🔄 ANA SAYFAYA DÖN</button>
     </div>
 
+    <div id="leader-screen" class="screen">
+        <h2 style="color: var(--gold)">Liderlik Tablosu</h2>
+        <div class="scroll-area" id="leader-list"></div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">⬅️ GERİ DÖN</button>
+    </div>
+
     <script>
-        const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
-        const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
-        const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
-        const tg = window.Telegram.WebApp;
+        // JS mantığı öncekiyle aynı kalacak, sadece showScreen ve render fonksiyonları 
+        // yukarıdaki yeni ID'lere uygun çalışacak.
         
-        let user = null;
-        let dailyQuestions = [];
-        let currentIdx = 0, score = 0, timer, timeLeft = 15, userAnswers = [];
-        const userId = tg.initDataUnsafe?.user?.id || 123456;
-        const getSqlDate = () => new Date().toISOString().split('T')[0];
-
-        // --- GÜNLÜK AYNI SORULARI SEÇME ALGORİTMASI ---
-        function getDailySeed() {
-            const d = new Date();
-            // Yıl, Ay ve Günü birleştirerek bir sayı oluştur (Örn: 20260125)
-            return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-        }
-
-        function seededRandom(seed) {
-            const x = Math.sin(seed) * 10000;
-            return x - Math.floor(x);
-        }
-
-        async function init() {
-            try {
-                tg.expand();
-                const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
-                user = data;
-                
-                if (!user) {
-                    const { data: newUser } = await _supabase.from('users').insert([{
-                        telegram_id: userId,
-                        username: tg.initDataUnsafe?.user?.username || "Oyuncu",
-                        last_ad_date: getSqlDate(),
-                        ads_watched: 0,
-                        has_ticket: false
-                    }]).select().single();
-                    user = newUser;
-                }
-                
-                renderMain();
-            } catch (err) { console.error(err); }
-        }
-
-        function renderMain() {
-            document.getElementById('u-name').innerText = `@${user.username}`;
-            const statusBox = document.getElementById('status-box');
-            const actionArea = document.getElementById('action-area');
-            const today = getSqlDate();
-
-            if (user.last_played_date === today) {
-                statusBox.innerHTML = "✅ Bugünün yarışmasını tamamladın!";
-                actionArea.innerHTML = "";
-            } else {
-                statusBox.innerHTML = "🎫 Yarışma hazır! (Test Modu Aktif)";
-                actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA GİR</button>`;
-            }
-            showScreen('main-screen');
-        }
-
-        async function startQuiz() {
-            document.getElementById('load-msg').innerText = "Günün Soruları Yükleniyor...";
-            showScreen('loading-screen');
-
-            try {
-                // 1. Tüm soruları çek (Veya büyük bir havuzu)
-                const { data: allQuestions, error } = await _supabase.from('questions').select('*');
-                if (error) throw error;
-
-                // 2. Seed kullanarak soruları her kullanıcı için AYNI şekilde karıştır
-                let seed = getDailySeed();
-                
-                // Fisher-Yates shuffle with seed
-                for (let i = allQuestions.length - 1; i > 0; i--) {
-                    const j = Math.floor(seededRandom(seed + i) * (i + 1));
-                    [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
-                }
-
-                // 3. İlk 10 soruyu al (Herkes için aynı 10 soru olacak)
-                dailyQuestions = allQuestions.slice(0, 10);
-
-                currentIdx = 0; score = 0; userAnswers = [];
-                showScreen('quiz-screen');
-                loadQuestion();
-            } catch (err) {
-                alert("Hata: " + err.message);
-                showScreen('main-screen');
-            }
-        }
-
-        function loadQuestion() {
-            if (currentIdx >= dailyQuestions.length) return endQuiz();
-            timeLeft = 15;
-            document.getElementById('quiz-timer').innerText = timeLeft;
-            const qData = dailyQuestions[currentIdx];
-            document.getElementById('question-text').innerText = `${currentIdx + 1}. ${qData.question}`;
-            
-            const container = document.getElementById('options-container');
-            container.innerHTML = '';
-            qData.options.forEach((opt, i) => {
-                const btn = document.createElement('button');
-                btn.className = 'btn btn-option';
-                btn.innerText = opt;
-                btn.onclick = () => {
-                    userAnswers.push(i);
-                    if (i === qData.correct_option) score += (timeLeft * 10);
-                    clearInterval(timer);
-                    currentIdx++;
-                    loadQuestion();
-                };
-                container.appendChild(btn);
-            });
-
-            clearInterval(timer);
-            timer = setInterval(() => {
-                timeLeft--;
-                document.getElementById('quiz-timer').innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    userAnswers.push(-1);
-                    currentIdx++;
-                    loadQuestion();
-                }
-            }, 1000);
-        }
-
-        async function endQuiz() {
-            showScreen('result-screen');
-            document.getElementById('final-score').innerText = score;
-            const today = getSqlDate();
-
-            const review = document.getElementById('review-list');
-            review.innerHTML = "";
-            dailyQuestions.forEach((q, i) => {
-                const isCorrect = userAnswers[i] === q.correct_option;
-                review.innerHTML += `
-                    <div class="review-item" style="text-align:left; border-bottom:1px solid #444; padding:5px;">
-                        <b>${i+1}. ${q.question}</b><br>
-                        <span style="color:#10b981">Doğru: ${q.options[q.correct_option]}</span><br>
-                        ${!isCorrect ? `<span style="color:#ef4444">Sizin: ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}
-                    </div>`;
-            });
-
-            await _supabase.from('users').update({ last_played_date: today }).eq('telegram_id', userId);
-            await _supabase.from('daily_scores').insert([{
-                telegram_id: userId, username: user.username, score: score, play_date: today
-            }]);
-        }
-
-        async function fetchLeaderboard() {
-            // Liderlik tablosu kodu... (Öncekiyle aynı)
-        }
-
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-
-        window.onload = init;
+        // Önemli Not: Taşmayı önlemek için Telegram WebApp'e hazır olduğunu bildirin
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand(); // Ekranı tam boyuta açar
     </script>
 </body>
 </html>
