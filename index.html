@@ -9,23 +9,17 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; }
-        body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; overflow-x: hidden; }
-        #app { padding: 20px; max-width: 500px; margin: auto; text-align: center; }
-        
-        /* Ekranlar */
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; text-align: center; }
+        #app { padding: 20px; max-width: 500px; margin: auto; }
         .screen { display: none; }
         .active { display: block; }
-
-        /* Bilet ve Kartlar */
         .card { background: var(--card); padding: 25px; border-radius: 20px; border: 1px solid #334155; margin: 20px 0; }
-        .btn { display: block; width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        .btn { display: block; width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; }
         .btn-ad { background: #f59e0b; color: #000; }
         .btn-play { background: var(--accent); color: #000; }
-        .option { background: #334155; color: white; margin: 10px 0; text-align: left; }
-        
-        /* Zamanlayıcı ve Analiz */
+        .option { background: #334155; color: white; text-align: left; }
         #timer { font-size: 2.5rem; color: var(--accent); font-weight: 800; margin: 10px 0; }
-        .review-card { text-align: left; border-left: 4px solid #334155; padding-left: 15px; margin-bottom: 15px; }
+        .review-card { text-align: left; border-left: 4px solid #334155; padding-left: 15px; margin-bottom: 10px; font-size: 0.9rem; }
         .correct { color: #4ade80; }
         .wrong { color: #f87171; }
     </style>
@@ -33,51 +27,47 @@
 <body>
     <div id="app">
         <div id="loading" class="screen active">
-            <h3>Veriler Senkronize Ediliyor...</h3>
+            <h3 id="loader-text">Bağlantı Kuruluyor...</h3>
         </div>
 
         <div id="ticket-screen" class="screen">
             <h2>🎫 Günlük Yarışma</h2>
-            <p>Bugün henüz yarışmadın. Başlamak için 3 sponsor videosu izleyerek biletini al!</p>
             <div class="card">
                 <div id="ad-progress" style="font-size: 1.2rem; margin-bottom: 10px;">Reklam: 0 / 3</div>
                 <div id="ad-bar" style="height:10px; background:#334155; border-radius:5px; overflow:hidden;">
                     <div id="ad-fill" style="width:0%; height:100%; background:var(--accent); transition:0.3s;"></div>
                 </div>
             </div>
-            <button id="btn-ad" class="btn btn-ad" onclick="handleAd()">📺 VİDEO İZLE VE BİLET KAZAN</button>
+            <button id="btn-ad" class="btn btn-ad" onclick="handleAd()">📺 VİDEO İZLE</button>
             <button id="btn-start" class="btn btn-play" style="display:none;" onclick="startQuiz()">🚀 YARIŞMAYA BAŞLA</button>
         </div>
 
         <div id="quiz-screen" class="screen">
             <div id="timer">0.00s</div>
-            <div id="q-box" class="card" style="font-size: 1.2rem; min-height: 80px;"></div>
+            <div id="q-box" class="card"></div>
             <div id="options"></div>
         </div>
 
         <div id="result-screen" class="screen">
-            <h2 id="final-status">Sonuçlar</h2>
-            <div id="final-time" style="font-size: 2rem; margin-bottom: 20px;"></div>
+            <h2>Yarışma Bitti!</h2>
+            <div id="final-time" style="font-size: 2rem; color:var(--accent); margin-bottom: 20px;"></div>
             <div id="analysis"></div>
-            <button class="btn btn-play" onclick="location.reload()">🔄 ANA SAYFA</button>
+            <button class="btn btn-play" onclick="location.reload()">🔄 YENİDEN DENE</button>
         </div>
     </div>
 
     <script>
-        // --- AYARLAR ---
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
-        const AdController = window.Adsgram.init({ blockId: "int-2709" }); // Test ID
-        
+        const AdController = window.Adsgram.init({ blockId: "int-2709" });
+
         let userStats = { ads_watched: 0 };
-        let currentIdx = 0, startTime, timerInt, penalty = 0;
-        let userChoices = [];
-        const userId = tg.initDataUnsafe?.user?.id || 12345;
+        let currentIdx = 0, startTime, timerInt, penalty = 0, userChoices = [];
+        const userId = tg.initDataUnsafe?.user?.id || Math.floor(Math.random() * 9999);
         const today = new Date().toLocaleDateString('tr-TR');
 
-        // --- SORU HAVUZU (Örnek) ---
         const pool = [
             {q:"Hangi gezegen Güneş'e en yakındır?", a:["Venüs","Merkür","Mars"], c:1},
             {q:"Su kaç derecede kaynar?", a:["90","100","110"], c:1},
@@ -91,24 +81,35 @@
             {q:"Satrançta kaç adet piyon vardır?", a:["8","12","16"], c:2}
         ];
 
-        // --- MANTIK ---
         async function init() {
-            let { data } = await _supabase.from('user_tickets').select('*').eq('telegram_id', userId).single();
-            if (!data || data.last_date !== today) {
-                const entry = { telegram_id: userId, ads_watched: 0, last_date: today };
-                await _supabase.from('user_tickets').upsert(entry);
-                userStats.ads_watched = 0;
-            } else {
-                userStats = data;
+            try {
+                // Supabase'den veri çek
+                let { data, error } = await _supabase.from('user_tickets').select('*').eq('telegram_id', userId).maybeSingle();
+                
+                if (error) throw error;
+
+                if (!data || data.last_date !== today) {
+                    // Veri yoksa veya gün yeniyse sıfırla/oluştur
+                    const { data: upsertedData, error: uError } = await _supabase.from('user_tickets')
+                        .upsert({ telegram_id: userId, ads_watched: 0, last_date: today }, { onConflict: 'telegram_id' })
+                        .select().single();
+                    if (uError) throw uError;
+                    userStats = upsertedData;
+                } else {
+                    userStats = data;
+                }
+                
+                showScreen('ticket-screen');
+                updateAdUI();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loader-text').innerHTML = `Hata: ${err.message}<br><br>Supabase'de <b>user_tickets</b> tablosu kurulu mu?`;
             }
-            showScreen(userStats.ads_watched >= 3 ? 'ticket-screen' : 'ticket-screen');
-            updateAdUI();
         }
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            if(id === 'loading') document.getElementById('loading').classList.add('active');
         }
 
         async function handleAd() {
@@ -122,8 +123,6 @@
         }
 
         function updateAdUI() {
-            document.getElementById('loading').classList.remove('active');
-            document.getElementById('ticket-screen').classList.add('active');
             const count = userStats.ads_watched;
             document.getElementById('ad-progress').innerText = `Reklam: ${count} / 3`;
             document.getElementById('ad-fill').style.width = `${(count/3)*100}%`;
@@ -144,7 +143,7 @@
         }
 
         function renderQuestion() {
-            if (currentIdx >= 10) return endQuiz();
+            if (currentIdx >= pool.length) return endQuiz();
             const q = pool[currentIdx];
             document.getElementById('q-box').innerText = `${currentIdx+1}. ${q.q}`;
             const optDiv = document.getElementById('options');
@@ -169,7 +168,7 @@
             showScreen('result-screen');
             document.getElementById('final-time').innerText = total + "s";
             
-            let html = "<h3>Analiz Ekranı</h3>";
+            let html = "<h3 style='margin-top:20px'>Detaylı Karne</h3>";
             pool.forEach((q, i) => {
                 const correct = userChoices[i] === q.c;
                 html += `
@@ -180,14 +179,15 @@
                 </div>`;
             });
             document.getElementById('analysis').innerHTML = html;
-            saveFinal(total);
+            saveScore(total);
         }
 
-        async function saveFinal(score) {
-            await _supabase.from('leaderboard').insert([{ 
-                telegram_id: userId, 
-                username: tg.initDataUnsafe?.user?.first_name || "Oyuncu", 
-                score: parseFloat(score) 
+        async function saveScore(s) {
+            const u = tg.initDataUnsafe?.user;
+            await _supabase.from('leaderboard').insert([{
+                telegram_id: userId,
+                username: u?.first_name || "Oyuncu",
+                score: parseFloat(s)
             }]);
         }
 
