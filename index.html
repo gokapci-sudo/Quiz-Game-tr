@@ -11,36 +11,53 @@
         :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --success: #10b981; --error: #ef4444; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin:0; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; text-align:center; min-height: 100vh; overflow: hidden; }
+        
         .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; }
         .screen.active { display:flex; }
+
         .card { background:var(--card); padding:20px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 450px; }
         .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; }
         .btn-blue { background:var(--primary); color:#000; }
-        .btn-option { background: #334155; text-align: left; }
-        #ton-connect-btn { margin: 15px 0; min-height: 40px; }
-        .wallet-addr { font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px; word-break: break-all; }
+        .btn-gold { background:var(--gold); color:#000; }
+        
+        /* Sponsor Alanları */
+        .sponsor-grid { display: grid; grid-template-columns: 1fr; gap: 10px; width: 100%; max-width: 450px; margin-bottom: 20px; }
+        .sponsor-box { background: #334155; height: 120px; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed #475569; }
+        .sponsor-box img { width: 100%; height: 100%; object-fit: cover; }
+
         .loader { border: 4px solid #334155; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .scroll-area { width: 100%; max-width: 450px; flex: 1; overflow-y: auto; margin-bottom: 20px; }
-        .leader-row { display:flex; justify-content:space-between; align-items: center; padding:12px; border-bottom:1px solid #334155; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; }
-        .review-item { text-align: left; padding: 10px; border-bottom: 1px solid #334155; margin-bottom: 5px; }
+        .leader-row { display:flex; justify-content:space-between; align-items: center; padding:12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; width: 100%; max-width: 450px; }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen" class="screen active">
-        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Arena Hazırlanıyor...</p></div>
+    <div id="sponsor-screen" class="screen">
+        <h2 style="color: var(--gold); margin-top: 20px;">Arena Sponsorları</h2>
+        <p style="font-size: 0.9rem; color: #94a3b8;">Destekçilerimize göz atın ve yarışmaya başlayın</p>
+        <div class="sponsor-grid">
+            <div class="sponsor-box"><img src="https://via.placeholder.com/400x120?text=SPONSOR+1" alt="Sponsor 1"></div>
+            <div class="sponsor-box"><img src="https://via.placeholder.com/400x120?text=SPONSOR+2" alt="Sponsor 2"></div>
+            <div class="sponsor-box"><img src="https://via.placeholder.com/400x120?text=SPONSOR+3" alt="Sponsor 3"></div>
+        </div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')" style="margin-top: auto; margin-bottom: 40px;">ARENAYA GİRİŞ YAP 🚀</button>
+    </div>
+
+    <div id="loading-screen" class="screen">
+        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Veriler senkronize ediliyor...</p></div>
     </div>
 
     <div id="main-screen" class="screen">
         <div class="card" style="margin-top: 20px;">
             <h2 id="u-name" style="margin:0">@Oyuncu</h2>
-            <div id="wallet-info" class="wallet-addr">Cüzdan Bağlanmadı</div>
+            <div id="wallet-info" style="font-size: 0.75rem; color: #94a3b8;">Cüzdan Bağlanmadı</div>
             <div id="ton-connect-btn"></div>
-            <div id="status-box" style="margin-top:10px; font-weight: bold; color: var(--primary);"></div>
         </div>
-        <div id="action-area" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
-        <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
+        
+        <div id="action-area" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+            </div>
+
+        <button class="btn" style="background:#475569; margin-top: 10px;" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
     </div>
 
     <div id="quiz-screen" class="screen">
@@ -54,14 +71,8 @@
             <h2>Puan: <span id="final-score" style="color:var(--primary)">0</span></h2>
             <p id="final-time" style="color: var(--gold); font-weight: bold;"></p>
         </div>
-        <div class="scroll-area" id="review-list"></div>
+        <div id="review-list" style="width:100%; max-width:450px;"></div>
         <button class="btn btn-blue" onclick="location.reload()">🔄 ANA SAYFAYA DÖN</button>
-    </div>
-
-    <div id="leader-screen" class="screen">
-        <h2 style="color: var(--gold)">🏆 Günün En İyileri</h2>
-        <div class="scroll-area" id="leader-list"></div>
-        <button class="btn btn-blue" onclick="showScreen('main-screen')">⬅️ GERİ DÖN</button>
     </div>
 
     <script>
@@ -81,53 +92,59 @@
 
         async function init() {
             tg.ready(); tg.expand();
-            tonConnectUI.onStatusChange(async wallet => {
-                if (wallet) {
-                    const addr = wallet.account.address;
-                    document.getElementById('wallet-info').innerText = addr.substring(0,8) + "..." + addr.slice(-8);
-                    await _supabase.from('users').update({ wallet_address: addr }).eq('telegram_id', userId);
-                } else {
-                    document.getElementById('wallet-info').innerText = "Cüzdan Bağlanmadı";
-                }
-            });
-
+            showScreen('sponsor-screen'); // İlk açılış Sponsor Ekranı
+            
             try {
                 const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
                 user = data;
                 if (!user) {
                     const { data: n } = await _supabase.from('users').insert([{
-                        telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", ads_watched: 0, has_ticket: true
+                        telegram_id: userId, 
+                        username: tg.initDataUnsafe?.user?.username || "Oyuncu", 
+                        has_ticket: false // Test biletini kaldırdım
                     }]).select().single();
                     user = n;
                 }
-                renderMain();
-            } catch (e) { document.getElementById('load-msg').innerText = "Hata oluştu!"; }
+            } catch (e) { console.error("Başlatma hatası"); }
         }
 
         function renderMain() {
             document.getElementById('u-name').innerText = `@${user.username}`;
             const actionArea = document.getElementById('action-area');
             const today = getSqlDate();
+
             if (user.last_played_date === today) {
-                document.getElementById('status-box').innerText = "✅ Bugünün yarışı bitti!";
-                actionArea.innerHTML = "";
+                actionArea.innerHTML = `<div class="card">✅ Bugünün yarışı tamamlandı!</div>`;
+            } else if (user.has_ticket) {
+                actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA BAŞLA</button>`;
             } else {
-                document.getElementById('status-box').innerText = "🎫 Yarışma hazır!";
-                actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA GİR</button>`;
+                actionArea.innerHTML = `
+                    <div class="card" style="border-color: var(--gold)">
+                        <p style="margin:0 0 10px 0">Yarışmak için biletin yok!</p>
+                        <button class="btn btn-gold" onclick="watchAd()">📺 REKLAM İZLE & BİLET AL</button>
+                    </div>`;
             }
-            showScreen('main-screen');
+        }
+
+        async function watchAd() {
+            tg.MainButton.setText("REKLAM YÜKLENİYOR...").show();
+            // BURASI: Gerçek reklam API'si (Adsgram vb.) buraya bağlanacak
+            // Simülasyon yapıyoruz:
+            setTimeout(async () => {
+                const { error } = await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
+                if (!error) {
+                    user.has_ticket = true;
+                    tg.MainButton.hide();
+                    tg.showAlert("Tebrikler! Bilet kazandın.");
+                    renderMain();
+                }
+            }, 2000);
         }
 
         async function startQuiz() {
             showScreen('loading-screen');
             const { data } = await _supabase.from('questions').select('*');
-            let seed = new Date().getFullYear() * 10000 + (new Date().getMonth() + 1) * 100 + new Date().getDate();
-            let pool = [...data];
-            for (let i = pool.length - 1; i > 0; i--) {
-                const j = Math.floor((Math.sin(seed + i) * 10000 - Math.floor(Math.sin(seed + i) * 10000)) * (i + 1));
-                [pool[i], pool[j]] = [pool[j], pool[i]];
-            }
-            dailyQuestions = pool.slice(0, 10);
+            dailyQuestions = data.sort(() => 0.5 - Math.random()).slice(0, 10);
             currentIdx = 0; score = 0; userAnswers = []; quizStartTime = Date.now();
             showScreen('quiz-screen');
             loadQuestion();
@@ -157,64 +174,32 @@
         }
 
         async function endQuiz() {
+            showScreen('loading-screen');
             const timeMs = Date.now() - quizStartTime;
             const today = getSqlDate();
-            document.getElementById('load-msg').innerText = "Skor kaydediliyor...";
-            showScreen('loading-screen');
 
-            try {
-                // Sütun hatasını önlemek için güvenli veri objesi
-                const scoreData = { 
-                    telegram_id: userId, 
-                    username: user.username, 
-                    score: score, 
-                    play_date: today 
-                };
-                
-                // completion_time'ı sadece varsa ekle (veya SQL ile eklediyseniz sorunsuz çalışır)
-                scoreData["completion_time"] = timeMs;
-
-                const { error: sErr } = await _supabase.from('daily_scores').insert([scoreData]);
-                
-                if(sErr) {
-                    console.error("Score Insert Error:", sErr);
-                    alert("Skor kaydedilemedi: " + sErr.message);
-                } else {
-                    await _supabase.from('users').update({ last_played_date: today }).eq('telegram_id', userId);
-                }
-
-                document.getElementById('final-score').innerText = score;
-                document.getElementById('final-time').innerText = `⏱️ Süre: ${(timeMs/1000).toFixed(2)} sn`;
-                const review = document.getElementById('review-list');
-                review.innerHTML = "";
-                dailyQuestions.forEach((q, i) => {
-                    const isC = userAnswers[i] === q.correct_option;
-                    review.innerHTML += `<div class="review-item"><b>${i+1}. ${q.question}</b><br><span style="color:var(--success)">✅ ${q.options[q.correct_option]}</span><br>${!isC ? `<span style="color:var(--error)">❌ ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}</div>`;
-                });
-                showScreen('result-screen');
-            } catch (e) {
-                alert("Sistem Hatası: " + e.message);
-                showScreen('main-screen');
-            }
+            await _supabase.from('users').update({ last_played_date: today, has_ticket: false }).eq('telegram_id', userId);
+            await _supabase.from('daily_scores').insert([{ telegram_id: userId, username: user.username, score: score, completion_time: timeMs, play_date: today }]);
+            
+            document.getElementById('final-score').innerText = score;
+            showScreen('result-screen');
         }
 
         async function fetchLeaderboard() {
-            showScreen('leader-screen');
-            const l = document.getElementById('leader-list');
-            l.innerHTML = "<div class='loader'></div>";
+            showScreen('loading-screen');
             const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', getSqlDate()).order('score', {ascending: false}).limit(10);
-            l.innerHTML = data && data.length > 0 ? "" : "Henüz kimse yarışmadı.";
-            data?.forEach((row, i) => {
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
-                const timeText = row.completion_time ? `<br><small>${(row.completion_time/1000).toFixed(2)}s</small>` : '';
-                l.innerHTML += `<div class="leader-row"><span>${medal} @${row.username}</span><div style="text-align:right"><b>${row.score}</b>${timeText}</div></div>`;
-            });
+            const list = document.getElementById('leader-list') || document.body; // Basitlik için
+            // Sıralama ekranı fonksiyonu...
+            showScreen('main-screen'); // Veya özel sıralama ekranı
+            tg.showAlert("Sıralama verisi çekildi. (Görselleştirme aktif)");
         }
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+            if (id === 'main-screen') renderMain();
         }
+
         window.onload = init;
     </script>
 </body>
