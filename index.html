@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Quiz Arena: YouTube Görevleri</title>
+    <title>Quiz Arena: Gelir Odaklı Final</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
@@ -14,25 +14,33 @@
         .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; position: fixed; top:0; left:0; right: 0; }
         .screen.active { display:flex; }
         .card { background:var(--card); padding:15px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 450px; }
-        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; text-decoration: none; transition: 0.3s; }
+        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; text-decoration: none; }
         .btn-blue { background:var(--primary); color:#000; }
-        .btn-yt { background: var(--yt); color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .btn-disabled { background: #475569 !important; opacity: 0.5; cursor: not-allowed; }
-        .btn-success { background: #10b981; color: #fff; }
-        
+        .btn-yt { background: var(--yt); color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
+        .btn-success { background: #10b981; }
+        .btn-disabled { background: #475569; opacity: 0.5; cursor: not-allowed; }
         #ton-connect-btn { display: flex; justify-content: center; margin: 10px 0; width: 100%; }
-        
         .prize-table { background: rgba(56, 189, 248, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 10px; margin-bottom: 10px; width: 100%; max-width: 450px; }
-        .prize-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }
-        .task-status { font-size: 0.8rem; margin-top: 5px; color: var(--gold); }
-        .scroll-area { width: 100%; max-width: 450px; flex: 1; overflow-y: auto; margin-bottom: 20px; }
+        .prize-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; }
+        .sponsor-box { background: #1e293b; height: 70px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #334155; overflow: hidden; display:block; }
+        .sponsor-box img { width: 100%; height: 100%; object-fit: cover; }
         .leader-row { display:flex; justify-content:space-between; align-items: center; padding:12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; }
     </style>
 </head>
 <body>
 
-    <div id="main-screen" class="screen active">
-        <div class="card" style="margin-top: 10px;">
+    <div id="sponsor-screen" class="screen active">
+        <h2 style="color: var(--gold); margin-top: 10px;">ARENA SPONSORLARI</h2>
+        <div style="width:100%; max-width:450px; margin: 10px 0;">
+            <a href="https://t.me/SeninKanalin" class="sponsor-box"><img src="https://via.placeholder.com/400x80?text=SPONSOR+1"></a>
+            <a href="https://t.me/SeninKanalin" class="sponsor-box"><img src="https://via.placeholder.com/400x80?text=SPONSOR+2"></a>
+            <a href="https://t.me/SeninKanalin" class="sponsor-box"><img src="https://via.placeholder.com/400x80?text=SPONSOR+3"></a>
+        </div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">ARENAYA GİR 🚀</button>
+    </div>
+
+    <div id="main-screen" class="screen">
+        <div class="card">
             <h2 id="u-name" style="margin:0">@Oyuncu</h2>
             <div id="ton-connect-btn"></div>
         </div>
@@ -41,24 +49,23 @@
 
         <div class="prize-table">
             <div style="font-weight: bold; color: var(--gold); margin-bottom: 5px;">🏆 GÜNÜN ÖDÜLÜ</div>
-            <div class="prize-row"><span>1. Oyuncu:</span> <span id="p1" style="color:var(--primary)">0.50 TON</span></div>
-            <div class="prize-row"><span>2. Oyuncu:</span> <span id="p2" style="color:var(--primary)">0.30 TON</span></div>
-            <div class="prize-row"><span>3. Oyuncu:</span> <span id="p3" style="color:var(--primary)">0.20 TON</span></div>
+            <div class="prize-row"><span>1. Oyuncu:</span> <span id="p1">0.50 TON</span></div>
+            <div class="prize-row"><span>2. Oyuncu:</span> <span id="p2">0.30 TON</span></div>
+            <div class="prize-row"><span>3. Oyuncu:</span> <span id="p3">0.20 TON</span></div>
         </div>
-
         <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
     </div>
 
     <div id="quiz-screen" class="screen">
         <div id="quiz-timer" style="font-size: 2.5rem; color: var(--gold); font-weight: 800; margin: 15px 0;">15</div>
-        <div class="card"><h3 id="question-text">...</h3></div>
-        <div id="options-container" style="width: 100%; max-width: 450px; display: flex; flex-direction: column;"></div>
+        <div class="card"><h3 id="question-text">Soru Yükleniyor...</h3></div>
+        <div id="options-container" style="width: 100%; max-width: 450px;"></div>
     </div>
 
     <div id="leader-screen" class="screen">
         <h2 style="color: var(--gold)">🏆 Günün En İyileri</h2>
-        <div class="scroll-area" id="leader-list"></div>
-        <button class="btn btn-blue" onclick="showScreen('main-screen')">⬅️ GERİ DÖN</button>
+        <div id="leader-list" style="width:100%; max-width:450px;"></div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')" style="margin-top:20px">⬅️ GERİ</button>
     </div>
 
     <script>
@@ -66,19 +73,18 @@
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
-        
+
         // --- 🎥 YOUTUBE AYARLARI ---
         const YT_VIDEOS = [
-            "https://www.youtube.com/watch?v=VIDEO_ID_1",
-            "https://www.youtube.com/watch?v=VIDEO_ID_2",
-            "https://www.youtube.com/watch?v=VIDEO_ID_3"
+            { url: "https://www.youtube.com/watch?v=1", duration: 30000 }, // 30 sn bekleme
+            { url: "https://www.youtube.com/watch?v=2", duration: 30000 },
+            { url: "https://www.youtube.com/watch?v=3", duration: 30000 }
         ];
-        let watchedCount = 0;
-        let v1_ok = false, v2_ok = false, v3_ok = false;
-        // ---------------------------
+        let vStatus = [false, false, false];
+        let vLoading = [false, false, false];
 
         const userId = tg.initDataUnsafe?.user?.id || 123456;
-        let user = null;
+        let user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15;
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://skill-survive.vercel.app/tonconnect-manifest.json',
@@ -92,24 +98,26 @@
             renderMain();
         }
 
-        function openVideo(index) {
-            tg.openLink(YT_VIDEOS[index]);
-            if(index === 0) v1_ok = true;
-            if(index === 1) v2_ok = true;
-            if(index === 2) v3_ok = true;
-            renderMain(); // Buton durumlarını güncelle
+        function openVideo(i) {
+            if(vStatus[i] || vLoading[i]) return;
+            tg.openLink(YT_VIDEOS[i].url);
+            vLoading[i] = true;
+            renderMain();
+            
+            // Gerçekten izlenmesi için gereken süre simülasyonu
+            setTimeout(() => {
+                vStatus[i] = true;
+                vLoading[i] = false;
+                renderMain();
+            }, YT_VIDEOS[i].duration);
         }
 
         async function claimTicket() {
-            if(v1_ok && v2_ok && v3_ok) {
-                const { error } = await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
-                if(!error) {
-                    user.has_ticket = true;
-                    tg.showAlert("Tebrikler! 3 videoyu da ziyaret ettiniz. Biletiniz tanımlandı.");
-                    renderMain();
-                }
-            } else {
-                tg.showAlert("Lütfen bilet kazanmak için 3 videoyu da sonuna kadar izleyin!");
+            if(vStatus.every(v => v)) {
+                await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
+                user.has_ticket = true;
+                renderMain();
+                tg.showAlert("3 Video başarıyla tamamlandı! Biletiniz aktif.");
             }
         }
 
@@ -117,65 +125,64 @@
             document.getElementById('u-name').innerText = `@${user.username}`;
             const actionArea = document.getElementById('action-area');
             const today = new Date().toISOString().split('T')[0];
-            
+
             if (user.last_played_date === today) {
-                actionArea.innerHTML = `<div class="card" style="color:var(--primary)">✅ Bugünün yarışı bitti. Yarın bekliyoruz!</div>`;
+                actionArea.innerHTML = `<div class="card" style="color:var(--primary)">✅ Bugünün yarışı bitti.</div>`;
             } else if (user.has_ticket) {
                 actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA BAŞLA</button>`;
             } else {
                 actionArea.innerHTML = `
-                    <div class="card">
-                        <p style="margin:0 0 15px 0; font-weight:bold;">🎫 Bilet Kazanma Görevi</p>
-                        
-                        <button class="btn btn-yt ${v1_ok ? 'btn-success' : ''}" onclick="openVideo(0)">
-                            ${v1_ok ? '✅ 1. Video Tamam' : '🎬 1. Videoyu İzle'}
+                <div class="card">
+                    <p style="margin:0 0 10px 0; font-weight:bold;">🎫 Bilet Görevi</p>
+                    ${vStatus.map((v, i) => `
+                        <button class="btn btn-yt ${v ? 'btn-success' : (vLoading[i] ? 'btn-disabled' : '')}" onclick="openVideo(${i})">
+                            ${v ? `✅ ${i+1}. Video İzlendi` : (vLoading[i] ? `⏳ İzleniyor (${YT_VIDEOS[i].duration/1000}sn)...` : `🎬 ${i+1}. Videoyu İzle`)}
                         </button>
-                        
-                        <button class="btn btn-yt ${v2_ok ? 'btn-success' : ''}" onclick="openVideo(1)">
-                            ${v2_ok ? '✅ 2. Video Tamam' : '🎬 2. Videoyu İzle'}
-                        </button>
-                        
-                        <button class="btn btn-yt ${v3_ok ? 'btn-success' : ''}" onclick="openVideo(2)">
-                            ${v3_ok ? '✅ 3. Video Tamam' : '🎬 3. Videoyu İzle'}
-                        </button>
-
-                        <div style="font-size: 0.75rem; color: #94a3b8; margin: 10px 0;">
-                            ⚠️ <b>Bilet kazanmak için 3 videoyu da sonuna kadar izleyin.</b>
-                        </div>
-
-                        <button class="btn ${ (v1_ok && v2_ok && v3_ok) ? 'btn-blue' : 'btn-disabled' }" onclick="claimTicket()">
-                            🎁 BİLETİMİ ONAYLA
-                        </button>
-                    </div>`;
+                    `).join('')}
+                    <p style="font-size:0.65rem; color:#94a3b8; margin:10px 0;">Bilet kazanmak için 3 videoyu da sonuna kadar izleyin.</p>
+                    <button class="btn ${vStatus.every(v => v) ? 'btn-blue' : 'btn-disabled'}" onclick="claimTicket()">BİLETİ ONAYLA</button>
+                </div>`;
             }
         }
 
-        // Quiz Başlatma, Sıralama vb. fonksiyonlar aynı kalacak şekilde devam ediyor...
         async function startQuiz() {
             const { data } = await _supabase.from('questions').select('*');
+            if(!data || data.length === 0) return tg.showAlert("Sorular yüklenemedi!");
             dailyQuestions = data.sort(() => 0.5 - Math.random()).slice(0, 10);
+            currentIdx = 0; score = 0;
             showScreen('quiz-screen');
             loadQuestion();
         }
 
         function loadQuestion() {
-            if (currentIdx >= 10) return endQuiz();
+            if (currentIdx >= dailyQuestions.length) return endQuiz();
+            timeLeft = 15; document.getElementById('quiz-timer').innerText = timeLeft;
             const q = dailyQuestions[currentIdx];
-            document.getElementById('question-text').innerText = q.question;
+            document.getElementById('question-text').innerText = `${currentIdx + 1}. ${q.question}`;
             const container = document.getElementById('options-container');
             container.innerHTML = '';
             q.options.forEach((opt, i) => {
                 const b = document.createElement('button');
                 b.className = 'btn btn-option';
                 b.innerText = opt;
-                b.onclick = () => { currentIdx++; loadQuestion(); };
+                b.onclick = () => {
+                    if(i === q.correct_option) score += timeLeft * 10;
+                    clearInterval(timer); currentIdx++; loadQuestion();
+                };
                 container.appendChild(b);
             });
+            clearInterval(timer);
+            timer = setInterval(() => {
+                timeLeft--; document.getElementById('quiz-timer').innerText = timeLeft;
+                if(timeLeft <= 0) { clearInterval(timer); currentIdx++; loadQuestion(); }
+            }, 1000);
         }
 
         async function endQuiz() {
             const today = new Date().toISOString().split('T')[0];
+            await _supabase.from('daily_scores').insert([{ telegram_id: userId, username: user.username, score: score, play_date: today }]);
             await _supabase.from('users').update({ last_played_date: today, has_ticket: false }).eq('telegram_id', userId);
+            tg.showAlert(`Yarışma Bitti! Puanın: ${score}`);
             location.reload();
         }
 
@@ -183,7 +190,7 @@
             const today = new Date().toISOString().split('T')[0];
             const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false}).limit(10);
             const l = document.getElementById('leader-list');
-            l.innerHTML = "";
+            l.innerHTML = data && data.length > 0 ? "" : "Henüz kimse yarışmadı.";
             data?.forEach((row, i) => {
                 l.innerHTML += `<div class="leader-row"><span>#${i+1} @${row.username}</span><b>${row.score}</b></div>`;
             });
