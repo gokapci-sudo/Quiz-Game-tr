@@ -28,6 +28,7 @@
         
         .scroll-area { width: 100%; max-width: 450px; flex: 1; overflow-y: auto; margin-bottom: 20px; }
         .leader-row { display:flex; justify-content:space-between; align-items: center; padding:12px; border-bottom:1px solid #334155; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; }
+        .review-item { text-align: left; padding: 10px; border-bottom: 1px solid #334155; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -78,7 +79,6 @@
         const userId = tg.initDataUnsafe?.user?.id || 123456;
         let user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, userAnswers = [], quizStartTime = 0;
 
-        // TON Connect UI setup - BURADAKİ URL GÜNCELLENDİ
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://skill-survive.vercel.app/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn'
@@ -166,19 +166,40 @@
         async function endQuiz() {
             const timeMs = Date.now() - quizStartTime;
             const today = getSqlDate();
-            showScreen('result-screen');
-            document.getElementById('final-score').innerText = score;
-            document.getElementById('final-time').innerText = `⏱️ Süre: ${(timeMs/1000).toFixed(2)} sn`;
             
-            const review = document.getElementById('review-list');
-            review.innerHTML = "";
-            dailyQuestions.forEach((q, i) => {
-                const isC = userAnswers[i] === q.correct_option;
-                review.innerHTML += `<div class="review-item"><b>${i+1}. ${q.question}</b><br><span style="color:var(--success)">✅ ${q.options[q.correct_option]}</span><br>${!isC ? `<span style="color:var(--error)">❌ ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}</div>`;
-            });
+            document.getElementById('load-msg').innerText = "Skor kaydediliyor...";
+            showScreen('loading-screen');
 
-            await _supabase.from('users').update({ last_played_date: today }).eq('telegram_id', userId);
-            await _supabase.from('daily_scores').insert([{ telegram_id: userId, username: user.username, score: score, completion_time: timeMs, play_date: today }]);
+            try {
+                // 1. Kullanıcıyı güncelle
+                const { error: uErr } = await _supabase.from('users').update({ last_played_date: today }).eq('telegram_id', userId);
+                if(uErr) console.error("User Update Error:", uErr);
+
+                // 2. Skoru kaydet
+                const { error: sErr } = await _supabase.from('daily_scores').insert([{ 
+                    telegram_id: userId, 
+                    username: user.username, 
+                    score: score, 
+                    completion_time: timeMs, 
+                    play_date: today 
+                }]);
+                if(sErr) alert("Skor kaydedilemedi: " + sErr.message);
+
+                // Ekranı hazırla
+                document.getElementById('final-score').innerText = score;
+                document.getElementById('final-time').innerText = `⏱️ Süre: ${(timeMs/1000).toFixed(2)} sn`;
+                const review = document.getElementById('review-list');
+                review.innerHTML = "";
+                dailyQuestions.forEach((q, i) => {
+                    const isC = userAnswers[i] === q.correct_option;
+                    review.innerHTML += `<div class="review-item"><b>${i+1}. ${q.question}</b><br><span style="color:var(--success)">✅ ${q.options[q.correct_option]}</span><br>${!isC ? `<span style="color:var(--error)">❌ ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}</div>`;
+                });
+                
+                showScreen('result-screen');
+            } catch (e) {
+                alert("Sistem Hatası: " + e.message);
+                showScreen('main-screen');
+            }
         }
 
         async function fetchLeaderboard() {
