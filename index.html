@@ -11,21 +11,16 @@
         :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --success: #10b981; --error: #ef4444; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin:0; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; text-align:center; min-height: 100vh; overflow: hidden; }
-        
         .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; }
         .screen.active { display:flex; }
-
         .card { background:var(--card); padding:20px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 450px; }
         .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; }
         .btn-blue { background:var(--primary); color:#000; }
         .btn-option { background: #334155; text-align: left; }
-
-        #ton-connect-btn { margin: 15px 0; min-height: 40px; }
-        .wallet-addr { font-size: 0.75rem; color: #94a3b8; margin-bottom: 10px; word-break: break-all; }
-        
+        #ton-connect-btn { margin: 15px 0; min-height: 44px; }
+        .wallet-addr { font-size: 0.75rem; color: #94a3b8; margin-bottom: 5px; word-break: break-all; }
         .loader { border: 4px solid #334155; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
         .scroll-area { width: 100%; max-width: 450px; flex: 1; overflow-y: auto; margin-bottom: 20px; }
         .leader-row { display:flex; justify-content:space-between; align-items: center; padding:12px; border-bottom:1px solid #334155; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; }
     </style>
@@ -33,7 +28,7 @@
 <body>
 
     <div id="loading-screen" class="screen active">
-        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Arena Hazırlanıyor...</p></div>
+        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Veriler Yükleniyor...</p></div>
     </div>
 
     <div id="main-screen" class="screen">
@@ -78,7 +73,6 @@
         const userId = tg.initDataUnsafe?.user?.id || 123456;
         let user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, userAnswers = [], quizStartTime = 0;
 
-        // TON Connect UI setup
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://gokapci-sudo.vercel.app/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn'
@@ -91,35 +85,45 @@
                 if (wallet) {
                     const addr = wallet.account.address;
                     document.getElementById('wallet-info').innerText = addr.substring(0,8) + "..." + addr.slice(-8);
-                    await _supabase.from('users').update({ wallet_address: addr }).eq('telegram_id', userId);
-                } else {
-                    document.getElementById('wallet-info').innerText = "Cüzdan Bağlanmadı";
+                    // Tablo sütun ismi: cüzdan_adresi
+                    await _supabase.from('users').update({ "cüzdan_adresi": addr }).eq('telegram_kimliği', userId);
                 }
             });
 
             try {
-                const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
+                // Tablo sütun ismi: telegram_kimliği
+                const { data, error } = await _supabase.from('users').select('*').eq('telegram_kimliği', userId).maybeSingle();
                 user = data;
+                
                 if (!user) {
                     const { data: n } = await _supabase.from('users').insert([{
-                        telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", ads_watched: 0, has_ticket: true
+                        "telegram_kimliği": userId, 
+                        "kullanıcı adı": tg.initDataUnsafe?.user?.username || "Oyuncu",
+                        "bileti var": true,
+                        "reklamları izledi": 0
                     }]).select().single();
                     user = n;
                 }
+                
+                if(user["cüzdan_adresi"]) {
+                    document.getElementById('wallet-info').innerText = user["cüzdan_adresi"].substring(0,8) + "..." + user["cüzdan_adresi"].slice(-8);
+                }
+                
                 renderMain();
-            } catch (e) { document.getElementById('load-msg').innerText = "Hata oluştu!"; }
+            } catch (e) { document.getElementById('load-msg').innerText = "Bağlantı Hatası!"; }
         }
 
         function renderMain() {
-            document.getElementById('u-name').innerText = `@${user.username}`;
+            document.getElementById('u-name').innerText = `@${user["kullanıcı adı"]}`;
             const actionArea = document.getElementById('action-area');
             const today = getSqlDate();
 
-            if (user.last_played_date === today) {
-                document.getElementById('status-box').innerText = "✅ Bugünün yarışı bitti!";
+            // Tablo sütun ismi: son_oynama_tarihi
+            if (user["son_oynama_tarihi"] === today) {
+                document.getElementById('status-box').innerText = "✅ Yarışma tamamlandı!";
                 actionArea.innerHTML = "";
             } else {
-                document.getElementById('status-box').innerText = "🎫 Yarışma hazır!";
+                document.getElementById('status-box').innerText = "🎫 Biletiniz aktif!";
                 actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA GİR</button>`;
             }
             showScreen('main-screen');
@@ -177,8 +181,17 @@
                 review.innerHTML += `<div class="review-item"><b>${i+1}. ${q.question}</b><br><span style="color:var(--success)">✅ ${q.options[q.correct_option]}</span><br>${!isC ? `<span style="color:var(--error)">❌ ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}</div>`;
             });
 
-            await _supabase.from('users').update({ last_played_date: today }).eq('telegram_id', userId);
-            await _supabase.from('daily_scores').insert([{ telegram_id: userId, username: user.username, score: score, completion_time: timeMs, play_date: today }]);
+            // Veritabanı güncelleme: son_oynama_tarihi ve bileti var
+            await _supabase.from('users').update({ "son_oynama_tarihi": today, "bileti var": false }).eq('telegram_kimliği', userId);
+            
+            // Skor kaydı (Bu tablonun sütunları İngilizce varsayılmıştır)
+            await _supabase.from('daily_scores').insert([{ 
+                telegram_id: userId, 
+                username: user["kullanıcı adı"], 
+                score: score, 
+                completion_time: timeMs, 
+                play_date: today 
+            }]);
         }
 
         async function fetchLeaderboard() {
