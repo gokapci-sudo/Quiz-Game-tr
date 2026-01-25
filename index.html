@@ -8,38 +8,34 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
-        :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --success: #10b981; --error: #ef4444; }
-        * { box-sizing: border-box; }
-        body { margin:0; background: var(--bg); color: var(--text); font-family: sans-serif; text-align:center; overflow: hidden; }
-        .screen { display:none; padding: 20px; flex-direction: column; align-items: center; height: 100vh; }
+        :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --error: #ef4444; }
+        body { margin:0; background: var(--bg); color: var(--text); font-family: sans-serif; text-align:center; }
+        .screen { display:none; padding: 20px; flex-direction: column; align-items: center; min-height: 100vh; }
         .screen.active { display:flex; }
-        .card { background:var(--card); padding:20px; border-radius:15px; width: 100%; max-width: 400px; margin: 10px 0; border: 1px solid #334155; }
-        .btn { display:block; width: 100%; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; }
+        .card { background:var(--card); padding:20px; border-radius:15px; width: 100%; max-width: 400px; border: 1px solid #334155; margin-top: 20px; }
+        .btn { display:block; width: 100%; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-top:10px; font-size: 1rem; color: #fff; }
         .btn-blue { background:var(--primary); color:#000; }
-        .btn-option { background: #334155; text-align: left; }
         .loader { border: 4px solid #334155; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #error-log { color: var(--error); font-size: 0.8rem; margin-top: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; display: none; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen" class="screen active">
-        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Yükleniyor...</p></div>
+        <div style="margin-top: 40vh;">
+            <div class="loader"></div>
+            <p id="load-msg">Veritabanı Sütunları Kontrol Ediliyor...</p>
+            <div id="error-log"></div>
+        </div>
     </div>
 
     <div id="main-screen" class="screen">
-        <div class="card" style="margin-top: 20px;">
+        <div class="card">
             <h2 id="u-name">@Oyuncu</h2>
             <div id="ton-connect-btn"></div>
         </div>
-        <div id="action-area" style="width: 100%; max-width: 400px;"></div>
-        <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
-    </div>
-
-    <div id="quiz-screen" class="screen">
-        <div id="quiz-timer" style="font-size: 2rem; color: var(--gold); margin: 20px 0;">15</div>
-        <div class="card"><h3 id="question-text">...</h3></div>
-        <div id="options-container" style="width: 100%; max-width: 400px;"></div>
+        <div id="action-area" style="width: 100%; max-width: 400px; margin-top: 20px;"></div>
     </div>
 
     <script>
@@ -49,7 +45,6 @@
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
         const userId = tg.initDataUnsafe?.user?.id || 123456;
-        let user = null;
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: APP_URL + '/tonconnect-manifest.json',
@@ -58,48 +53,52 @@
 
         async function init() {
             tg.ready(); tg.expand();
-            
+            const logBox = document.getElementById('error-log');
+
             try {
-                // Sütun ismini hem 'telegram_kimliği' hem 'telegram_id' olarak esnek bıraktım
-                let { data, error } = await _supabase.from('users').select('*').or(`telegram_kimliği.eq.${userId},telegram_id.eq.${userId}`).maybeSingle();
+                // Hangi sütun isminin var olduğunu anlamak için küçük bir test yapıyoruz
+                let colName = "telegram_kimliği";
+                
+                // Önce telegram_kimliği ile dene
+                let { error: testErr } = await _supabase.from('users').select('telegram_kimliği').limit(1).maybeSingle();
+                
+                if (testErr && testErr.message.includes("does not exist")) {
+                    // Eğer yoksa telegram_id dene
+                    colName = "telegram_id";
+                    let { error: testErr2 } = await _supabase.from('users').select('telegram_id').limit(1).maybeSingle();
+                    
+                    if (testErr2 && testErr2.message.includes("does not exist")) {
+                        throw new Error("Veritabanında ne 'telegram_kimliği' ne de 'telegram_id' sütunu bulundu. Lütfen Supabase'i kontrol edin.");
+                    }
+                }
+
+                // Doğru sütunla veriyi çek
+                const { data, error } = await _supabase.from('users').select('*').eq(colName, userId).maybeSingle();
                 
                 if (error) throw error;
-                user = data;
 
+                let user = data;
                 if (!user) {
-                    const { data: n, error: insErr } = await _supabase.from('users').insert([{
-                        "telegram_kimliği": userId,
-                        "kullanıcı adı": tg.initDataUnsafe?.user?.username || "Oyuncu",
-                        "bileti var": true
-                    }]).select().single();
+                    // Kullanıcı yoksa oluştur (Doğru sütun ismiyle)
+                    const newUserObj = {};
+                    newUserObj[colName] = userId;
+                    newUserObj["kullanıcı adı"] = tg.initDataUnsafe?.user?.username || "Oyuncu";
+                    newUserObj["bileti var"] = true;
+
+                    const { data: n, error: insErr } = await _supabase.from('users').insert([newUserObj]).select().single();
                     if (insErr) throw insErr;
                     user = n;
                 }
-                renderMain();
+
+                document.getElementById('u-name').innerText = "@" + (user["kullanıcı adı"] || "Oyuncu");
+                document.getElementById('action-area').innerHTML = `<button class="btn btn-blue">🚀 YARIŞMAYA BAŞLA</button>`;
+                showScreen('main-screen');
+
             } catch (e) {
-                document.getElementById('load-msg').innerText = "Hata: " + e.message;
+                logBox.innerText = "Detay: " + e.message;
+                logBox.style.display = "block";
+                document.getElementById('load-msg').innerText = "Bağlantı Kurulamadı!";
             }
-        }
-
-        function renderMain() {
-            document.getElementById('u-name').innerText = "@" + (user["kullanıcı adı"] || "Oyuncu");
-            const actionArea = document.getElementById('action-area');
-            const today = new Date().toISOString().split('T')[0];
-
-            if (user["son_oynama_tarihi"] === today) {
-                actionArea.innerHTML = "<div class='card'>✅ Bugünlük tamam!</div>";
-            } else {
-                actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA GİR</button>`;
-            }
-            showScreen('main-screen');
-        }
-
-        async function startQuiz() {
-            showScreen('loading-screen');
-            const { data } = await _supabase.from('questions').select('*').limit(10);
-            // Soru mantığı buraya gelecek...
-            showScreen('quiz-screen');
-            document.getElementById('question-text').innerText = data[0].question;
         }
 
         function showScreen(id) {
