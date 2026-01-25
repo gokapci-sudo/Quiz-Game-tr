@@ -17,7 +17,7 @@
         .btn { display: block; width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; }
         .btn-ad { background: #f59e0b; color: #000; }
         .btn-play { background: var(--accent); color: #000; }
-        .option { background: #334155; color: white; text-align: left; }
+        .option { background: #334155; color: white; text-align: left; margin-bottom: 10px; width: 100%; }
         #timer { font-size: 2.5rem; color: var(--accent); font-weight: 800; margin: 10px 0; }
         .review-card { text-align: left; border-left: 4px solid #334155; padding-left: 15px; margin-bottom: 10px; font-size: 0.9rem; }
         .correct { color: #4ade80; }
@@ -27,7 +27,7 @@
 <body>
     <div id="app">
         <div id="loading" class="screen active">
-            <h3 id="loader-text">Bağlantı Kuruluyor...</h3>
+            <h3 id="loader-text">Bilet Kontrol Ediliyor...</h3>
         </div>
 
         <div id="ticket-screen" class="screen">
@@ -65,7 +65,7 @@
 
         let userStats = { ads_watched: 0 };
         let currentIdx = 0, startTime, timerInt, penalty = 0, userChoices = [];
-        const userId = tg.initDataUnsafe?.user?.id || Math.floor(Math.random() * 9999);
+        const userId = tg.initDataUnsafe?.user?.id || 12345;
         const today = new Date().toLocaleDateString('tr-TR');
 
         const pool = [
@@ -73,63 +73,66 @@
             {q:"Su kaç derecede kaynar?", a:["90","100","110"], c:1},
             {q:"Türkiye'nin yüzölçümü en büyük ili?", a:["Ankara","İstanbul","Konya"], c:2},
             {q:"Hangisi bir programlama dilidir?", a:["Python","HTML","CSS"], c:0},
-            {q:"Kızıl Gezegen hangisidir?", a:["Mars","Jüpiter","Satürn"], c:0},
-            {q:"Atatürk kaç yılında doğdu?", a:["1880","1881","1938"], c:1},
-            {q:"Mona Lisa tablosu kimindir?", a:["Picasso","Da Vinci","Dali"], c:1},
-            {q:"İnsan vücudundaki en büyük organ?", a:["Kalp","Deri","Karaciğer"], c:1},
-            {q:"Hangi hayvan memelidir?", a:["Balina","Timsah","Yılan"], c:0},
-            {q:"Satrançta kaç adet piyon vardır?", a:["8","12","16"], c:2}
+            {q:"Kızıl Gezegen hangisidir?", a:["Mars","Jüpiter","Satürn"], c:0}
         ];
 
+        // --- ASIL DÜZELTME BURADA ---
         async function init() {
             try {
-                // Supabase'den veri çek
-                let { data, error } = await _supabase.from('user_tickets').select('*').eq('telegram_id', userId).maybeSingle();
-                
-                if (error) throw error;
+                // Supabase'den veri çekmeye çalış (3 saniye zaman aşımı)
+                const fetchPromise = _supabase.from('user_tickets').select('*').eq('telegram_id', userId).maybeSingle();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000));
+
+                let { data, error } = await Promise.race([fetchPromise, timeoutPromise]).catch(() => ({ data: null, error: null }));
 
                 if (!data || data.last_date !== today) {
-                    // Veri yoksa veya gün yeniyse sıfırla/oluştur
-                    const { data: upsertedData, error: uError } = await _supabase.from('user_tickets')
-                        .upsert({ telegram_id: userId, ads_watched: 0, last_date: today }, { onConflict: 'telegram_id' })
-                        .select().single();
-                    if (uError) throw uError;
-                    userStats = upsertedData;
+                    userStats = { telegram_id: userId, ads_watched: 0, last_date: today };
+                    // Arka planda güncelle (Arayüzü bekletme)
+                    _supabase.from('user_tickets').upsert(userStats).then();
                 } else {
                     userStats = data;
                 }
-                
-                showScreen('ticket-screen');
-                updateAdUI();
             } catch (err) {
-                console.error(err);
-                document.getElementById('loader-text').innerHTML = `Hata: ${err.message}<br><br>Supabase'de <b>user_tickets</b> tablosu kurulu mu?`;
+                console.log("Veritabanı atlanıyor, yerel mod aktif.");
+            } finally {
+                // Ne olursa olsun bilet ekranına geç
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('ticket-screen').classList.add('active');
+                updateAdUI();
             }
         }
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-
         async function handleAd() {
-            const res = await AdController.show();
-            if (res.done) {
-                userStats.ads_watched++;
-                await _supabase.from('user_tickets').update({ads_watched: userStats.ads_watched}).eq('telegram_id', userId);
-                updateAdUI();
-                tg.HapticFeedback.notificationOccurred('success');
+            try {
+                const res = await AdController.show();
+                if (res.done) {
+                    userStats.ads_watched++;
+                    updateAdUI();
+                    _supabase.from('user_tickets').upsert({
+                        telegram_id: userId, 
+                        ads_watched: userStats.ads_watched, 
+                        last_date: today 
+                    }).then();
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+            } catch (e) {
+                alert("Reklam şu an hazır değil.");
             }
         }
 
         function updateAdUI() {
             const count = userStats.ads_watched;
             document.getElementById('ad-progress').innerText = `Reklam: ${count} / 3`;
-            document.getElementById('ad-fill').style.width = `${(count/3)*100}%`;
+            document.getElementById('ad-fill').style.width = `${Math.min((count/3)*100, 100)}%`;
             if (count >= 3) {
                 document.getElementById('btn-ad').style.display = 'none';
                 document.getElementById('btn-start').style.display = 'block';
             }
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
         }
 
         function startQuiz() {
@@ -179,16 +182,12 @@
                 </div>`;
             });
             document.getElementById('analysis').innerHTML = html;
-            saveScore(total);
-        }
-
-        async function saveScore(s) {
-            const u = tg.initDataUnsafe?.user;
-            await _supabase.from('leaderboard').insert([{
+            
+            _supabase.from('leaderboard').insert([{
                 telegram_id: userId,
-                username: u?.first_name || "Oyuncu",
-                score: parseFloat(s)
-            }]);
+                username: tg.initDataUnsafe?.user?.first_name || "Oyuncu",
+                score: parseFloat(total)
+            }]).then();
         }
 
         window.onload = init;
