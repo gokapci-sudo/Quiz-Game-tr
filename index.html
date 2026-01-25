@@ -3,117 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quiz Master - Ticket System</title>
+    <title>Quiz Master Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/adsgram-ad-sdk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { margin: 0; background: #0f172a; color: white; font-family: sans-serif; text-align: center; }
-        #game-container { padding: 20px; max-width: 500px; margin: auto; }
-        .ticket-card { background: #1e293b; padding: 20px; border-radius: 20px; border: 2px dashed #38bdf8; margin: 20px 0; }
-        #ticket-count { font-size: 3rem; color: #38bdf8; display: block; }
-        .btn { 
-            display: block; width: 100%; padding: 15px; margin: 10px 0; 
-            border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer;
-        }
+        :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --text: #f8fafc; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; overflow-x: hidden; }
+        #app { padding: 20px; max-width: 500px; margin: auto; text-align: center; }
+        
+        /* Ekranlar */
+        .screen { display: none; }
+        .active { display: block; }
+
+        /* Bilet ve Kartlar */
+        .card { background: var(--card); padding: 25px; border-radius: 20px; border: 1px solid #334155; margin: 20px 0; }
+        .btn { display: block; width: 100%; padding: 16px; margin: 10px 0; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
         .btn-ad { background: #f59e0b; color: #000; }
-        .btn-play { background: #10b981; color: white; display: none; }
-        .btn-disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
-        #status-text { color: #94a3b8; font-size: 0.9rem; margin-top: 10px; }
-        /* Oyun stilleri */
-        .option { width: 100%; padding: 15px; margin: 8px 0; background: #334155; border: none; border-radius: 10px; color: white; }
+        .btn-play { background: var(--accent); color: #000; }
+        .option { background: #334155; color: white; margin: 10px 0; text-align: left; }
+        
+        /* Zamanlayıcı ve Analiz */
+        #timer { font-size: 2.5rem; color: var(--accent); font-weight: 800; margin: 10px 0; }
+        .review-card { text-align: left; border-left: 4px solid #334155; padding-left: 15px; margin-bottom: 15px; }
+        .correct { color: #4ade80; }
+        .wrong { color: #f87171; }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="setup-screen">
-            <h2>Giriş Bileti Gerekli</h2>
-            <p>Günün yarışmasına katılmak için 3 reklam izleyerek 1 bilet kazanmalısın.</p>
-            
-            <div class="ticket-card">
-                <span id="ticket-progress">Reklam: 0 / 3</span>
-                <span id="ticket-count">🎫</span>
-            </div>
-
-            <button id="ad-btn" class="btn btn-ad" onclick="showAd()">📺 REKLAM İZLE (%0)</button>
-            <button id="start-btn" class="btn btn-play" onclick="startGame()">🚀 YARIŞMAYA BAŞLA</button>
-            <div id="status-text">Bugün henüz bilet almadın.</div>
+    <div id="app">
+        <div id="loading" class="screen active">
+            <h3>Veriler Senkronize Ediliyor...</h3>
         </div>
 
-        <div id="quiz-screen" style="display:none;">
-            <div id="timer" style="font-size:1.5rem; color:#38bdf8;">0.00s</div>
-            <div id="question-box" style="margin:20px 0; font-size:1.2rem;"></div>
-            <div id="options-container"></div>
+        <div id="ticket-screen" class="screen">
+            <h2>🎫 Günlük Yarışma</h2>
+            <p>Bugün henüz yarışmadın. Başlamak için 3 sponsor videosu izleyerek biletini al!</p>
+            <div class="card">
+                <div id="ad-progress" style="font-size: 1.2rem; margin-bottom: 10px;">Reklam: 0 / 3</div>
+                <div id="ad-bar" style="height:10px; background:#334155; border-radius:5px; overflow:hidden;">
+                    <div id="ad-fill" style="width:0%; height:100%; background:var(--accent); transition:0.3s;"></div>
+                </div>
+            </div>
+            <button id="btn-ad" class="btn btn-ad" onclick="handleAd()">📺 VİDEO İZLE VE BİLET KAZAN</button>
+            <button id="btn-start" class="btn btn-play" style="display:none;" onclick="startQuiz()">🚀 YARIŞMAYA BAŞLA</button>
+        </div>
+
+        <div id="quiz-screen" class="screen">
+            <div id="timer">0.00s</div>
+            <div id="q-box" class="card" style="font-size: 1.2rem; min-height: 80px;"></div>
+            <div id="options"></div>
+        </div>
+
+        <div id="result-screen" class="screen">
+            <h2 id="final-status">Sonuçlar</h2>
+            <div id="final-time" style="font-size: 2rem; margin-bottom: 20px;"></div>
+            <div id="analysis"></div>
+            <button class="btn btn-play" onclick="location.reload()">🔄 ANA SAYFA</button>
         </div>
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp; tg.expand();
-        // ADSGRAM TEST ID: int-2709
-        const AdController = window.Adsgram.init({ blockId: "int-2709" });
+        // --- AYARLAR ---
+        const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
+        const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
+        const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
+        const tg = window.Telegram.WebApp;
+        const AdController = window.Adsgram.init({ blockId: "int-2709" }); // Test ID
+        
+        let userStats = { ads_watched: 0 };
+        let currentIdx = 0, startTime, timerInt, penalty = 0;
+        let userChoices = [];
+        const userId = tg.initDataUnsafe?.user?.id || 12345;
+        const today = new Date().toLocaleDateString('tr-TR');
 
-        let adCount = 0;
-        const requiredAds = 3;
+        // --- SORU HAVUZU (Örnek) ---
+        const pool = [
+            {q:"Hangi gezegen Güneş'e en yakındır?", a:["Venüs","Merkür","Mars"], c:1},
+            {q:"Su kaç derecede kaynar?", a:["90","100","110"], c:1},
+            {q:"Türkiye'nin yüzölçümü en büyük ili?", a:["Ankara","İstanbul","Konya"], c:2},
+            {q:"Hangisi bir programlama dilidir?", a:["Python","HTML","CSS"], c:0},
+            {q:"Kızıl Gezegen hangisidir?", a:["Mars","Jüpiter","Satürn"], c:0},
+            {q:"Atatürk kaç yılında doğdu?", a:["1880","1881","1938"], c:1},
+            {q:"Mona Lisa tablosu kimindir?", a:["Picasso","Da Vinci","Dali"], c:1},
+            {q:"İnsan vücudundaki en büyük organ?", a:["Kalp","Deri","Karaciğer"], c:1},
+            {q:"Hangi hayvan memelidir?", a:["Balina","Timsah","Yılan"], c:0},
+            {q:"Satrançta kaç adet piyon vardır?", a:["8","12","16"], c:2}
+        ];
 
-        async function showAd() {
-            const adBtn = document.getElementById('ad-btn');
-            const status = document.getElementById('status-text');
-            
-            adBtn.disabled = true;
-            status.innerText = "Sponsor videosu hazırlanıyor...";
-
-            try {
-                const result = await AdController.show();
-                
-                if (result.done) {
-                    adCount++;
-                    updateUI();
-                    tg.HapticFeedback.notificationOccurred('success');
-                } else {
-                    status.innerText = "Bilet kazanmak için reklamı sonuna kadar izlemelisin!";
-                }
-            } catch (error) {
-                console.error(error);
-                status.innerText = "Reklam yüklenemedi, lütfen tekrar dene.";
-            } finally {
-                adBtn.disabled = false;
-            }
-        }
-
-        function updateUI() {
-            const adBtn = document.getElementById('ad-btn');
-            const startBtn = document.getElementById('start-btn');
-            const progress = document.getElementById('ticket-progress');
-            const status = document.getElementById('status-text');
-
-            let percent = Math.floor((adCount / requiredAds) * 100);
-            adBtn.innerText = `📺 REKLAM İZLE (%${percent})`;
-            progress.innerText = `Reklam: ${adCount} / ${requiredAds}`;
-
-            if (adCount >= requiredAds) {
-                adBtn.style.display = 'none';
-                startBtn.style.display = 'block';
-                status.innerText = "Biletin hazır! Yarışmaya katılabilirsin.";
-                tg.HapticFeedback.notificationOccurred('warning'); // Güçlü titreşim
+        // --- MANTIK ---
+        async function init() {
+            let { data } = await _supabase.from('user_tickets').select('*').eq('telegram_id', userId).single();
+            if (!data || data.last_date !== today) {
+                const entry = { telegram_id: userId, ads_watched: 0, last_date: today };
+                await _supabase.from('user_tickets').upsert(entry);
+                userStats.ads_watched = 0;
             } else {
-                status.innerText = `${requiredAds - adCount} reklam daha izlemelisin.`;
+                userStats = data;
+            }
+            showScreen(userStats.ads_watched >= 3 ? 'ticket-screen' : 'ticket-screen');
+            updateAdUI();
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'loading') document.getElementById('loading').classList.add('active');
+        }
+
+        async function handleAd() {
+            const res = await AdController.show();
+            if (res.done) {
+                userStats.ads_watched++;
+                await _supabase.from('user_tickets').update({ads_watched: userStats.ads_watched}).eq('telegram_id', userId);
+                updateAdUI();
+                tg.HapticFeedback.notificationOccurred('success');
             }
         }
 
-        function startGame() {
-            document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('quiz-screen').style.display = 'block';
-            
-            // Burada önceki hazırladığımız Quiz fonksiyonlarını (questions, nextQuestion vb.) çalıştıracaksın.
-            startQuizLogic(); 
+        function updateAdUI() {
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('ticket-screen').classList.add('active');
+            const count = userStats.ads_watched;
+            document.getElementById('ad-progress').innerText = `Reklam: ${count} / 3`;
+            document.getElementById('ad-fill').style.width = `${(count/3)*100}%`;
+            if (count >= 3) {
+                document.getElementById('btn-ad').style.display = 'none';
+                document.getElementById('btn-start').style.display = 'block';
+            }
         }
 
-        // --- QUIZ MANTIK KISMI (Kısaltılmış Özet) ---
-        function startQuizLogic() {
-            // Buraya bir önceki mesajdaki soru döngüsünü ve zamanlayıcıyı ekliyoruz.
-            alert("Bilet doğrulandı! Yarışma başlıyor...");
-            // ... (Daha önceki quiz kodlarını buraya yapıştırabilirsin)
+        function startQuiz() {
+            showScreen('quiz-screen');
+            startTime = Date.now();
+            timerInt = setInterval(() => {
+                let s = ((Date.now() - startTime) / 1000 + penalty).toFixed(2);
+                document.getElementById('timer').innerText = s + "s";
+            }, 50);
+            renderQuestion();
         }
+
+        function renderQuestion() {
+            if (currentIdx >= 10) return endQuiz();
+            const q = pool[currentIdx];
+            document.getElementById('q-box').innerText = `${currentIdx+1}. ${q.q}`;
+            const optDiv = document.getElementById('options');
+            optDiv.innerHTML = "";
+            q.a.forEach((txt, i) => {
+                const b = document.createElement('button');
+                b.className = "btn option";
+                b.innerText = txt;
+                b.onclick = () => {
+                    userChoices.push(i);
+                    if(i !== q.c) { penalty += 5; tg.HapticFeedback.notificationOccurred('error'); }
+                    currentIdx++;
+                    renderQuestion();
+                };
+                optDiv.appendChild(b);
+            });
+        }
+
+        function endQuiz() {
+            clearInterval(timerInt);
+            const total = ((Date.now() - startTime) / 1000 + penalty).toFixed(2);
+            showScreen('result-screen');
+            document.getElementById('final-time').innerText = total + "s";
+            
+            let html = "<h3>Analiz Ekranı</h3>";
+            pool.forEach((q, i) => {
+                const correct = userChoices[i] === q.c;
+                html += `
+                <div class="card review-card" style="border-left-color: ${correct ? '#4ade80' : '#f87171'}">
+                    <strong>${i+1}. ${q.q}</strong><br>
+                    <span class="${correct ? 'correct' : 'wrong'}">Senin Cevabın: ${q.a[userChoices[i]]}</span><br>
+                    ${!correct ? `<span class="correct">Doğru: ${q.a[q.c]}</span>` : ''}
+                </div>`;
+            });
+            document.getElementById('analysis').innerHTML = html;
+            saveFinal(total);
+        }
+
+        async function saveFinal(score) {
+            await _supabase.from('leaderboard').insert([{ 
+                telegram_id: userId, 
+                username: tg.initDataUnsafe?.user?.first_name || "Oyuncu", 
+                score: parseFloat(score) 
+            }]);
+        }
+
+        window.onload = init;
     </script>
 </body>
 </html>
