@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Quiz Arena: Pro Edition</title>
+    <title>Quiz Arena: Champion Edition</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
@@ -14,12 +14,12 @@
         .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; position: fixed; top:0; left:0; right: 0; }
         .screen.active { display:flex; }
         .card { background:var(--card); padding:15px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 450px; }
-        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; text-decoration: none; }
+        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; text-decoration: none; transition: 0.2s; }
         .btn-blue { background:var(--primary); color:#000; }
         .btn-yt { background: var(--yt); color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
-        .btn-option { background: #fff; color: #000; margin-bottom: 12px; text-align: left; padding: 14px; }
-        .btn-success { background: var(--success) !important; color: #fff; }
-        .btn-error { background: var(--error) !important; color: #fff; }
+        .btn-option { background: #ffffff; color: #000; margin-bottom: 12px; text-align: left; padding: 14px; border: 2px solid transparent; }
+        .btn-success { background: var(--success) !important; color: #fff !important; }
+        .btn-error { background: var(--error) !important; color: #fff !important; }
         .btn-disabled { background: #475569 !important; opacity: 0.5; cursor: not-allowed; pointer-events: none; }
         #ton-connect-btn { display: flex; justify-content: center; margin: 10px 0; width: 100%; }
         .prize-table { background: rgba(56, 189, 248, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 10px; margin-bottom: 10px; width: 100%; max-width: 450px; }
@@ -66,7 +66,8 @@
         <h2 style="color: var(--gold)">YARIŞMA BİTTİ!</h2>
         <div class="card">
             <h1 id="final-score" style="font-size: 3rem; margin:0; color:var(--primary)">0</h1>
-            <p>Toplam Puan Kazandın</p>
+            <p>Puan Kazandın</p>
+            <p id="final-time-text" style="color:var(--gold); font-weight:bold;"></p>
         </div>
         <button class="btn btn-blue" onclick="location.reload()">ANA SAYFAYA DÖN</button>
     </div>
@@ -83,7 +84,7 @@
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
 
-        // --- 🎥 YOUTUBE AYARLARI (300 saniye = 5 dakika) ---
+        // YouTube Ayarları (Test için süreyi düşürebilirsin, şu an 300000ms = 5dk)
         const WAIT_TIME = 300000; 
         const YT_VIDEOS = [
             { url: "https://www.youtube.com/watch?v=1" },
@@ -96,7 +97,7 @@
         let activeInterval = null;
 
         const userId = tg.initDataUnsafe?.user?.id || 123456;
-        let user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15;
+        let user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, quizStartTime = 0;
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://skill-survive.vercel.app/tonconnect-manifest.json',
@@ -112,11 +113,8 @@
 
         function startVideoTimer(i) {
             if (vStatus[i] || (i > 0 && !vStatus[i-1])) return;
-            
             tg.openLink(YT_VIDEOS[i].url);
-            
             if (activeInterval) clearInterval(activeInterval);
-            
             activeInterval = setInterval(() => {
                 vTimers[i] -= 1000;
                 renderMain();
@@ -133,7 +131,7 @@
                 await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
                 user.has_ticket = true;
                 renderMain();
-                tg.showAlert("Tebrikler! Biletiniz tanımlandı.");
+                tg.showAlert("Biletiniz başarıyla tanımlandı!");
             }
         }
 
@@ -147,23 +145,16 @@
             } else if (user.has_ticket) {
                 actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA BAŞLA</button>`;
             } else {
-                let html = `<div class="card"><p style="font-weight:bold;">🎫 Bilet Görevi (Sırayla İzleyin)</p>`;
+                let html = `<div class="card"><p style="font-weight:bold;">🎫 Bilet Görevi (Sırayla İzle)</p>`;
                 for(let i=0; i<3; i++) {
                     const isLocked = i > 0 && !vStatus[i-1];
                     const isDone = vStatus[i];
                     const isRunning = vTimers[i] < WAIT_TIME && vTimers[i] > 0;
-                    
-                    let btnClass = "btn btn-yt";
-                    if (isLocked) btnClass += " btn-disabled";
-                    if (isDone) btnClass += " btn-success";
-                    
-                    let btnText = `🎬 ${i+1}. Videoyu İzle`;
-                    if (isRunning) btnText = `⏳ Kalan: ${Math.ceil(vTimers[i]/1000)}sn`;
-                    if (isDone) btnText = `✅ ${i+1}. Video Tamam`;
-
+                    let btnClass = "btn btn-yt" + (isLocked ? " btn-disabled" : "") + (isDone ? " btn-success" : "");
+                    let btnText = isDone ? `✅ ${i+1}. Tamamlandı` : (isRunning ? `⏳ Kalan: ${Math.ceil(vTimers[i]/1000)}sn` : `🎬 ${i+1}. Videoyu İzle`);
                     html += `<button class="${btnClass}" onclick="startVideoTimer(${i})">${btnText}</button>`;
                 }
-                html += `<p style="font-size:0.65rem; color:#94a3b8;">Her video 5 dakika izlenmelidir.</p>`;
+                html += `<p style="font-size:0.6rem; color:#94a3b8; margin:10px 0;">Bilet için tüm videoları 5 dakika izlemelisiniz.</p>`;
                 html += `<button class="btn ${vStatus.every(v => v) ? 'btn-blue' : 'btn-disabled'}" onclick="claimTicket()">BİLETİ ONAYLA</button></div>`;
                 actionArea.innerHTML = html;
             }
@@ -171,23 +162,21 @@
 
         async function startQuiz() {
             const { data } = await _supabase.from('questions').select('*');
-            if(!data || data.length === 0) return tg.showAlert("Soru bulunamadı!");
+            if(!data || data.length === 0) return tg.showAlert("Soru yüklenemedi!");
             dailyQuestions = data.sort(() => 0.5 - Math.random()).slice(0, 10);
             currentIdx = 0; score = 0;
+            quizStartTime = Date.now();
             showScreen('quiz-screen');
             loadQuestion();
         }
 
         function loadQuestion() {
             if (currentIdx >= dailyQuestions.length) return endQuiz();
-            timeLeft = 15;
-            document.getElementById('quiz-timer').innerText = timeLeft;
+            timeLeft = 15; document.getElementById('quiz-timer').innerText = timeLeft;
             const q = dailyQuestions[currentIdx];
             document.getElementById('question-text').innerText = `${currentIdx + 1}. ${q.question}`;
-            
             const container = document.getElementById('options-container');
             container.innerHTML = '';
-            
             q.options.forEach((opt, i) => {
                 const b = document.createElement('button');
                 b.className = 'btn btn-option';
@@ -195,11 +184,9 @@
                 b.onclick = () => handleAnswer(b, i, q.correct_option);
                 container.appendChild(b);
             });
-
             if(timer) clearInterval(timer);
             timer = setInterval(() => {
-                timeLeft--;
-                document.getElementById('quiz-timer').innerText = timeLeft;
+                timeLeft--; document.getElementById('quiz-timer').innerText = timeLeft;
                 if(timeLeft <= 0) { clearInterval(timer); currentIdx++; loadQuestion(); }
             }, 1000);
         }
@@ -208,7 +195,6 @@
             clearInterval(timer);
             const allBtns = document.querySelectorAll('.btn-option');
             allBtns.forEach(b => b.style.pointerEvents = 'none');
-
             if(selected === correct) {
                 btn.classList.add('btn-success');
                 score += timeLeft * 10;
@@ -216,38 +202,32 @@
                 btn.classList.add('btn-error');
                 allBtns[correct].classList.add('btn-success');
             }
-
-            setTimeout(() => {
-                currentIdx++;
-                loadQuestion();
-            }, 1500);
+            setTimeout(() => { currentIdx++; loadQuestion(); }, 1500);
         }
 
         async function endQuiz() {
+            const totalTimeMs = Date.now() - quizStartTime;
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('final-score').innerText = score;
+            document.getElementById('final-time-text').innerText = `Süre: ${(totalTimeMs/1000).toFixed(2)} Saniye`;
             showScreen('result-screen');
-
-            // DB KAYITLARI
-            await _supabase.from('daily_scores').insert([{ 
-                telegram_id: userId, 
-                username: user.username, 
-                score: score, 
-                play_date: today 
-            }]);
-            await _supabase.from('users').update({ 
-                last_played_date: today, 
-                has_ticket: false 
-            }).eq('telegram_id', userId);
+            await _supabase.from('daily_scores').insert([{ telegram_id: userId, username: user.username, score: score, completion_time: totalTimeMs, play_date: today }]);
+            await _supabase.from('users').update({ last_played_date: today, has_ticket: false }).eq('telegram_id', userId);
         }
 
         async function fetchLeaderboard() {
             const today = new Date().toISOString().split('T')[0];
-            const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false}).limit(10);
+            const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false}).order('completion_time', {ascending: true}).limit(10);
             const l = document.getElementById('leader-list');
-            l.innerHTML = data && data.length > 0 ? "" : "<p>Henüz kayıt yok.</p>";
+            l.innerHTML = data && data.length > 0 ? "" : "<p>Henüz veri yok.</p>";
             data?.forEach((row, i) => {
-                l.innerHTML += `<div class="leader-row"><span>#${i+1} @${row.username}</span><b>${row.score}</b></div>`;
+                l.innerHTML += `<div class="leader-row">
+                    <div style="text-align:left">
+                        <span>#${i+1} @${row.username}</span><br>
+                        <small style="color:var(--primary); font-size:0.65rem">Süre: ${(row.completion_time/1000).toFixed(1)}sn</small>
+                    </div>
+                    <b>${row.score} P</b>
+                </div>`;
             });
             showScreen('leader-screen');
         }
