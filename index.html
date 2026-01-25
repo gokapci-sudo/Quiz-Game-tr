@@ -3,59 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quiz Arena - Yarışma Modu</title>
+    <title>Quiz Arena Pro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --success: #10b981; --error: #ef4444; }
-        body { margin:0; background: var(--bg); color: var(--text); font-family: sans-serif; text-align:center; display: flex; flex-direction: column; min-height: 100vh; }
-        .screen { display:none; padding: 20px; flex: 1; flex-direction: column; align-items: center; justify-content: center; }
+        :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --success: #10b981; --error: #ef4444; --gold: #fbbf24; }
+        body { margin:0; background: var(--bg); color: var(--text); font-family: sans-serif; text-align:center; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+        .screen { display:none; padding: 20px; flex: 1; flex-direction: column; align-items: center; justify-content: flex-start; }
         .screen.active { display:flex !important; }
-        .card { background:var(--card); padding:25px; border-radius:20px; margin:10px 0; border:1px solid #334155; width: 90%; max-width: 400px; }
-        .btn { display:block; width: 100%; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:12px; font-size: 1rem; transition: 0.2s; color: #fff; }
+        .card { background:var(--card); padding:20px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 90%; max-width: 400px; }
+        .btn { display:block; width: 100%; padding:14px; border-radius:10px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; transition: 0.2s; }
         .btn-blue { background:var(--primary); color:#000; }
         .btn-option { background: #334155; text-align: left; }
-        .btn-option:active { background: #475569; }
+        .btn-option.selected { background: var(--primary); color: #000; }
         
-        /* Quiz Özel */
-        #quiz-timer { font-size: 2rem; color: #fbbf24; font-weight: bold; margin-bottom: 20px; }
-        .progress-bar { width: 100%; background: #334155; height: 10px; border-radius: 5px; margin-bottom: 20px; overflow: hidden; }
-        #progress-fill { height: 100%; background: var(--primary); width: 0%; transition: 0.3s; }
-        .correct { background: var(--success) !important; }
-        .wrong { background: var(--error) !important; }
+        /* Leaderboard */
+        .leader-row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #334155; font-size: 0.9rem; }
+        .leader-row:last-child { border: none; }
+        .rank { font-weight: bold; color: var(--gold); margin-right: 10px; }
+
+        /* Review List */
+        .review-item { text-align: left; border-bottom: 1px solid #475569; padding: 10px 0; font-size: 0.85rem; }
+        .review-q { font-weight: bold; margin-bottom: 5px; }
+        .review-a { color: var(--success); }
+        .review-your { color: var(--error); }
     </style>
 </head>
 <body>
 
     <div id="loading-screen" class="screen active">
-        <p>Yükleniyor...</p>
+        <p>Arena Hazırlanıyor...</p>
     </div>
 
     <div id="main-screen" class="screen">
         <div class="card">
-            <h3 id="u-name">@Oyuncu</h3>
-            <p>Bilet Durumu: <span style="color:var(--success)">TEST BİLETİ AKTİF ✅</span></p>
+            <h2 id="u-name">@Oyuncu</h2>
+            <p id="entry-status">Yarışma Durumu: Kontrol Ediliyor...</p>
         </div>
-        <button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYI BAŞLAT</button>
+        <button id="start-btn" class="btn btn-blue" style="display:none;" onclick="startQuiz()">🚀 YARIŞMAYA GİR</button>
+        <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 LİDERLİK TABLOSU</button>
     </div>
 
     <div id="quiz-screen" class="screen">
-        <div id="quiz-timer">15</div>
-        <div class="progress-bar"><div id="progress-fill"></div></div>
-        <div class="card">
-            <h3 id="question-text">Soru yükleniyor...</h3>
-        </div>
-        <div id="options-container" style="width: 100%; max-width: 400px;">
-            </div>
+        <div id="quiz-timer" style="font-size: 1.5rem; color: var(--gold); font-weight: bold;">15</div>
+        <div class="card"><h3 id="question-text">...</h3></div>
+        <div id="options-container" style="width: 100%; max-width: 400px;"></div>
     </div>
 
     <div id="result-screen" class="screen">
         <div class="card">
-            <h2>Yarışma Bitti! 🏁</h2>
-            <p id="final-score" style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">Puan: 0</p>
-            <p id="stats-text">Doğru: 0 | Yanlış: 0</p>
+            <h2>Puan: <span id="final-score" style="color:var(--primary)">0</span></h2>
+            <p>Bugünkü yarışmayı tamamladın!</p>
+        </div>
+        
+        <div class="card" style="background: transparent;">
+            <h3>Cevaplarınızı İnceleyin</h3>
+            <div id="review-list"></div>
         </div>
         <button class="btn btn-blue" onclick="location.reload()">🔄 ANA SAYFAYA DÖN</button>
+    </div>
+
+    <div id="leader-screen" class="screen">
+        <div class="card" style="width: 95%;">
+            <h3>🏆 Günün En İyileri</h3>
+            <div id="leader-list"></div>
+        </div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">⬅️ GERİ DÖN</button>
     </div>
 
     <script>
@@ -63,62 +76,60 @@
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
+        const userId = tg.initDataUnsafe?.user?.id || 123456;
 
-        // ÖRNEK SORU HAVUZU (Gerçekte veritabanından çekilebilir)
         const questions = [
             { q: "TON hangi ağın kripto parasıdır?", a: ["The Open Network", "Ethereum", "Solana", "Bitcoin"], c: 0 },
             { q: "Telegram'ın kurucusu kimdir?", a: ["Mark Zuckerberg", "Pavel Durov", "Elon Musk", "Bill Gates"], c: 1 },
-            { q: "Blockchain teknolojisi hangisiyle başlar?", a: ["Web 2.0", "Web 3.0", "Sanayi Devrimi", "Akıllı Telefonlar"], c: 1 },
-            { q: "Hangisi bir TON cüzdanıdır?", a: ["Metamask", "Tonkeeper", "Phantom", "Trust Wallet"], c: 1 },
-            { q: "1 TON yaklaşık kaç dolardır? (Tahmini)", a: ["1$", "5$", "50$", "100$"], c: 1 }
+            { q: "1 TON yaklaşık kaç dolardır?", a: ["1$", "5$", "50$", "100$"], c: 1 },
+            { q: "Blockchain'de bloklar nasıl bağlanır?", a: ["Zincir", "Hash Değeri", "Wifi", "Kablo"], c: 1 },
+            { q: "Hangisi soğuk cüzdandır?", a: ["Borsa", "Ledger", "Website", "Instagram"], c: 1 }
         ];
 
-        let currentIdx = 0;
-        let score = 0;
-        let timer;
-        let timeLeft = 15;
-        let canAnswer = true;
-        let stats = { correct: 0, wrong: 0 };
+        let currentIdx = 0, score = 0, timer, timeLeft = 15;
+        let userAnswers = []; // Kullanıcının seçimlerini tutar
+        let user = null;
 
         async function init() {
             tg.expand();
-            // Test için kullanıcı ismini çekelim
-            const userId = tg.initDataUnsafe?.user?.id || 123;
-            const { data } = await _supabase.from('users').select('username').eq('telegram_id', userId).maybeSingle();
-            document.getElementById('u-name').innerText = `@${data?.username || 'Oyuncu'}`;
+            const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
+            user = data;
+            document.getElementById('u-name').innerText = `@${user.username}`;
+            
+            // Günlük Giriş Kontrolü
+            const today = new Date().toISOString().split('T')[0];
+            if (user.last_played_date === today) {
+                document.getElementById('entry-status').innerText = "Yarışma: Bugün tamamlandı 🏁";
+                document.getElementById('start-btn').style.display = 'none';
+            } else {
+                document.getElementById('entry-status').innerText = "Yarışma: Hazır 🚀";
+                document.getElementById('start-btn').style.display = 'block';
+            }
             showScreen('main-screen');
         }
 
         function startQuiz() {
-            currentIdx = 0;
-            score = 0;
-            stats = { correct: 0, wrong: 0 };
+            userAnswers = []; score = 0; currentIdx = 0;
             showScreen('quiz-screen');
             loadQuestion();
         }
 
         function loadQuestion() {
             if (currentIdx >= questions.length) return endQuiz();
-            
-            canAnswer = true;
             timeLeft = 15;
             document.getElementById('quiz-timer').innerText = timeLeft;
-            document.getElementById('progress-fill').style.width = `${((currentIdx + 1) / questions.length) * 100}%`;
-            
             const qData = questions[currentIdx];
             document.getElementById('question-text').innerText = qData.q;
             
             const container = document.getElementById('options-container');
             container.innerHTML = '';
-            
             qData.a.forEach((opt, i) => {
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-option';
                 btn.innerText = opt;
-                btn.onclick = () => checkAnswer(i, btn);
+                btn.onclick = () => selectOption(i, btn);
                 container.appendChild(btn);
             });
-
             startTimer();
         }
 
@@ -127,51 +138,70 @@
             timer = setInterval(() => {
                 timeLeft--;
                 document.getElementById('quiz-timer').innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
-                    checkAnswer(-1); // Zaman biterse yanlış say
-                }
+                if (timeLeft <= 0) selectOption(-1); 
             }, 1000);
         }
 
-        async function checkAnswer(idx, btn) {
-            if (!canAnswer) return;
-            canAnswer = false;
+        function selectOption(idx, btn) {
             clearInterval(timer);
-
-            const correctIdx = questions[currentIdx].c;
-            const options = document.querySelectorAll('.btn-option');
-
-            if (idx === correctIdx) {
-                if(btn) btn.classList.add('correct');
-                score += (timeLeft * 10); // Hızlı cevap verene daha çok puan
-                stats.correct++;
-                tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                if(btn) btn.classList.add('wrong');
-                options[correctIdx].classList.add('correct');
-                stats.wrong++;
-                tg.HapticFeedback.notificationOccurred('error');
+            if(btn) btn.classList.add('selected');
+            
+            // Cevabı kaydet ama sonucu gösterme!
+            userAnswers.push(idx);
+            if (idx === questions[currentIdx].c) {
+                score += (timeLeft * 10);
             }
-
+            
             setTimeout(() => {
                 currentIdx++;
                 loadQuestion();
-            }, 1500);
+            }, 500);
         }
 
         async function endQuiz() {
             showScreen('result-screen');
-            document.getElementById('final-score').innerText = `Puan: ${score}`;
-            document.getElementById('stats-text').innerText = `Doğru: ${stats.correct} | Yanlış: ${stats.wrong}`;
+            document.getElementById('final-score').innerText = score;
             
-            // SKORU KAYDET (Supabase)
-            const userId = tg.initDataUnsafe?.user?.id || 123;
+            // Yarışma analizini oluştur
+            const reviewContainer = document.getElementById('review-list');
+            reviewContainer.innerHTML = '';
+            questions.forEach((q, i) => {
+                const userChoice = userAnswers[i];
+                const isCorrect = userChoice === q.c;
+                reviewContainer.innerHTML += `
+                    <div class="review-item">
+                        <div class="review-q">${i+1}. ${q.q}</div>
+                        <div class="review-a">✅ Doğru: ${q.a[q.c]}</div>
+                        ${!isCorrect ? `<div class="review-your">❌ Sizin: ${userChoice === -1 ? 'Süre Bitti' : q.a[userChoice]}</div>` : ''}
+                    </div>`;
+            });
+
+            // Veritabanını Güncelle (Kilit koy)
+            const today = new Date().toISOString().split('T')[0];
+            await _supabase.from('users').update({ last_played_date: today }).eq('telegram_id', userId);
             await _supabase.from('daily_scores').insert([{
-                telegram_id: userId,
-                username: tg.initDataUnsafe?.user?.username || "Test",
-                score: score
+                telegram_id: userId, username: user.username, score: score, play_date: today
             }]);
+        }
+
+        async function fetchLeaderboard() {
+            showScreen('leader-screen');
+            const today = new Date().toISOString().split('T')[0];
+            const { data } = await _supabase.from('daily_scores')
+                .select('*')
+                .eq('play_date', today)
+                .order('score', { ascending: false })
+                .limit(10);
+
+            const list = document.getElementById('leader-list');
+            list.innerHTML = data && data.length > 0 ? "" : "Henüz veri yok.";
+            data.forEach((row, i) => {
+                list.innerHTML += `
+                    <div class="leader-row">
+                        <span><span class="rank">#${i+1}</span> @${row.username}</span>
+                        <span style="font-weight:bold">${row.score} Puan</span>
+                    </div>`;
+            });
         }
 
         function showScreen(id) {
