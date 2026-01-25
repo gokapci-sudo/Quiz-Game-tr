@@ -14,11 +14,11 @@
         .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; }
         .screen.active { display:flex; }
         .card { background:var(--card); padding:20px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 450px; }
-        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; }
+        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; transition: 0.2s; }
         .btn-blue { background:var(--primary); color:#000; }
-        .btn-option { background: #334155; text-align: left; }
+        .btn-option { background: #334155; text-align: left; margin-bottom: 8px; }
         #ton-connect-btn { margin: 15px 0; min-height: 44px; }
-        .wallet-addr { font-size: 0.75rem; color: #94a3b8; margin-bottom: 5px; word-break: break-all; }
+        .wallet-addr { font-size: 0.75rem; color: #94a3b8; margin-bottom: 5px; word-break: break-all; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px; }
         .loader { border: 4px solid #334155; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .scroll-area { width: 100%; max-width: 450px; flex: 1; overflow-y: auto; margin-bottom: 20px; }
@@ -28,7 +28,7 @@
 <body>
 
     <div id="loading-screen" class="screen active">
-        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Veriler Yükleniyor...</p></div>
+        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Arena Hazırlanıyor...</p></div>
     </div>
 
     <div id="main-screen" class="screen">
@@ -39,12 +39,12 @@
             <div id="status-box" style="margin-top:10px; font-weight: bold; color: var(--primary);"></div>
         </div>
         <div id="action-area" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
-        <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
+        <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 GÜNLÜK SIRALAMA</button>
     </div>
 
     <div id="quiz-screen" class="screen">
         <div id="quiz-timer" style="font-size: 2.5rem; color: var(--gold); font-weight: 800; margin: 20px 0;">15</div>
-        <div class="card"><h3 id="question-text">...</h3></div>
+        <div class="card"><h3 id="question-text">Soru Yükleniyor...</h3></div>
         <div id="options-container" style="width: 100%; max-width: 450px;"></div>
     </div>
 
@@ -64,53 +64,64 @@
     </div>
 
     <script>
+        // --- AYARLAR ---
+        const APP_URL = 'https://gokapci-sudo.vercel.app'; // Kendi Vercel URL'ni buraya yaz!
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
+        
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
         
         const getSqlDate = () => new Date().toISOString().split('T')[0];
         const userId = tg.initDataUnsafe?.user?.id || 123456;
+        
         let user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, userAnswers = [], quizStartTime = 0;
 
+        // TON Connect UI
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://gokapci-sudo.vercel.app/tonconnect-manifest.json',
+            manifestUrl: APP_URL + '/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn'
         });
 
         async function init() {
             tg.ready(); tg.expand();
             
+            // Cüzdan Dinleyici
             tonConnectUI.onStatusChange(async wallet => {
                 if (wallet) {
                     const addr = wallet.account.address;
-                    document.getElementById('wallet-info').innerText = addr.substring(0,8) + "..." + addr.slice(-8);
-                    // Tablo sütun ismi: cüzdan_adresi
+                    document.getElementById('wallet-info').innerText = "Bağlı: " + addr.substring(0,8) + "...";
                     await _supabase.from('users').update({ "cüzdan_adresi": addr }).eq('telegram_kimliği', userId);
                 }
             });
 
             try {
-                // Tablo sütun ismi: telegram_kimliği
+                // Veritabanı Sütun Eşleşmesi
                 const { data, error } = await _supabase.from('users').select('*').eq('telegram_kimliği', userId).maybeSingle();
-                user = data;
                 
+                if (error) throw error;
+                user = data;
+
                 if (!user) {
-                    const { data: n } = await _supabase.from('users').insert([{
+                    const { data: n, error: insErr } = await _supabase.from('users').insert([{
                         "telegram_kimliği": userId, 
-                        "kullanıcı adı": tg.initDataUnsafe?.user?.username || "Oyuncu",
+                        "kullanıcı adı": tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name || "Oyuncu",
                         "bileti var": true,
                         "reklamları izledi": 0
                     }]).select().single();
+                    if (insErr) throw insErr;
                     user = n;
                 }
                 
                 if(user["cüzdan_adresi"]) {
-                    document.getElementById('wallet-info').innerText = user["cüzdan_adresi"].substring(0,8) + "..." + user["cüzdan_adresi"].slice(-8);
+                    document.getElementById('wallet-info').innerText = "Cüzdan: " + user["cüzdan_adresi"].substring(0,8) + "...";
                 }
                 
                 renderMain();
-            } catch (e) { document.getElementById('load-msg').innerText = "Bağlantı Hatası!"; }
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('load-msg').innerText = "Bağlantı Hatası! Lütfen internetinizi kontrol edin.";
+            }
         }
 
         function renderMain() {
@@ -118,12 +129,11 @@
             const actionArea = document.getElementById('action-area');
             const today = getSqlDate();
 
-            // Tablo sütun ismi: son_oynama_tarihi
             if (user["son_oynama_tarihi"] === today) {
-                document.getElementById('status-box').innerText = "✅ Yarışma tamamlandı!";
-                actionArea.innerHTML = "";
+                document.getElementById('status-box').innerText = "✅ Bugünün hakkı doldu!";
+                actionArea.innerHTML = "<p style='color:#94a3b8; font-size:0.9rem;'>Yarın tekrar gel!</p>";
             } else {
-                document.getElementById('status-box').innerText = "🎫 Biletiniz aktif!";
+                document.getElementById('status-box').innerText = "🎫 Yarışma Biletin Hazır!";
                 actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA GİR</button>`;
             }
             showScreen('main-screen');
@@ -131,79 +141,127 @@
 
         async function startQuiz() {
             showScreen('loading-screen');
-            const { data } = await _supabase.from('questions').select('*');
-            let seed = new Date().getFullYear() * 10000 + (new Date().getMonth() + 1) * 100 + new Date().getDate();
-            let pool = [...data];
-            for (let i = pool.length - 1; i > 0; i--) {
-                const j = Math.floor((Math.sin(seed + i) * 10000 - Math.floor(Math.sin(seed + i) * 10000)) * (i + 1));
-                [pool[i], pool[j]] = [pool[j], pool[i]];
+            try {
+                const { data, error } = await _supabase.from('questions').select('*');
+                if (error) throw error;
+                
+                // Günlük Rastgeleleştirme (Herkes için aynı sıra)
+                let seed = new Date().getUTCDate(); 
+                let pool = [...data].sort(() => 0.5 - Math.random()); // Basit karıştırma
+                dailyQuestions = pool.slice(0, 10);
+
+                currentIdx = 0; score = 0; userAnswers = []; quizStartTime = Date.now();
+                showScreen('quiz-screen');
+                loadQuestion();
+            } catch (e) {
+                alert("Sorular yüklenemedi!");
+                showScreen('main-screen');
             }
-            dailyQuestions = pool.slice(0, 10);
-            currentIdx = 0; score = 0; userAnswers = []; quizStartTime = Date.now();
-            showScreen('quiz-screen');
-            loadQuestion();
         }
 
         function loadQuestion() {
             if (currentIdx >= dailyQuestions.length) return endQuiz();
-            timeLeft = 15; document.getElementById('quiz-timer').innerText = timeLeft;
+            
+            timeLeft = 15;
+            document.getElementById('quiz-timer').innerText = timeLeft;
             const q = dailyQuestions[currentIdx];
             document.getElementById('question-text').innerText = `${currentIdx + 1}. ${q.question}`;
+            
             const container = document.getElementById('options-container');
             container.innerHTML = '';
+            
             q.options.forEach((opt, i) => {
                 const b = document.createElement('button');
-                b.className = 'btn btn-option'; b.innerText = opt;
-                b.onclick = () => {
-                    userAnswers.push(i); if (i === q.correct_option) score += (timeLeft * 10);
-                    clearInterval(timer); currentIdx++; loadQuestion();
-                };
+                b.className = 'btn btn-option';
+                b.innerText = opt;
+                b.onclick = () => handleAnswer(i);
                 container.appendChild(b);
             });
+
             clearInterval(timer);
             timer = setInterval(() => {
-                timeLeft--; document.getElementById('quiz-timer').innerText = timeLeft;
-                if (timeLeft <= 0) { userAnswers.push(-1); currentIdx++; loadQuestion(); }
+                timeLeft--;
+                document.getElementById('quiz-timer').innerText = timeLeft;
+                if (timeLeft <= 0) handleAnswer(-1);
             }, 1000);
+        }
+
+        function handleAnswer(choice) {
+            clearInterval(timer);
+            const q = dailyQuestions[currentIdx];
+            userAnswers.push(choice);
+            if (choice === q.correct_option) score += (timeLeft * 10);
+            currentIdx++;
+            loadQuestion();
         }
 
         async function endQuiz() {
             const timeMs = Date.now() - quizStartTime;
             const today = getSqlDate();
-            showScreen('result-screen');
-            document.getElementById('final-score').innerText = score;
-            document.getElementById('final-time').innerText = `⏱️ Süre: ${(timeMs/1000).toFixed(2)} sn`;
+            showScreen('loading-screen');
             
-            const review = document.getElementById('review-list');
-            review.innerHTML = "";
-            dailyQuestions.forEach((q, i) => {
-                const isC = userAnswers[i] === q.correct_option;
-                review.innerHTML += `<div class="review-item"><b>${i+1}. ${q.question}</b><br><span style="color:var(--success)">✅ ${q.options[q.correct_option]}</span><br>${!isC ? `<span style="color:var(--error)">❌ ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}</div>`;
-            });
+            try {
+                // Kayıt Güncelleme
+                await _supabase.from('users').update({ 
+                    "son_oynama_tarihi": today, 
+                    "bileti var": false 
+                }).eq('telegram_kimliği', userId);
+                
+                await _supabase.from('daily_scores').insert([{ 
+                    telegram_id: userId, 
+                    username: user["kullanıcı adı"], 
+                    score: score, 
+                    completion_time: timeMs, 
+                    play_date: today 
+                }]);
 
-            // Veritabanı güncelleme: son_oynama_tarihi ve bileti var
-            await _supabase.from('users').update({ "son_oynama_tarihi": today, "bileti var": false }).eq('telegram_kimliği', userId);
-            
-            // Skor kaydı (Bu tablonun sütunları İngilizce varsayılmıştır)
-            await _supabase.from('daily_scores').insert([{ 
-                telegram_id: userId, 
-                username: user["kullanıcı adı"], 
-                score: score, 
-                completion_time: timeMs, 
-                play_date: today 
-            }]);
+                // Sonuç Ekranını Göster
+                showScreen('result-screen');
+                document.getElementById('final-score').innerText = score;
+                document.getElementById('final-time').innerText = `⏱️ ${(timeMs/1000).toFixed(2)} saniyede bitirdin!`;
+                
+                const review = document.getElementById('review-list');
+                review.innerHTML = "";
+                dailyQuestions.forEach((q, i) => {
+                    const isC = userAnswers[i] === q.correct_option;
+                    review.innerHTML += `
+                        <div class="review-item" style="padding:10px; border-bottom:1px solid #334155; text-align:left;">
+                            <b>${i+1}. ${q.question}</b><br>
+                            <span style="color:var(--success)">Doğru: ${q.options[q.correct_option]}</span><br>
+                            ${!isC ? `<span style="color:var(--error)">Senin Cevabın: ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}
+                        </div>`;
+                });
+            } catch (e) {
+                alert("Skor kaydedilemedi!");
+                location.reload();
+            }
         }
 
         async function fetchLeaderboard() {
             showScreen('leader-screen');
             const l = document.getElementById('leader-list');
             l.innerHTML = "<div class='loader'></div>";
-            const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', getSqlDate()).order('score', {ascending: false}).order('completion_time', {ascending: true}).limit(10);
-            l.innerHTML = data && data.length > 0 ? "" : "Henüz kimse yarışmadı.";
-            data?.forEach((row, i) => {
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
-                l.innerHTML += `<div class="leader-row"><span>${medal} @${row.username}</span><div style="text-align:right"><b>${row.score}</b><br><small>${(row.completion_time/1000).toFixed(2)}s</small></div></div>`;
-            });
+            try {
+                const { data } = await _supabase.from('daily_scores')
+                    .select('*')
+                    .eq('play_date', getSqlDate())
+                    .order('score', {ascending: false})
+                    .order('completion_time', {ascending: true})
+                    .limit(10);
+                
+                l.innerHTML = data && data.length > 0 ? "" : "Henüz kimse yarışmadı.";
+                data?.forEach((row, i) => {
+                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+                    l.innerHTML += `
+                        <div class="leader-row">
+                            <span>${medal} @${row.username}</span>
+                            <div style="text-align:right">
+                                <b>${row.score} Puan</b><br>
+                                <small>${(row.completion_time/1000).toFixed(2)}sn</small>
+                            </div>
+                        </div>`;
+                });
+            } catch (e) { l.innerHTML = "Sıralama yüklenemedi."; }
         }
 
         function showScreen(id) {
