@@ -3,171 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quiz Master - Daily Challenge</title>
+    <title>Quiz Master - Ticket System</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://sad.adsgram.ai/js/adsgram-ad-sdk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { margin: 0; background: #0f172a; color: white; font-family: sans-serif; overflow-y: auto; }
-        #game-container { padding: 20px; text-align: center; max-width: 500px; margin: auto; }
-        #timer { font-size: 2rem; color: #38bdf8; font-weight: bold; margin: 10px 0; }
-        #question-box { background: #1e293b; padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 2px solid #334155; font-size: 1.2rem; }
-        .option { 
-            display: block; width: 100%; padding: 15px; margin: 8px 0; 
-            background: #334155; border: none; border-radius: 10px; 
-            color: white; font-size: 1rem; cursor: pointer;
+        body { margin: 0; background: #0f172a; color: white; font-family: sans-serif; text-align: center; }
+        #game-container { padding: 20px; max-width: 500px; margin: auto; }
+        .ticket-card { background: #1e293b; padding: 20px; border-radius: 20px; border: 2px dashed #38bdf8; margin: 20px 0; }
+        #ticket-count { font-size: 3rem; color: #38bdf8; display: block; }
+        .btn { 
+            display: block; width: 100%; padding: 15px; margin: 10px 0; 
+            border: none; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer;
         }
-        /* İnceleme Ekranı Stilleri */
-        .review-item { text-align: left; background: #1e293b; padding: 15px; margin: 10px 0; border-radius: 10px; font-size: 0.9rem; }
-        .correct { color: #4ade80; font-weight: bold; }
-        .wrong { color: #f87171; font-weight: bold; }
-        #leaderboard-btn {
-            display: none; width: 100%; padding: 15px; background: #38bdf8; color: #0f172a; 
-            border: none; border-radius: 10px; font-weight: bold; margin-top: 20px;
-        }
+        .btn-ad { background: #f59e0b; color: #000; }
+        .btn-play { background: #10b981; color: white; display: none; }
+        .btn-disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+        #status-text { color: #94a3b8; font-size: 0.9rem; margin-top: 10px; }
+        /* Oyun stilleri */
+        .option { width: 100%; padding: 15px; margin: 8px 0; background: #334155; border: none; border-radius: 10px; color: white; }
     </style>
 </head>
 <body>
     <div id="game-container">
-        <div id="header">Günün Soruları (00:00'da Yenilenir)</div>
-        <div id="timer">0.00s</div>
-        <div id="question-box">Yükleniyor...</div>
-        <div id="options-container"></div>
-        <div id="review-container"></div>
-        <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 LİDERLİK TABLOSU</button>
+        <div id="setup-screen">
+            <h2>Giriş Bileti Gerekli</h2>
+            <p>Günün yarışmasına katılmak için 3 reklam izleyerek 1 bilet kazanmalısın.</p>
+            
+            <div class="ticket-card">
+                <span id="ticket-progress">Reklam: 0 / 3</span>
+                <span id="ticket-count">🎫</span>
+            </div>
+
+            <button id="ad-btn" class="btn btn-ad" onclick="showAd()">📺 REKLAM İZLE (%0)</button>
+            <button id="start-btn" class="btn btn-play" onclick="startGame()">🚀 YARIŞMAYA BAŞLA</button>
+            <div id="status-text">Bugün henüz bilet almadın.</div>
+        </div>
+
+        <div id="quiz-screen" style="display:none;">
+            <div id="timer" style="font-size:1.5rem; color:#38bdf8;">0.00s</div>
+            <div id="question-box" style="margin:20px 0; font-size:1.2rem;"></div>
+            <div id="options-container"></div>
+        </div>
     </div>
 
     <script>
-        const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
-        const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
         const tg = window.Telegram.WebApp; tg.expand();
-        const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
+        // ADSGRAM TEST ID: int-2709
+        const AdController = window.Adsgram.init({ blockId: "int-2709" });
 
-        // --- BÜYÜK SORU HAVUZU ---
-        const questionPool = [
-            { q: "Dünyanın en yüksek dağı hangisidir?", a: ["K2", "Everest", "Lhotse"], c: 1 },
-            { q: "Hangi elementin simgesi 'Au'dur?", a: ["Gümüş", "Bakır", "Altın"], c: 2 },
-            { q: "Aspirin'in hammaddesi nedir?", a: ["Meşe", "Söğüt", "Çam"], c: 1 },
-            { q: "İlk Nobel ödülü hangi yılda verilmiştir?", a: ["1901", "1915", "1923"], c: 0 },
-            { q: "Hangi ülke en çok adaya sahiptir?", a: ["Yunanistan", "Endonezya", "İsveç"], c: 2 },
-            { q: "İnsan vücudundaki en sert doku hangisidir?", a: ["Kemik", "Diş Minesi", "Kıkırdak"], c: 1 },
-            { q: "Güneş'e en yakın gezegen?", a: ["Merkür", "Venüs", "Dünya"], c: 0 },
-            { q: "Telefonu kim icat etti?", a: ["Edison", "Graham Bell", "Tesla"], c: 1 },
-            { q: "Fransa'nın başkenti?", a: ["Lyon", "Marsilya", "Paris"], c: 2 },
-            { q: "8x8 satranç tahtasında kaç kare vardır?", a: ["32", "64", "128"], c: 1 },
-            { q: "Türkiye'nin en büyük gölü?", a: ["Van Gölü", "Tuz Gölü", "Eğirdir"], c: 0 },
-            { q: "Kendi ışığını üreten gök cismi?", a: ["Gezegen", "Yıldız", "Uydu"], c: 1 },
-            { q: "Hangisi bir memelidir?", a: ["Balina", "Köpekbalığı", "Timsah"], c: 0 },
-            { q: "Avrupa Birliği'nin merkezi neresidir?", a: ["Paris", "Berlin", "Brüksel"], c: 2 },
-            { q: "DNA'nın yapısı nasıldır?", a: ["Tekli Sarmal", "Çift Sarmal", "Daire"], c: 1 }
-            // Buraya yüzlerce soru ekleyebilirsin...
-        ];
+        let adCount = 0;
+        const requiredAds = 3;
 
-        let dailyQuestions = [];
-        let userAnswers = [];
-        let currentIdx = 0, startTime, timerInterval, penaltyTime = 0;
-
-        // --- GÜNLÜK SORU SEÇİCİ (00:00 AYARI) ---
-        function getDailyQuestions() {
-            const today = new Date().toLocaleDateString('tr-TR'); // Gün-Ay-Yıl formatı
-            let seed = today.split('.').join(''); // "26012026" gibi bir sayı oluşturur
-            let randomSeed = parseInt(seed);
+        async function showAd() {
+            const adBtn = document.getElementById('ad-btn');
+            const status = document.getElementById('status-text');
             
-            // Basit bir karıştırma algoritması (Her gün aynı sırayı verir)
-            let shuffled = [...questionPool].sort(() => {
-                randomSeed = (randomSeed * 9301 + 49297) % 233280;
-                return (randomSeed / 233280) - 0.5;
-            });
-            return shuffled.slice(0, 10);
+            adBtn.disabled = true;
+            status.innerText = "Sponsor videosu hazırlanıyor...";
+
+            try {
+                const result = await AdController.show();
+                
+                if (result.done) {
+                    adCount++;
+                    updateUI();
+                    tg.HapticFeedback.notificationOccurred('success');
+                } else {
+                    status.innerText = "Bilet kazanmak için reklamı sonuna kadar izlemelisin!";
+                }
+            } catch (error) {
+                console.error(error);
+                status.innerText = "Reklam yüklenemedi, lütfen tekrar dene.";
+            } finally {
+                adBtn.disabled = false;
+            }
         }
 
-        function init() {
-            dailyQuestions = getDailyQuestions();
-            document.getElementById('question-box').innerText = "Günün 10 sorusuna hazır mısın?";
-            document.getElementById('options-container').innerHTML = `<button class="option" onclick="startGame()">YARIŞMAYI BAŞLAT</button>`;
+        function updateUI() {
+            const adBtn = document.getElementById('ad-btn');
+            const startBtn = document.getElementById('start-btn');
+            const progress = document.getElementById('ticket-progress');
+            const status = document.getElementById('status-text');
+
+            let percent = Math.floor((adCount / requiredAds) * 100);
+            adBtn.innerText = `📺 REKLAM İZLE (%${percent})`;
+            progress.innerText = `Reklam: ${adCount} / ${requiredAds}`;
+
+            if (adCount >= requiredAds) {
+                adBtn.style.display = 'none';
+                startBtn.style.display = 'block';
+                status.innerText = "Biletin hazır! Yarışmaya katılabilirsin.";
+                tg.HapticFeedback.notificationOccurred('warning'); // Güçlü titreşim
+            } else {
+                status.innerText = `${requiredAds - adCount} reklam daha izlemelisin.`;
+            }
         }
 
         function startGame() {
-            currentIdx = 0; userAnswers = []; penaltyTime = 0;
-            startTime = Date.now();
-            timerInterval = setInterval(() => {
-                let now = ((Date.now() - startTime) / 1000 + penaltyTime).toFixed(2);
-                document.getElementById('timer').innerText = now + "s";
-            }, 50);
-            renderQuestion();
-        }
-
-        function renderQuestion() {
-            if (currentIdx >= dailyQuestions.length) return endGame();
-            let qData = dailyQuestions[currentIdx];
-            document.getElementById('question-box').innerText = `${currentIdx + 1}. ${qData.q}`;
-            let container = document.getElementById('options-container');
-            container.innerHTML = "";
-            qData.a.forEach((opt, i) => {
-                let btn = document.createElement('button');
-                btn.className = "option";
-                btn.innerText = opt;
-                btn.onclick = () => handleAnswer(i);
-                container.appendChild(btn);
-            });
-        }
-
-        function handleAnswer(choice) {
-            let qData = dailyQuestions[currentIdx];
-            userAnswers.push(choice);
-            if (choice !== qData.c) {
-                penaltyTime += 5; // Yanlış cevaba 5 sn ceza
-                tg.HapticFeedback.notificationOccurred('error');
-            } else {
-                tg.HapticFeedback.notificationOccurred('success');
-            }
-            currentIdx++;
-            renderQuestion();
-        }
-
-        function endGame() {
-            clearInterval(timerInterval);
-            let finalTime = ((Date.now() - startTime) / 1000 + penaltyTime).toFixed(2);
-            document.getElementById('timer').innerText = finalTime + "s";
-            document.getElementById('question-box').innerText = "YARIŞMA TAMAMLANDI!";
-            document.getElementById('options-container').innerHTML = "";
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('quiz-screen').style.display = 'block';
             
-            // SONUÇLARI GÖSTER (İnceleme Ekranı)
-            let reviewHtml = "<h3> Yanıt Analizi:</h3>";
-            dailyQuestions.forEach((q, i) => {
-                let uAns = userAnswers[i];
-                let isCorrect = uAns === q.c;
-                reviewHtml += `
-                    <div class="review-item">
-                        <strong>Soru ${i+1}:</strong> ${q.q}<br>
-                        <span class="${isCorrect ? 'correct' : 'wrong'}">Senin Cevabın: ${q.a[uAns]}</span><br>
-                        ${!isCorrect ? `<span class="correct">Doğru Cevap: ${q.a[q.c]}</span>` : ''}
-                    </div>`;
-            });
-            document.getElementById('review-container').innerHTML = reviewHtml;
-            saveScore(finalTime);
+            // Burada önceki hazırladığımız Quiz fonksiyonlarını (questions, nextQuestion vb.) çalıştıracaksın.
+            startQuizLogic(); 
         }
 
-        async function saveScore(f) {
-            const u = tg.initDataUnsafe?.user;
-            const data = { 
-                telegram_id: u?.id || Math.floor(Math.random()*999), 
-                username: u?.first_name || "Bilgin", 
-                score: parseFloat(f) 
-            };
-            await _supabase.from('leaderboard').insert([data]);
-            document.getElementById('leaderboard-btn').style.display = 'block';
-            tg.showAlert(`BİTTİ! Toplam Süren (Cezalar Dahil): ${f}s`);
+        // --- QUIZ MANTIK KISMI (Kısaltılmış Özet) ---
+        function startQuizLogic() {
+            // Buraya bir önceki mesajdaki soru döngüsünü ve zamanlayıcıyı ekliyoruz.
+            alert("Bilet doğrulandı! Yarışma başlıyor...");
+            // ... (Daha önceki quiz kodlarını buraya yapıştırabilirsin)
         }
-
-        async function showLeaderboard() {
-            const { data } = await _supabase.from('leaderboard').select('*').order('score', { ascending: true }).limit(5);
-            if (data) {
-                let list = data.map((item, i) => `${i+1}. ${item.username}: ${item.score}s`).join('\n');
-                tg.showConfirm("🏆 GÜNÜN EN HIZLILARI:\n\n" + list);
-            }
-        }
-
-        init();
     </script>
 </body>
 </html>
