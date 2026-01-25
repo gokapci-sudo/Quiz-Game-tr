@@ -3,36 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quiz Master: 10 Soru</title>
+    <title>Quiz Master - Daily Challenge</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { margin: 0; background: #0f172a; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
-        #game-container { padding: 20px; text-align: center; }
-        #timer { font-size: 2rem; color: #38bdf8; font-weight: bold; margin-bottom: 10px; }
-        #question-box { background: #1e293b; padding: 20px; border-radius: 15px; min-height: 100px; margin-bottom: 20px; border: 2px solid #334155; }
+        body { margin: 0; background: #0f172a; color: white; font-family: sans-serif; overflow-y: auto; }
+        #game-container { padding: 20px; text-align: center; max-width: 500px; margin: auto; }
+        #timer { font-size: 2rem; color: #38bdf8; font-weight: bold; margin: 10px 0; }
+        #question-box { background: #1e293b; padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 2px solid #334155; font-size: 1.2rem; }
         .option { 
-            display: block; width: 100%; padding: 15px; margin: 10px 0; 
+            display: block; width: 100%; padding: 15px; margin: 8px 0; 
             background: #334155; border: none; border-radius: 10px; 
-            color: white; font-size: 1.1rem; cursor: pointer; transition: 0.2s;
+            color: white; font-size: 1rem; cursor: pointer;
         }
-        .option:active { transform: scale(0.95); background: #475569; }
+        /* İnceleme Ekranı Stilleri */
+        .review-item { text-align: left; background: #1e293b; padding: 15px; margin: 10px 0; border-radius: 10px; font-size: 0.9rem; }
+        .correct { color: #4ade80; font-weight: bold; }
+        .wrong { color: #f87171; font-weight: bold; }
         #leaderboard-btn {
-            display: none; margin: 20px auto; padding: 12px 25px; 
-            background: #38bdf8; color: #0f172a; border: none; 
-            border-radius: 20px; font-weight: bold; cursor: pointer;
+            display: none; width: 100%; padding: 15px; background: #38bdf8; color: #0f172a; 
+            border: none; border-radius: 10px; font-weight: bold; margin-top: 20px;
         }
     </style>
 </head>
 <body>
     <div id="game-container">
-        <div id="status-bar">Soru: <span id="q-count">0</span>/10</div>
+        <div id="header">Günün Soruları (00:00'da Yenilenir)</div>
         <div id="timer">0.00s</div>
-        <div id="question-box">Yarışmaya Hazır mısın?</div>
-        <div id="options-container">
-            <button class="option" onclick="startGame()">BAŞLA!</button>
-        </div>
-        <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 SKORLAR</button>
+        <div id="question-box">Yükleniyor...</div>
+        <div id="options-container"></div>
+        <div id="review-container"></div>
+        <button id="leaderboard-btn" onclick="showLeaderboard()">🏆 LİDERLİK TABLOSU</button>
     </div>
 
     <script>
@@ -41,67 +42,108 @@
         const tg = window.Telegram.WebApp; tg.expand();
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
 
-        let questions = [
-            { q: "Dünyanın en büyük okyanusu hangisidir?", a: ["Büyük Okyanus", "Atlas Okyanusu", "Hint Okyanusu"], c: 0 },
-            { q: "Hangi gezegen 'Kızıl Gezegen' olarak bilinir?", a: ["Venüs", "Mars", "Jüpiter"], c: 1 },
-            { q: "Türkiye'nin başkenti neresidir?", a: ["İstanbul", "Ankara", "İzmir"], c: 1 },
-            { q: "Mona Lisa tablosu kime aittir?", a: ["Picasso", "Da Vinci", "Van Gogh"], c: 1 },
-            { q: "Hangisi bir programlama dili değildir?", a: ["Python", "HTML", "Java"], c: 1 },
-            { q: "Güneş sistemindeki en büyük gezegen?", a: ["Satürn", "Neptün", "Jüpiter"], c: 2 },
-            { q: "Su kaç derecede donar?", a: ["0", "10", "100"], c: 0 },
-            { q: "En çok uydusu olan gezegen?", a: ["Mars", "Satürn", "Dünya"], c: 1 },
-            { q: "İstiklal Marşı'nın şairi kimdir?", a: ["Ziya Gökalp", "M. Akif Ersoy", "Namık Kemal"], c: 1 },
-            { q: "Işık hızını temsil eden harf?", a: ["v", "c", "x"], c: 1 }
+        // --- BÜYÜK SORU HAVUZU ---
+        const questionPool = [
+            { q: "Dünyanın en yüksek dağı hangisidir?", a: ["K2", "Everest", "Lhotse"], c: 1 },
+            { q: "Hangi elementin simgesi 'Au'dur?", a: ["Gümüş", "Bakır", "Altın"], c: 2 },
+            { q: "Aspirin'in hammaddesi nedir?", a: ["Meşe", "Söğüt", "Çam"], c: 1 },
+            { q: "İlk Nobel ödülü hangi yılda verilmiştir?", a: ["1901", "1915", "1923"], c: 0 },
+            { q: "Hangi ülke en çok adaya sahiptir?", a: ["Yunanistan", "Endonezya", "İsveç"], c: 2 },
+            { q: "İnsan vücudundaki en sert doku hangisidir?", a: ["Kemik", "Diş Minesi", "Kıkırdak"], c: 1 },
+            { q: "Güneş'e en yakın gezegen?", a: ["Merkür", "Venüs", "Dünya"], c: 0 },
+            { q: "Telefonu kim icat etti?", a: ["Edison", "Graham Bell", "Tesla"], c: 1 },
+            { q: "Fransa'nın başkenti?", a: ["Lyon", "Marsilya", "Paris"], c: 2 },
+            { q: "8x8 satranç tahtasında kaç kare vardır?", a: ["32", "64", "128"], c: 1 },
+            { q: "Türkiye'nin en büyük gölü?", a: ["Van Gölü", "Tuz Gölü", "Eğirdir"], c: 0 },
+            { q: "Kendi ışığını üreten gök cismi?", a: ["Gezegen", "Yıldız", "Uydu"], c: 1 },
+            { q: "Hangisi bir memelidir?", a: ["Balina", "Köpekbalığı", "Timsah"], c: 0 },
+            { q: "Avrupa Birliği'nin merkezi neresidir?", a: ["Paris", "Berlin", "Brüksel"], c: 2 },
+            { q: "DNA'nın yapısı nasıldır?", a: ["Tekli Sarmal", "Çift Sarmal", "Daire"], c: 1 }
+            // Buraya yüzlerce soru ekleyebilirsin...
         ];
 
+        let dailyQuestions = [];
+        let userAnswers = [];
         let currentIdx = 0, startTime, timerInterval, penaltyTime = 0;
 
-        function startGame() {
-            currentIdx = 0; penaltyTime = 0; startTime = Date.now();
-            document.getElementById('leaderboard-btn').style.display = 'none';
-            timerInterval = setInterval(updateTimer, 50);
-            nextQuestion();
-        }
-
-        function updateTimer() {
-            let now = ((Date.now() - startTime) / 1000 + penaltyTime).toFixed(2);
-            document.getElementById('timer').innerText = now + "s";
-        }
-
-        function nextQuestion() {
-            if (currentIdx >= 10) return endGame();
+        // --- GÜNLÜK SORU SEÇİCİ (00:00 AYARI) ---
+        function getDailyQuestions() {
+            const today = new Date().toLocaleDateString('tr-TR'); // Gün-Ay-Yıl formatı
+            let seed = today.split('.').join(''); // "26012026" gibi bir sayı oluşturur
+            let randomSeed = parseInt(seed);
             
-            let qData = questions[currentIdx];
-            document.getElementById('q-count').innerText = currentIdx + 1;
-            document.getElementById('question-box').innerText = qData.q;
+            // Basit bir karıştırma algoritması (Her gün aynı sırayı verir)
+            let shuffled = [...questionPool].sort(() => {
+                randomSeed = (randomSeed * 9301 + 49297) % 233280;
+                return (randomSeed / 233280) - 0.5;
+            });
+            return shuffled.slice(0, 10);
+        }
+
+        function init() {
+            dailyQuestions = getDailyQuestions();
+            document.getElementById('question-box').innerText = "Günün 10 sorusuna hazır mısın?";
+            document.getElementById('options-container').innerHTML = `<button class="option" onclick="startGame()">YARIŞMAYI BAŞLAT</button>`;
+        }
+
+        function startGame() {
+            currentIdx = 0; userAnswers = []; penaltyTime = 0;
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                let now = ((Date.now() - startTime) / 1000 + penaltyTime).toFixed(2);
+                document.getElementById('timer').innerText = now + "s";
+            }, 50);
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            if (currentIdx >= dailyQuestions.length) return endGame();
+            let qData = dailyQuestions[currentIdx];
+            document.getElementById('question-box').innerText = `${currentIdx + 1}. ${qData.q}`;
             let container = document.getElementById('options-container');
             container.innerHTML = "";
-            
             qData.a.forEach((opt, i) => {
                 let btn = document.createElement('button');
                 btn.className = "option";
                 btn.innerText = opt;
-                btn.onclick = () => checkAnswer(i);
+                btn.onclick = () => handleAnswer(i);
                 container.appendChild(btn);
             });
         }
 
-        function checkAnswer(idx) {
-            if (idx === questions[currentIdx].c) {
-                tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                penaltyTime += 5; // Yanlış cevapta 5 saniye ceza
+        function handleAnswer(choice) {
+            let qData = dailyQuestions[currentIdx];
+            userAnswers.push(choice);
+            if (choice !== qData.c) {
+                penaltyTime += 5; // Yanlış cevaba 5 sn ceza
                 tg.HapticFeedback.notificationOccurred('error');
+            } else {
+                tg.HapticFeedback.notificationOccurred('success');
             }
             currentIdx++;
-            nextQuestion();
+            renderQuestion();
         }
 
         function endGame() {
             clearInterval(timerInterval);
             let finalTime = ((Date.now() - startTime) / 1000 + penaltyTime).toFixed(2);
-            document.getElementById('question-box').innerText = "YARIŞ BİTTİ!";
-            document.getElementById('options-container').innerHTML = `<h3>Süren: ${finalTime}s</h3>`;
+            document.getElementById('timer').innerText = finalTime + "s";
+            document.getElementById('question-box').innerText = "YARIŞMA TAMAMLANDI!";
+            document.getElementById('options-container').innerHTML = "";
+            
+            // SONUÇLARI GÖSTER (İnceleme Ekranı)
+            let reviewHtml = "<h3> Yanıt Analizi:</h3>";
+            dailyQuestions.forEach((q, i) => {
+                let uAns = userAnswers[i];
+                let isCorrect = uAns === q.c;
+                reviewHtml += `
+                    <div class="review-item">
+                        <strong>Soru ${i+1}:</strong> ${q.q}<br>
+                        <span class="${isCorrect ? 'correct' : 'wrong'}">Senin Cevabın: ${q.a[uAns]}</span><br>
+                        ${!isCorrect ? `<span class="correct">Doğru Cevap: ${q.a[q.c]}</span>` : ''}
+                    </div>`;
+            });
+            document.getElementById('review-container').innerHTML = reviewHtml;
             saveScore(finalTime);
         }
 
@@ -114,16 +156,18 @@
             };
             await _supabase.from('leaderboard').insert([data]);
             document.getElementById('leaderboard-btn').style.display = 'block';
-            tg.showAlert(`TEBRİKLER!\nToplam Süre: ${f}s`);
+            tg.showAlert(`BİTTİ! Toplam Süren (Cezalar Dahil): ${f}s`);
         }
 
         async function showLeaderboard() {
             const { data } = await _supabase.from('leaderboard').select('*').order('score', { ascending: true }).limit(5);
             if (data) {
                 let list = data.map((item, i) => `${i+1}. ${item.username}: ${item.score}s`).join('\n');
-                tg.showConfirm("🏆 EN HIZLI BİLGİNLER:\n\n" + list);
+                tg.showConfirm("🏆 GÜNÜN EN HIZLILARI:\n\n" + list);
             }
         }
+
+        init();
     </script>
 </body>
 </html>
