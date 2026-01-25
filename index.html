@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Quiz Arena: Champion Edition</title>
+    <title>Quiz Arena: Password Edition</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
@@ -17,10 +17,11 @@
         .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; text-decoration: none; transition: 0.2s; }
         .btn-blue { background:var(--primary); color:#000; }
         .btn-yt { background: var(--yt); color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
-        .btn-option { background: #ffffff; color: #000; margin-bottom: 12px; text-align: left; padding: 14px; border: 2px solid transparent; }
+        .btn-option { background: #ffffff; color: #000; margin-bottom: 12px; text-align: left; padding: 14px; }
         .btn-success { background: var(--success) !important; color: #fff !important; }
         .btn-error { background: var(--error) !important; color: #fff !important; }
         .btn-disabled { background: #475569 !important; opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+        .pw-input { width: 60px; padding: 10px; border-radius: 8px; border: 1px solid var(--primary); background: #0f172a; color: #fff; text-align: center; text-transform: uppercase; font-weight: bold; margin-top: 5px; }
         #ton-connect-btn { display: flex; justify-content: center; margin: 10px 0; width: 100%; }
         .prize-table { background: rgba(56, 189, 248, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 10px; margin-bottom: 10px; width: 100%; max-width: 450px; }
         .prize-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; }
@@ -56,6 +57,16 @@
         <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
     </div>
 
+    <div id="task-screen" class="screen">
+        <h2 style="color: var(--gold)">BİLET GÖREVİ</h2>
+        <div class="card">
+            <p style="font-size: 0.9rem;">Videoları izleyin ve içindeki <b>2'şer harfli</b> şifreleri bulun.</p>
+            <div id="task-list"></div>
+            <button class="btn btn-blue" id="final-claim-btn" onclick="checkAllPasswords()" style="margin-top:15px">BİLETİ ONAYLA</button>
+        </div>
+        <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">⬅️ GERİ DÖN</button>
+    </div>
+
     <div id="quiz-screen" class="screen">
         <div id="quiz-timer" style="font-size: 2.5rem; color: var(--gold); font-weight: 800; margin: 15px 0;">15</div>
         <div class="card"><h3 id="question-text">Soru Yükleniyor...</h3></div>
@@ -84,8 +95,9 @@
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
 
-        // YouTube Ayarları (Test için süreyi düşürebilirsin, şu an 300000ms = 5dk)
-        const WAIT_TIME = 300000; 
+        // --- AYARLAR ---
+        const CORRECT_PASSWORDS = ["GA", "MI", "NI"]; // Videolardaki şifreler (Sırayla)
+        const WAIT_TIME = 300000; // 5 Dakika
         const YT_VIDEOS = [
             { url: "https://www.youtube.com/watch?v=1" },
             { url: "https://www.youtube.com/watch?v=2" },
@@ -109,6 +121,7 @@
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
             user = data || (await _supabase.from('users').insert([{ telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", has_ticket: false }]).select().single()).data;
             renderMain();
+            renderTasks();
         }
 
         function startVideoTimer(i) {
@@ -117,21 +130,51 @@
             if (activeInterval) clearInterval(activeInterval);
             activeInterval = setInterval(() => {
                 vTimers[i] -= 1000;
-                renderMain();
+                renderTasks();
                 if (vTimers[i] <= 0) {
                     clearInterval(activeInterval);
                     vStatus[i] = true;
-                    renderMain();
+                    renderTasks();
                 }
             }, 1000);
         }
 
-        async function claimTicket() {
-            if(vStatus.every(v => v)) {
+        function renderTasks() {
+            const list = document.getElementById('task-list');
+            let html = "";
+            for(let i=0; i<3; i++) {
+                const isLocked = i > 0 && !vStatus[i-1];
+                const isDone = vStatus[i];
+                const isRunning = vTimers[i] < WAIT_TIME && vTimers[i] > 0;
+                
+                let btnClass = "btn btn-yt" + (isLocked ? " btn-disabled" : "") + (isDone ? " btn-success" : "");
+                let btnText = isDone ? `✅ ${i+1}. Video İzlendi` : (isRunning ? `⏳ Kalan: ${Math.ceil(vTimers[i]/1000)}sn` : `🎬 ${i+1}. Videoyu İzle`);
+                
+                html += `
+                    <div style="margin-bottom:15px; padding:10px; border-bottom:1px solid #334155;">
+                        <button class="${btnClass}" onclick="startVideoTimer(${i})">${btnText}</button>
+                        <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:5px;">
+                            <span>Şifre:</span>
+                            <input type="text" maxlength="2" class="pw-input" id="pw-${i}" ${!isDone ? 'disabled placeholder="??"' : 'placeholder="AZ"'} oninput="this.value = this.value.toUpperCase()">
+                        </div>
+                    </div>`;
+            }
+            list.innerHTML = html;
+        }
+
+        async function checkAllPasswords() {
+            const p1 = document.getElementById('pw-0').value.toUpperCase();
+            const p2 = document.getElementById('pw-1').value.toUpperCase();
+            const p3 = document.getElementById('pw-2').value.toUpperCase();
+
+            if(p1 === CORRECT_PASSWORDS[0] && p2 === CORRECT_PASSWORDS[1] && p3 === CORRECT_PASSWORDS[2]) {
                 await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
                 user.has_ticket = true;
+                tg.showAlert("Şifreler Doğru! Biletiniz tanımlandı.");
+                showScreen('main-screen');
                 renderMain();
-                tg.showAlert("Biletiniz başarıyla tanımlandı!");
+            } else {
+                tg.showAlert("Şifreler yanlış! Lütfen videoları dikkatli izleyin.");
             }
         }
 
@@ -145,18 +188,11 @@
             } else if (user.has_ticket) {
                 actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA BAŞLA</button>`;
             } else {
-                let html = `<div class="card"><p style="font-weight:bold;">🎫 Bilet Görevi (Sırayla İzle)</p>`;
-                for(let i=0; i<3; i++) {
-                    const isLocked = i > 0 && !vStatus[i-1];
-                    const isDone = vStatus[i];
-                    const isRunning = vTimers[i] < WAIT_TIME && vTimers[i] > 0;
-                    let btnClass = "btn btn-yt" + (isLocked ? " btn-disabled" : "") + (isDone ? " btn-success" : "");
-                    let btnText = isDone ? `✅ ${i+1}. Tamamlandı` : (isRunning ? `⏳ Kalan: ${Math.ceil(vTimers[i]/1000)}sn` : `🎬 ${i+1}. Videoyu İzle`);
-                    html += `<button class="${btnClass}" onclick="startVideoTimer(${i})">${btnText}</button>`;
-                }
-                html += `<p style="font-size:0.6rem; color:#94a3b8; margin:10px 0;">Bilet için tüm videoları 5 dakika izlemelisiniz.</p>`;
-                html += `<button class="btn ${vStatus.every(v => v) ? 'btn-blue' : 'btn-disabled'}" onclick="claimTicket()">BİLETİ ONAYLA</button></div>`;
-                actionArea.innerHTML = html;
+                actionArea.innerHTML = `
+                <div class="card">
+                    <p style="margin:0 0 10px 0;">Yarışmak için biletiniz yok.</p>
+                    <button class="btn btn-yt" onclick="showScreen('task-screen')">🎫 BİLET AL (GÖREVE GİT)</button>
+                </div>`;
             }
         }
 
@@ -164,10 +200,8 @@
             const { data } = await _supabase.from('questions').select('*');
             if(!data || data.length === 0) return tg.showAlert("Soru yüklenemedi!");
             dailyQuestions = data.sort(() => 0.5 - Math.random()).slice(0, 10);
-            currentIdx = 0; score = 0;
-            quizStartTime = Date.now();
-            showScreen('quiz-screen');
-            loadQuestion();
+            currentIdx = 0; score = 0; quizStartTime = Date.now();
+            showScreen('quiz-screen'); loadQuestion();
         }
 
         function loadQuestion() {
