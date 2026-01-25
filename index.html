@@ -14,11 +14,11 @@
         .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; }
         .screen.active { display:flex; }
         .card { background:var(--card); padding:20px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 450px; }
-        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; transition: 0.2s; }
+        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; }
         .btn-blue { background:var(--primary); color:#000; }
-        .btn-option { background: #334155; text-align: left; margin-bottom: 8px; }
+        .btn-option { background: #334155; text-align: left; }
         #ton-connect-btn { margin: 15px 0; min-height: 44px; }
-        .wallet-addr { font-size: 0.75rem; color: #94a3b8; margin-bottom: 5px; word-break: break-all; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px; }
+        .wallet-addr { font-size: 0.75rem; color: #94a3b8; margin-bottom: 5px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px; }
         .loader { border: 4px solid #334155; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .scroll-area { width: 100%; max-width: 450px; flex: 1; overflow-y: auto; margin-bottom: 20px; }
@@ -28,13 +28,13 @@
 <body>
 
     <div id="loading-screen" class="screen active">
-        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Veriler Doğrulanıyor...</p></div>
+        <div style="margin-top: 40vh;"><div class="loader"></div><p id="load-msg">Veriler Senkronize Ediliyor...</p></div>
     </div>
 
     <div id="main-screen" class="screen">
         <div class="card" style="margin-top: 20px;">
             <h2 id="u-name" style="margin:0">@Oyuncu</h2>
-            <div id="wallet-info" class="wallet-addr">Cüzdan Bağlı Değil</div>
+            <div id="wallet-info" class="wallet-addr">Cüzdan Bağlanmadı</div>
             <div id="ton-connect-btn"></div>
             <div id="status-box" style="margin-top:10px; font-weight: bold; color: var(--primary);"></div>
         </div>
@@ -44,7 +44,7 @@
 
     <div id="quiz-screen" class="screen">
         <div id="quiz-timer" style="font-size: 2.5rem; color: var(--gold); font-weight: 800; margin: 20px 0;">15</div>
-        <div class="card"><h3 id="question-text">Soru Yükleniyor...</h3></div>
+        <div class="card"><h3 id="question-text">...</h3></div>
         <div id="options-container" style="width: 100%; max-width: 450px;"></div>
     </div>
 
@@ -64,20 +64,16 @@
     </div>
 
     <script>
-        // --- KONFİGÜRASYON ---
         const APP_URL = 'https://skill-survive.vercel.app'; 
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
-        
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
         
         const getSqlDate = () => new Date().toISOString().split('T')[0];
         const userId = tg.initDataUnsafe?.user?.id || 123456;
-        
         let user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, userAnswers = [], quizStartTime = 0;
 
-        // TON CONNECT UI
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: APP_URL + '/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn'
@@ -90,23 +86,21 @@
                 if (wallet) {
                     const addr = wallet.account.address;
                     document.getElementById('wallet-info').innerText = "Bağlı: " + addr.substring(0,8) + "...";
-                    // Veritabanı sütun: cüzdan_adresi
                     await _supabase.from('users').update({ "cüzdan_adresi": addr }).eq('telegram_kimliği', userId);
                 }
             });
 
             try {
-                // Veritabanı sütun: telegram_kimliği
+                // Sütun isimleri senin tablo yapına göre: telegram_kimliği
                 const { data, error } = await _supabase.from('users').select('*').eq('telegram_kimliği', userId).maybeSingle();
                 
                 if (error) throw error;
                 user = data;
 
                 if (!user) {
-                    // Kayıt oluşturma sütun isimleri
                     const { data: n, error: insErr } = await _supabase.from('users').insert([{
                         "telegram_kimliği": userId, 
-                        "kullanıcı adı": tg.initDataUnsafe?.user?.username || "Oyuncu",
+                        "kullanıcı adı": tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name || "Oyuncu",
                         "bileti var": true,
                         "reklamları izledi": 0
                     }]).select().single();
@@ -120,20 +114,18 @@
                 
                 renderMain();
             } catch (e) { 
-                document.getElementById('load-msg').innerText = "Bağlantı Hatası! Lütfen sayfayı yenileyin.";
+                document.getElementById('load-msg').innerHTML = `<span style="color:var(--error)">Hata: ${e.message}. Sayfayı yenileyin.</span>`;
             }
         }
 
         function renderMain() {
-            // Sütun ismi: kullanıcı adı
             document.getElementById('u-name').innerText = `@${user["kullanıcı adı"]}`;
             const actionArea = document.getElementById('action-area');
             const today = getSqlDate();
 
-            // Sütun ismi: son_oynama_tarihi
             if (user["son_oynama_tarihi"] === today) {
-                document.getElementById('status-box').innerText = "✅ Bugün yarışma hakkın doldu!";
-                actionArea.innerHTML = "<p>Yarın tekrar görüşmek üzere!</p>";
+                document.getElementById('status-box').innerText = "✅ Bugün yarışma tamamlandı!";
+                actionArea.innerHTML = "<p>Yarın tekrar biletin tanımlanacak.</p>";
             } else {
                 document.getElementById('status-box').innerText = "🎫 Yarışma Biletin Hazır!";
                 actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 YARIŞMAYA GİR</button>`;
@@ -147,48 +139,33 @@
                 const { data, error } = await _supabase.from('questions').select('*');
                 if (error) throw error;
                 
-                // Soruları her gün için aynı şekilde karıştır (Seed)
-                let seed = new Date().getDate();
                 dailyQuestions = data.sort(() => 0.5 - Math.random()).slice(0, 10);
-
                 currentIdx = 0; score = 0; userAnswers = []; quizStartTime = Date.now();
                 showScreen('quiz-screen');
                 loadQuestion();
-            } catch (e) {
-                alert("Sorular yüklenemedi!");
-                showScreen('main-screen');
-            }
+            } catch (e) { alert("Soru hatası!"); location.reload(); }
         }
 
         function loadQuestion() {
             if (currentIdx >= dailyQuestions.length) return endQuiz();
-            timeLeft = 15;
-            document.getElementById('quiz-timer').innerText = timeLeft;
+            timeLeft = 15; document.getElementById('quiz-timer').innerText = timeLeft;
             const q = dailyQuestions[currentIdx];
             document.getElementById('question-text').innerText = `${currentIdx + 1}. ${q.question}`;
             const container = document.getElementById('options-container');
             container.innerHTML = '';
             q.options.forEach((opt, i) => {
                 const b = document.createElement('button');
-                b.className = 'btn btn-option';
-                b.innerText = opt;
+                b.className = 'btn btn-option'; b.innerText = opt;
                 b.onclick = () => {
-                    userAnswers.push(i);
-                    if (i === q.correct_option) score += (timeLeft * 10);
+                    userAnswers.push(i); if (i === q.correct_option) score += (timeLeft * 10);
                     clearInterval(timer); currentIdx++; loadQuestion();
                 };
                 container.appendChild(b);
             });
-
             clearInterval(timer);
             timer = setInterval(() => {
-                timeLeft--;
-                document.getElementById('quiz-timer').innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    userAnswers.push(-1);
-                    currentIdx++;
-                    loadQuestion();
-                }
+                timeLeft--; document.getElementById('quiz-timer').innerText = timeLeft;
+                if (timeLeft <= 0) { userAnswers.push(-1); currentIdx++; loadQuestion(); }
             }, 1000);
         }
 
@@ -199,37 +176,23 @@
             
             try {
                 // Sütun isimleri: son_oynama_tarihi, bileti var
-                await _supabase.from('users').update({ 
-                    "son_oynama_tarihi": today, 
-                    "bileti var": false 
-                }).eq('telegram_kimliği', userId);
+                await _supabase.from('users').update({ "son_oynama_tarihi": today, "bileti var": false }).eq('telegram_kimliği', userId);
                 
-                // Skor kaydı
                 await _supabase.from('daily_scores').insert([{ 
-                    telegram_id: userId, 
-                    username: user["kullanıcı adı"], 
-                    score: score, 
-                    completion_time: timeMs, 
-                    play_date: today 
+                    telegram_id: userId, username: user["kullanıcı adı"], score: score, completion_time: timeMs, play_date: today 
                 }]);
 
                 showScreen('result-screen');
                 document.getElementById('final-score').innerText = score;
-                document.getElementById('final-time').innerText = `⏱️ Bitirme süren: ${(timeMs/1000).toFixed(2)} sn`;
+                document.getElementById('final-time').innerText = `⏱️ ${(timeMs/1000).toFixed(2)} sn`;
                 
                 const review = document.getElementById('review-list');
                 review.innerHTML = "";
                 dailyQuestions.forEach((q, i) => {
                     const isC = userAnswers[i] === q.correct_option;
-                    review.innerHTML += `<div style="text-align:left; padding:10px; border-bottom:1px solid #334155;">
-                        <b>${i+1}. ${q.question}</b><br>
-                        <span style="color:var(--success)">Doğru: ${q.options[q.correct_option]}</span><br>
-                        ${!isC ? `<span style="color:var(--error)">Senin Cevabın: ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}
-                    </div>`;
+                    review.innerHTML += `<div style="text-align:left; padding:10px; border-bottom:1px solid #334155;"><b>${i+1}. ${q.question}</b><br><span style="color:var(--success)">✅ ${q.options[q.correct_option]}</span><br>${!isC ? `<span style="color:var(--error)">❌ ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}</div>`;
                 });
-            } catch (e) {
-                location.reload();
-            }
+            } catch (e) { location.reload(); }
         }
 
         async function fetchLeaderboard() {
