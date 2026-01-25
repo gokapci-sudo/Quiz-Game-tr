@@ -7,14 +7,13 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; }
+        :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --success: #10b981; --error: #ef4444; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
             margin:0; background: var(--bg); color: var(--text); 
             font-family: -apple-system, system-ui, sans-serif; 
-            text-align:center; min-height: 100vh; width: 100%;
-            overflow: hidden; 
+            text-align:center; min-height: 100vh; width: 100%; overflow: hidden; 
         }
         
         .screen { 
@@ -34,7 +33,8 @@
             margin-bottom:10px; font-size: 1rem; color: #fff; transition: 0.2s;
         }
         .btn-blue { background:var(--primary); color:#000; }
-        .btn-option { background: #334155; text-align: left; }
+        .btn-option { background: #334155; text-align: left; font-weight: 500; }
+        .btn-option:active { background: #475569; }
         
         .loader { 
             border: 4px solid #334155; border-top: 4px solid var(--primary); 
@@ -43,8 +43,13 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .review-item { text-align: left; padding: 10px; border-bottom: 1px solid #475569; font-size: 0.85rem; width: 100%; }
-        .scroll-area { width: 100%; max-width: 450px; flex: 1; overflow-y: auto; margin-bottom: 20px; }
+        .scroll-area { width: 100%; max-width: 450px; flex: 1; overflow-y: auto; margin-bottom: 20px; padding: 5px; }
+        .leader-row { 
+            display:flex; justify-content:space-between; align-items: center;
+            padding:12px; border-bottom:1px solid #334155; background: rgba(30, 41, 59, 0.5);
+            margin-bottom: 4px; border-radius: 8px;
+        }
+        .review-item { text-align: left; padding: 12px; border-bottom: 1px solid #334155; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -52,14 +57,14 @@
     <div id="loading-screen" class="screen active">
         <div style="margin-top: 40vh;">
             <div class="loader"></div>
-            <p id="load-msg">Veriler Doğrulanıyor...</p>
+            <p id="load-msg">Veriler Senkronize Ediliyor...</p>
         </div>
     </div>
 
     <div id="main-screen" class="screen">
         <div class="card" style="margin-top: 20px;">
-            <h2 id="u-name" style="margin:0">...</h2>
-            <div id="status-box" style="margin-top:10px; color: var(--primary); font-weight: bold;"></div>
+            <h2 id="u-name" style="margin:0; color: var(--primary);">...</h2>
+            <div id="status-box" style="margin-top:10px; font-weight: bold; font-size: 0.9rem;"></div>
         </div>
         <div id="action-area" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
         <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 GÜNLÜK SIRALAMA</button>
@@ -73,14 +78,16 @@
 
     <div id="result-screen" class="screen">
         <div class="card">
-            <h2 style="margin:0">Puan: <span id="final-score" style="color:var(--primary)">0</span></h2>
+            <h2 style="margin:0">Skorunuz: <span id="final-score" style="color:var(--primary)">0</span></h2>
+            <p id="final-time" style="color: var(--gold); font-weight: bold; margin: 10px 0;"></p>
         </div>
         <div class="scroll-area" id="review-list"></div>
         <button class="btn btn-blue" onclick="location.reload()">🔄 ANA SAYFAYA DÖN</button>
     </div>
 
     <div id="leader-screen" class="screen">
-        <h2 style="color: var(--gold)">Liderlik Tablosu</h2>
+        <h2 style="color: var(--gold); margin-bottom: 5px;">🏆 Günün En İyileri</h2>
+        <p style="font-size: 0.8rem; margin-bottom: 15px; color: #94a3b8;">Sıralama: Önce Puan, Sonra Süre</p>
         <div class="scroll-area" id="leader-list"></div>
         <button class="btn btn-blue" onclick="showScreen('main-screen')">⬅️ GERİ DÖN</button>
     </div>
@@ -91,12 +98,15 @@
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
         
-        const getSqlDate = () => new Date().toISOString().split('T')[0];
         const userId = tg.initDataUnsafe?.user?.id || 123456;
+        const getSqlDate = () => new Date().toISOString().split('T')[0];
+        
         let user = null;
         let dailyQuestions = [];
         let currentIdx = 0, score = 0, timer, timeLeft = 15, userAnswers = [];
+        let quizStartTime = 0;
 
+        // Günlük aynı soruları seçmek için Seed mantığı
         function getDailySeed() {
             const d = new Date();
             return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
@@ -117,7 +127,7 @@
                 if (!user) {
                     const { data: newUser } = await _supabase.from('users').insert([{
                         telegram_id: userId,
-                        username: tg.initDataUnsafe?.user?.username || "Oyuncu",
+                        username: tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name || "Oyuncu",
                         last_ad_date: getSqlDate(),
                         ads_watched: 0,
                         has_ticket: false
@@ -126,7 +136,7 @@
                 }
                 renderMain();
             } catch (err) {
-                document.getElementById('load-msg').innerText = "Hata: " + err.message;
+                document.getElementById('load-msg').innerText = "Bağlantı Hatası!";
             }
         }
 
@@ -137,7 +147,7 @@
             const today = getSqlDate();
 
             if (user.last_played_date === today) {
-                statusBox.innerHTML = "✅ Bugünün yarışmasını tamamladın!";
+                statusBox.innerHTML = "✅ Bugünkü yarışma tamamlandı!";
                 actionArea.innerHTML = "";
             } else {
                 statusBox.innerHTML = "🎫 Yarışma biletin aktif!";
@@ -151,8 +161,9 @@
             try {
                 const { data: allQuestions } = await _supabase.from('questions').select('*');
                 let seed = getDailySeed();
-                
                 let pool = [...allQuestions];
+                
+                // Seed ile her kullanıcıya aynı karıştırma
                 for (let i = pool.length - 1; i > 0; i--) {
                     const j = Math.floor(seededRandom(seed + i) * (i + 1));
                     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -160,6 +171,7 @@
                 dailyQuestions = pool.slice(0, 10);
 
                 currentIdx = 0; score = 0; userAnswers = [];
+                quizStartTime = Date.now(); // Toplam süreyi başlat
                 showScreen('quiz-screen');
                 loadQuestion();
             } catch (err) {
@@ -203,9 +215,12 @@
         }
 
         async function endQuiz() {
-            showScreen('result-screen');
-            document.getElementById('final-score').innerText = score;
+            const totalTimeMs = Date.now() - quizStartTime;
             const today = getSqlDate();
+            showScreen('result-screen');
+            
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-time').innerText = `⏱️ Bitirme Süresi: ${(totalTimeMs/1000).toFixed(2)} sn`;
 
             const review = document.getElementById('review-list');
             review.innerHTML = "";
@@ -214,14 +229,19 @@
                 review.innerHTML += `
                     <div class="review-item">
                         <b>${i+1}. ${q.question}</b><br>
-                        <span style="color:#10b981">Doğru: ${q.options[q.correct_option]}</span><br>
-                        ${!isCorrect ? `<span style="color:#ef4444">Sizin: ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}
+                        <span style="color:var(--success)">Doğru: ${q.options[q.correct_option]}</span><br>
+                        ${!isCorrect ? `<span style="color:var(--error)">Sizin: ${userAnswers[i]===-1?'Süre Bitti':q.options[userAnswers[i]]}</span>` : ''}
                     </div>`;
             });
 
+            // Veritabanı Kayıtları
             await _supabase.from('users').update({ last_played_date: today }).eq('telegram_id', userId);
             await _supabase.from('daily_scores').insert([{
-                telegram_id: userId, username: user.username, score: score, play_date: today
+                telegram_id: userId, 
+                username: user.username, 
+                score: score, 
+                completion_time: totalTimeMs,
+                play_date: today
             }]);
         }
 
@@ -229,13 +249,32 @@
             showScreen('leader-screen');
             const list = document.getElementById('leader-list');
             list.innerHTML = "<div class='loader'></div>";
-            const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', getSqlDate()).order('score', {ascending: false}).limit(10);
+            
+            const { data } = await _supabase.from('daily_scores')
+                .select('*')
+                .eq('play_date', getSqlDate())
+                .order('score', {ascending: false})
+                .order('completion_time', {ascending: true})
+                .limit(10);
+            
             list.innerHTML = "";
             if (data && data.length > 0) {
                 data.forEach((row, i) => {
-                    list.innerHTML += `<div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #334155;"><span><b>#${i+1}</b> @${row.username}</span><b>${row.score}</b></div>`;
+                    const timeSec = (row.completion_time / 1000).toFixed(2);
+                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+                    list.innerHTML += `
+                        <div class="leader-row" style="${i < 3 ? 'border-left: 4px solid var(--gold)' : ''}">
+                            <div style="text-align:left">
+                                <span style="font-size:1.2rem; margin-right:8px;">${medal}</span>
+                                <b>@${row.username}</b>
+                            </div>
+                            <div style="text-align:right">
+                                <div style="color:var(--primary); font-weight:800;">${row.score}</div>
+                                <div style="font-size:0.7rem; color:#94a3b8;">⏱️ ${timeSec}s</div>
+                            </div>
+                        </div>`;
                 });
-            } else { list.innerHTML = "Henüz skor girilmedi."; }
+            } else { list.innerHTML = "<p style='margin-top:20px'>Henüz yarışan olmadı!</p>"; }
         }
 
         function showScreen(id) {
