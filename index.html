@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quiz Master Pro</title>
+    <title>Quiz Master Pro - Auto-Sync</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://sad.adsgram.ai/js/adsgram-ad-sdk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -19,15 +19,14 @@
         .btn-play { background: var(--accent); color: #000; }
         .option { background: #334155; color: white; text-align: left; margin-bottom: 10px; width: 100%; }
         #timer { font-size: 2.5rem; color: var(--accent); font-weight: 800; margin: 10px 0; }
-        .review-card { text-align: left; border-left: 4px solid #334155; padding-left: 15px; margin-bottom: 10px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
     <div id="app">
         <div id="ticket-screen" class="screen active">
-            <h2>🎫 Günlük Yarışma</h2>
+            <h2 id="welcome-msg">Hoş Geldiniz</h2>
             <div class="card">
-                <div id="ad-progress" style="font-size: 1.2rem; margin-bottom: 10px;">Yükleniyor...</div>
+                <div id="ad-progress" style="font-size: 1.2rem; margin-bottom: 10px;">Bilet Hazırlanıyor...</div>
                 <div id="ad-bar" style="height:10px; background:#334155; border-radius:5px; overflow:hidden;">
                     <div id="ad-fill" style="width:0%; height:100%; background:var(--accent); transition:0.3s;"></div>
                 </div>
@@ -46,7 +45,7 @@
             <h2>Bitti!</h2>
             <div id="final-time" style="font-size: 2rem; color:var(--accent); margin-bottom: 20px;"></div>
             <div id="analysis"></div>
-            <button class="btn btn-play" onclick="location.reload()">🔄 TEKRAR</button>
+            <button class="btn btn-play" onclick="location.reload()">🔄 TEKRAR DENE</button>
         </div>
     </div>
 
@@ -57,33 +56,52 @@
         const tg = window.Telegram.WebApp;
         const AdController = window.Adsgram.init({ blockId: "int-2709" });
 
+        const userId = tg.initDataUnsafe?.user?.id || 12345;
+        const userName = tg.initDataUnsafe?.user?.first_name || "Oyuncu";
+        const today = new Date().toLocaleDateString('tr-TR');
+
         let userStats = { ads_watched: 0 };
         let currentIdx = 0, startTime, timerInt, penalty = 0, userChoices = [];
-        const userId = tg.initDataUnsafe?.user?.id || 12345;
-        const today = new Date().toLocaleDateString('tr-TR');
 
         const pool = [
             {q:"Hangi gezegen Güneş'e en yakındır?", a:["Venüs","Merkür","Mars"], c:1},
             {q:"Su kaç derecede kaynar?", a:["90","100","110"], c:1},
-            {q:"Türkiye'nin yüzölçümü en büyük ili?", a:["Ankara","İstanbul","Konya"], c:2},
-            {q:"Hangisi bir programlama dilidir?", a:["Python","HTML","CSS"], c:0},
+            {q:"Türkiye'nin başkenti neresidir?", a:["İstanbul","Ankara","İzmir"], c:1},
+            {q:"Hangi elementin simgesi 'Au'dur?", a:["Gümüş","Bakır","Altın"], c:2},
             {q:"Kızıl Gezegen hangisidir?", a:["Mars","Jüpiter","Satürn"], c:0}
         ];
 
-        // --- BASİTLEŞTİRİLMİŞ BAŞLATMA ---
-        function init() {
-            console.log("Sistem hazır.");
-            // Veritabanını beklemeden UI'yı güncelle
-            updateAdUI();
+        async function init() {
+            document.getElementById('welcome-msg').innerText = `Merhaba, ${userName}`;
             
-            // Veriyi arka planda sessizce çek
-            _supabase.from('user_tickets').select('*').eq('telegram_id', userId).maybeSingle()
-            .then(({data}) => {
-                if (data && data.last_date === today) {
-                    userStats = data;
-                    updateAdUI();
+            try {
+                // 1. Kullanıcıyı bilet tablosunda kontrol et/oluştur
+                let { data: ticketData } = await _supabase.from('user_tickets').select('*').eq('telegram_id', userId).maybeSingle();
+                
+                if (!ticketData) {
+                    // Veritabanında kullanıcı yok, İLK KAYDI YAP
+                    const newTicket = { telegram_id: userId, ads_watched: 0, last_date: today };
+                    await _supabase.from('user_tickets').insert([newTicket]);
+                    userStats = newTicket;
+                } else if (ticketData.last_date !== today) {
+                    // Gün değişmiş, reklamları sıfırla
+                    await _supabase.from('user_tickets').update({ ads_watched: 0, last_date: today }).eq('telegram_id', userId);
+                    userStats = { ...ticketData, ads_watched: 0 };
+                } else {
+                    userStats = ticketData;
                 }
-            });
+
+                // 2. Kullanıcıyı Leaderboard tablosunda kontrol et/oluştur
+                let { data: scoreData } = await _supabase.from('leaderboard').select('*').eq('telegram_id', userId).maybeSingle();
+                if (!scoreData) {
+                    await _supabase.from('leaderboard').insert([{ telegram_id: userId, username: userName, score: 0 }]);
+                }
+
+            } catch (err) {
+                console.log("Kayıt sırasında hata (muhtemelen tablo yok):", err);
+            } finally {
+                updateAdUI();
+            }
         }
 
         async function handleAd() {
@@ -92,16 +110,11 @@
                 if (res.done) {
                     userStats.ads_watched++;
                     updateAdUI();
-                    // Veritabanına yaz (başarılı olup olmamasını bekleme)
-                    _supabase.from('user_tickets').upsert({
-                        telegram_id: userId, 
-                        ads_watched: userStats.ads_watched, 
-                        last_date: today 
-                    }).then();
+                    await _supabase.from('user_tickets').update({ ads_watched: userStats.ads_watched }).eq('telegram_id', userId);
                     tg.HapticFeedback.notificationOccurred('success');
                 }
             } catch (e) {
-                alert("Sponsor hazır değil, lütfen tekrar deneyin.");
+                tg.showAlert("Reklam şu an hazır değil.");
             }
         }
 
@@ -115,13 +128,9 @@
             }
         }
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-
         function startQuiz() {
-            showScreen('quiz-screen');
+            document.getElementById('ticket-screen').classList.remove('active');
+            document.getElementById('quiz-screen').classList.add('active');
             startTime = Date.now();
             timerInt = setInterval(() => {
                 let s = ((Date.now() - startTime) / 1000 + penalty).toFixed(2);
@@ -150,33 +159,27 @@
             });
         }
 
-        function endQuiz() {
+        async function endQuiz() {
             clearInterval(timerInt);
             const total = ((Date.now() - startTime) / 1000 + penalty).toFixed(2);
-            showScreen('result-screen');
+            document.getElementById('quiz-screen').classList.remove('active');
+            document.getElementById('result-screen').classList.add('active');
             document.getElementById('final-time').innerText = total + "s";
             
-            let html = "<h3 style='margin-top:20px'>Analiz</h3>";
+            // Skor güncelleme (En iyi skoru korumak istersen kontrol eklenebilir)
+            await _supabase.from('leaderboard').update({ score: parseFloat(total) }).eq('telegram_id', userId);
+            
+            let html = "<h3>Detaylı Analiz</h3>";
             pool.forEach((q, i) => {
                 const correct = userChoices[i] === q.c;
-                html += `
-                <div class="card review-card" style="border-left: 4px solid ${correct ? '#4ade80' : '#f87171'}">
-                    <strong>${i+1}. ${q.q}</strong><br>
-                    <span>Cevabın: ${q.a[userChoices[i]]}</span><br>
-                    ${!correct ? `<span>Doğru: ${q.a[q.c]}</span>` : ''}
+                html += `<div class="card" style="border-left:5px solid ${correct?'#4ade80':'#f87171'}; text-align:left; font-size:0.9rem">
+                    <b>${i+1}. ${q.q}</b><br>Senin Cevabın: ${q.a[userChoices[i]]}<br>
+                    ${!correct ? `Doğru Cevap: ${q.a[q.c]}` : ''}
                 </div>`;
             });
             document.getElementById('analysis').innerHTML = html;
-            
-            // Skoru kaydet
-            _supabase.from('leaderboard').insert([{
-                telegram_id: userId,
-                username: tg.initDataUnsafe?.user?.first_name || "Oyuncu",
-                score: parseFloat(total)
-            }]).then();
         }
 
-        // Uygulamayı başlat
         init();
     </script>
 </body>
