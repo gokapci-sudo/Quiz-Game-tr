@@ -109,8 +109,9 @@
         const userId = tg.initDataUnsafe?.user?.id || 123456;
         let user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, quizStartTime = 0;
 
+        // BURASI DÜZELTİLDİ: Vercel proje ismine uygun manifest yolu
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://skill-survive.vercel.app/tonconnect-manifest.json',
+            manifestUrl: 'https://quiz-game-tr.vercel.app/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn'
         });
 
@@ -126,7 +127,6 @@
                 if(row.key === 'video_pw_3') dbPasswords[2] = row.value.toUpperCase();
             });
 
-            // Geri sayımı her saniye güncellemek için
             setInterval(renderMain, 1000);
             renderTasks();
         }
@@ -203,7 +203,6 @@
                     actionArea.innerHTML = `<div class="card"><button class="btn btn-yt" onclick="showScreen('task-screen')">🎫 BİLET AL</button></div>`;
                 }
             } else {
-                // Geri Sayım Hesaplama
                 let target = getTRTime();
                 if (h >= 13) target.setDate(target.getDate() + 1);
                 target.setHours(13, 0, 0, 0);
@@ -286,6 +285,3 @@
     </script>
 </body>
 </html>
-
-
-
