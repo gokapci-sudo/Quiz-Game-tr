@@ -21,12 +21,14 @@
         .btn-option { background: #ffffff; color: #000; margin-bottom: 12px; text-align: left; padding: 14px; border: 2px solid transparent; }
         .btn-success { background: var(--success) !important; color: #fff !important; }
         .btn-error { background: var(--error) !important; color: #fff !important; }
-        .btn-disabled { background: #475569 !important; opacity: 0.5; cursor: not-allowed; pointer-events: none; }
         .pw-input { width: 70px; padding: 12px; border-radius: 8px; border: 1px solid var(--primary); background: #0f172a; color: #fff; text-align: center; text-transform: uppercase; font-weight: bold; }
-        .countdown-timer { font-size: 1.5rem; font-weight: bold; color: var(--gold); margin: 10px 0; font-family: monospace; }
-        .sponsor-box { background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 8px; border: 1px dashed #475569; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #94a3b8; width: 100%; max-width: 450px; }
-        .leader-row { display:flex; justify-content:space-between; padding:12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; }
-        /* CÜZDAN BUTONU ORTALAMA */
+        .countdown-timer { font-size: 1.5rem; font-weight: bold; color: var(--gold); margin: 5px 0; font-family: monospace; }
+        .sponsor-box { background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 8px; border: 1px dashed #475569; font-size: 0.8rem; color: #94a3b8; width: 100%; max-width: 450px; }
+        .prize-table { background: rgba(56, 189, 248, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 10px; width: 100%; max-width: 450px; margin-bottom: 10px; }
+        .leader-row { display:flex; justify-content:space-between; padding:12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; font-size: 0.85rem; }
+        .winner { border: 1px solid var(--gold); background: rgba(251, 191, 36, 0.1); }
+        .divider { height: 2px; background: #334155; margin: 15px 0; width: 100%; position: relative; }
+        .divider::after { content: "TÜM KATILIMCILAR"; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--bg); padding: 0 10px; font-size: 0.65rem; color: #64748b; }
         #ton-connect-btn { display: flex; justify-content: center; width: 100%; margin: 10px 0; }
         #ton-connect-btn * { margin: 0 auto !important; }
     </style>
@@ -42,6 +44,14 @@
     <div id="main-screen" class="screen">
         <div class="card"><h2 id="u-name">@Oyuncu</h2><div id="ton-connect-btn"></div></div>
         <div id="action-area" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
+        
+        <div class="prize-table">
+            <div style="font-weight: bold; color: var(--gold); margin-bottom: 5px; font-size: 0.8rem;">🏆 GÜNÜN ÖDÜLÜ</div>
+            <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
+                <span>1.: <b id="p1"></b></span> <span>2.: <b id="p2"></b></span> <span>3.: <b id="p3"></b></span>
+            </div>
+        </div>
+
         <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
         <button class="btn" style="background:#334155" onclick="showAnnouncements()">📢 DUYURULAR</button>
     </div>
@@ -54,10 +64,7 @@
 
     <div id="task-screen" class="screen">
         <h2 style="color: var(--gold)">BİLET GÖREVİ</h2>
-        <div class="card" style="width:100%">
-            <div id="task-list"></div>
-            <button class="btn btn-blue" onclick="checkAllPasswords()" style="margin-top:10px">BİLETİ ONAYLA</button>
-        </div>
+        <div class="card" style="width:100%"><div id="task-list"></div><button class="btn btn-blue" onclick="checkAllPasswords()" style="margin-top:10px">BİLETİ ONAYLA</button></div>
         <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">⬅️ GERİ</button>
     </div>
 
@@ -74,9 +81,9 @@
     </div>
 
     <div id="leader-screen" class="screen">
-        <h2 style="color: var(--gold)">🏆 SIRALAMA</h2>
-        <div id="leader-list" style="width:100%"></div>
-        <button class="btn btn-blue" onclick="showScreen('main-screen')">GERİ</button>
+        <h2 style="color: var(--gold)">🏆 GÜNLÜK SIRALAMA</h2>
+        <div id="leader-list" style="width:100%; max-width:450px;"></div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')" style="margin-top:15px">GERİ</button>
     </div>
 
     <script>
@@ -93,12 +100,16 @@
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://inquisitive-sawine-013b08.netlify.app/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn',
-            uiOptions: { language: 'tr' } // CÜZDAN BAĞLA TÜRKÇE YAPILDI
+            uiOptions: { language: 'tr' }
         });
 
         async function init() {
             tg.ready(); tg.expand();
             document.getElementById('sponsor-list').innerHTML = APP_CONFIG.sponsors.map(s => `<div class="sponsor-box">${s.text}</div>`).join("");
+            document.getElementById('p1').innerText = APP_CONFIG.prizes.first;
+            document.getElementById('p2').innerText = APP_CONFIG.prizes.second;
+            document.getElementById('p3').innerText = APP_CONFIG.prizes.third;
+            
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
             user = data || (await _supabase.from('users').insert([{ telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", has_ticket: false }]).select().single()).data;
             
@@ -113,31 +124,59 @@
             renderTasks();
         }
 
-        function showAnnouncements() {
-            document.getElementById('announcement-text').innerText = APP_CONFIG.announcement;
-            showScreen('announcement-screen');
-        }
-
-        function saveProgress() { localStorage.setItem('vTimers', JSON.stringify(vTimers)); localStorage.setItem('vStatus', JSON.stringify(vStatus)); }
         function getTRTime() { return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Istanbul"})); }
 
         function renderMain() {
             const now = getTRTime();
             const { hour, minute, durationMinutes } = APP_CONFIG.matchTime;
             const isMatchTime = (now.getHours() === hour && now.getMinutes() >= minute && now.getMinutes() < minute + durationMinutes);
+            const todayStr = now.toISOString().split('T')[0];
             const actionArea = document.getElementById('action-area');
             document.getElementById('u-name').innerText = `@${user.username}`;
-            if (user.last_played_date === now.toISOString().split('T')[0]) {
-                actionArea.innerHTML = `<div class="card" style="color:var(--primary)">Yarın tekrar gel!</div>`;
+
+            // Geri sayım hesaplama
+            let target = getTRTime();
+            if (now.getHours() >= hour && now.getMinutes() >= minute + durationMinutes) target.setDate(target.getDate() + 1);
+            target.setHours(hour, minute, 0, 0);
+            let diff = target - now;
+            let dh = Math.floor(diff/3600000).toString().padStart(2,'0'), dm = Math.floor((diff%3600000)/60000).toString().padStart(2,'0'), ds = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
+            const countdownHTML = `<p style="margin-bottom:0; font-size:0.8rem; color:#94a3b8;">Bir sonraki yarışma:</p><div class="countdown-timer">${dh}:${dm}:${ds}</div>`;
+
+            if (user.last_played_date === todayStr) {
+                actionArea.innerHTML = `<div class="card"><p style="color:var(--primary); font-weight:bold; margin-top:0;">Yarın tekrar gel!</p>${countdownHTML}</div>`;
             } else if (isMatchTime) {
                 actionArea.innerHTML = user.has_ticket ? `<button class="btn btn-blue" onclick="startQuiz()">🚀 BAŞLAT</button>` : `<button class="btn btn-yt" onclick="showScreen('task-screen')">🎫 BİLET AL</button>`;
             } else {
-                let target = getTRTime(); if (now.getHours() >= hour) target.setDate(target.getDate() + 1); target.setHours(hour, minute, 0, 0);
-                let diff = target - now; let dh = Math.floor(diff/3600000).toString().padStart(2,'0'), dm = Math.floor((diff%3600000)/60000).toString().padStart(2,'0'), ds = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-                actionArea.innerHTML = `<div class="card"><p>Sıradaki Yarışma</p><div class="countdown-timer">${dh}:${dm}:${ds}</div>${!user.has_ticket ? '<button class="btn btn-yt" onclick="showScreen(\'task-screen\')">🎫 BİLET AL</button>' : '<p style="color:var(--success)">🎫 Bilet Hazır!</p>'}</div>`;
+                actionArea.innerHTML = `<div class="card">${countdownHTML}${!user.has_ticket ? '<button class="btn btn-yt" onclick="showScreen(\'task-screen\')">🎫 BİLET AL</button>' : '<p style="color:var(--success); font-weight:bold; font-size:0.8rem;">🎫 Biletiniz Hazır!</p>'}</div>`;
             }
         }
 
+        async function fetchLeaderboard() {
+            const today = getTRTime().toISOString().split('T')[0];
+            // Önce PUANA göre, puan eşitse SÜREYE (düşük olan iyi) göre sırala
+            const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false}).order('completion_time', {ascending: true});
+            
+            let html = "";
+            if (data && data.length > 0) {
+                data.forEach((r, i) => {
+                    if (i === 3) html += `<div class="divider"></div>`; // 3. kişiden sonra çizgi çek
+                    const isWinner = i < 3;
+                    html += `
+                        <div class="leader-row ${isWinner ? 'winner' : ''}">
+                            <span style="display:flex; align-items:center; gap:8px;">
+                                <b style="color:${isWinner?'var(--gold)':'#94a3b8'}">#${i+1}</b> @${r.username}
+                            </span>
+                            <span><b>${r.score} P</b> <small style="font-size:0.6rem; opacity:0.7;">(${(r.completion_time/1000).toFixed(1)}s)</small></span>
+                        </div>`;
+                });
+            } else { html = "<p>Henüz katılım yok.</p>"; }
+            document.getElementById('leader-list').innerHTML = html;
+            showScreen('leader-screen');
+        }
+
+        // Diğer yardımcı fonksiyonlar (Aynı Kalıyor)
+        function showAnnouncements() { document.getElementById('announcement-text').innerText = APP_CONFIG.announcement; showScreen('announcement-screen'); }
+        function saveProgress() { localStorage.setItem('vTimers', JSON.stringify(vTimers)); localStorage.setItem('vStatus', JSON.stringify(vStatus)); }
         function renderTasks() {
             let html = "";
             for(let i=0; i<3; i++) {
@@ -147,9 +186,7 @@
             }
             document.getElementById('task-list').innerHTML = html;
         }
-
         function startVideoTask(i) { if (vStatus[i] || (i > 0 && !vStatus[i-1])) return; activeVideoIdx = i; tg.openLink(APP_CONFIG.videoTasks[i].url); renderTasks(); }
-
         async function checkAllPasswords() {
             const inputs = [0,1,2].map(i => document.getElementById(`pw-${i}`).value.toUpperCase());
             if (inputs.every((val, i) => val === APP_CONFIG.videoTasks[i].password)) {
@@ -158,9 +195,7 @@
                 tg.showAlert("Biletiniz tanımlandı."); showScreen('main-screen');
             } else tg.showAlert("Şifreler hatalı!");
         }
-
         function startQuiz() { dailyQuestions = [...APP_CONFIG.questions].sort(() => 0.5 - Math.random()).slice(0, 10); currentIdx = 0; score = 0; quizStartTime = Date.now(); showScreen('quiz-screen'); loadQuestion(); }
-
         function loadQuestion() {
             if (currentIdx >= dailyQuestions.length) return endQuiz();
             timeLeft = 15; document.getElementById('quiz-timer').innerText = timeLeft;
@@ -175,7 +210,6 @@
             if(timer) clearInterval(timer);
             timer = setInterval(() => { timeLeft--; document.getElementById('quiz-timer').innerText = timeLeft; if(timeLeft <= 0) { clearInterval(timer); currentIdx++; loadQuestion(); }}, 1000);
         }
-
         async function endQuiz() {
             const timeMs = Date.now() - quizStartTime, today = getTRTime().toISOString().split('T')[0];
             document.getElementById('final-score').innerText = score;
@@ -183,14 +217,6 @@
             await _supabase.from('daily_scores').insert([{ telegram_id: userId, username: user.username, score: score, completion_time: timeMs, play_date: today }]);
             await _supabase.from('users').update({ last_played_date: today, has_ticket: false }).eq('telegram_id', userId);
         }
-
-        async function fetchLeaderboard() {
-            const today = getTRTime().toISOString().split('T')[0];
-            const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false}).limit(10);
-            document.getElementById('leader-list').innerHTML = data?.map((r, i) => `<div class="leader-row"><span>#${i+1} @${r.username}</span><b>${r.score} P</b></div>`).join("") || "Henüz kayıt yok.";
-            showScreen('leader-screen');
-        }
-
         function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
         window.onload = init;
     </script>
