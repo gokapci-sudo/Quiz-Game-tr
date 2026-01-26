@@ -7,6 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <script src="config.js"></script>
     <style>
         :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --yt: #ff0000; --success: #10b981; --error: #ef4444; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -34,10 +35,9 @@
 
     <div id="sponsor-screen" class="screen active">
         <h2 style="color: var(--gold); margin-top: 10px;">ARENA SPONSORLARI</h2>
-        <div style="width:100%; max-width:450px; margin: 10px 0;">
-            <a href="https://t.me/SeninKanalin" class="sponsor-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2iPt1ZPGpwtVwY5fvpN_X3hqThRsBvJIAFA&s"></a>
-            <a href="https://t.me/SeninKanalin" class="sponsor-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2iPt1ZPGpwtVwY5fvpN_X3hqThRsBvJIAFA&s"></a>
-            <a href="https://t.me/SeninKanalin" class="sponsor-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2iPt1ZPGpwtVwY5fvpN_X3hqThRsBvJIAFA&s"></a>
+        <div id="sponsor-list" style="width:100%; max-width:450px; margin: 10px 0;">
+            <a href="#" class="sponsor-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2iPt1ZPGpwtVwY5fvpN_X3hqThRsBvJIAFA&s"></a>
+            <a href="#" class="sponsor-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2iPt1ZPGpwtVwY5fvpN_X3hqThRsBvJIAFA&s"></a>
         </div>
         <button class="btn btn-blue" onclick="showScreen('main-screen')">ARENAYA GİR 🚀</button>
     </div>
@@ -60,9 +60,8 @@
     <div id="task-screen" class="screen">
         <h2 style="color: var(--gold)">BİLET GÖREVİ</h2>
         <div class="card" style="width:100%">
-            <p style="font-size: 0.85rem;">Videoları izleyip şifreleri bulun. Her videoda 2 adet harf vardır.</p>
             <div id="task-list"></div>
-            <button class="btn btn-blue" id="final-claim-btn" onclick="checkAllPasswords()" style="margin-top:15px">BİLETİ ONAYLA</button>
+            <button class="btn btn-blue" onclick="checkAllPasswords()" style="margin-top:15px">BİLETİ ONAYLA</button>
         </div>
         <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">⬅️ GERİ</button>
     </div>
@@ -83,7 +82,7 @@
     </div>
 
     <div id="leader-screen" class="screen">
-        <h2 style="color: var(--gold)">🏆 KAZANANLAR</h2>
+        <h2 style="color: var(--gold)">🏆 SIRALAMA</h2>
         <div id="leader-list" style="width:100%; max-width:450px;"></div>
         <button class="btn btn-blue" onclick="showScreen('main-screen')" style="margin-top:10px">⬅️ GERİ</button>
     </div>
@@ -95,21 +94,11 @@
         const tg = window.Telegram.WebApp;
 
         const WAIT_TIME = 30000;
-        const YT_VIDEOS = [
-            { url: "https://www.youtube.com/watch?v=1" },
-            { url: "https://www.youtube.com/watch?v=2" },
-            { url: "https://www.youtube.com/watch?v=3" }
-        ];
+        const YT_VIDEOS = [{url:"#"}, {url:"#"}, {url:"#"}];
 
-        let vStatus = [false, false, false];
-        let vTimers = [WAIT_TIME, WAIT_TIME, WAIT_TIME];
-        let activeInterval = null;
-        let dbPasswords = ["", "", ""];
+        let vStatus = [false, false, false], vTimers = [WAIT_TIME, WAIT_TIME, WAIT_TIME], activeInterval = null;
+        let userId = tg.initDataUnsafe?.user?.id || 123456, user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, quizStartTime = 0;
 
-        const userId = tg.initDataUnsafe?.user?.id || 123456;
-        let user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, quizStartTime = 0;
-
-        // NETLIFY ADRESIYLE GÜNCELLENDİ
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://inquisitive-sawine-013b08.netlify.app/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn'
@@ -119,112 +108,36 @@
             tg.ready(); tg.expand();
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
             user = data || (await _supabase.from('users').insert([{ telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", has_ticket: false }]).select().single()).data;
-            
-            const { data: pwData } = await _supabase.from('settings').select('*');
-            pwData?.forEach(row => {
-                if(row.key === 'video_pw_1') dbPasswords[0] = row.value.toUpperCase();
-                if(row.key === 'video_pw_2') dbPasswords[1] = row.value.toUpperCase();
-                if(row.key === 'video_pw_3') dbPasswords[2] = row.value.toUpperCase();
-            });
-
             setInterval(renderMain, 1000);
             renderTasks();
         }
 
-        function getTRTime() {
-            return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Istanbul"}));
-        }
-
-        function startVideoTimer(i) {
-            if (vStatus[i] || (i > 0 && !vStatus[i-1])) return;
-            tg.openLink(YT_VIDEOS[i].url);
-            if (activeInterval) clearInterval(activeInterval);
-            activeInterval = setInterval(() => {
-                vTimers[i] -= 1000;
-                renderTasks();
-                if (vTimers[i] <= 0) {
-                    clearInterval(activeInterval);
-                    vStatus[i] = true;
-                    renderTasks();
-                }
-            }, 1000);
-        }
-
-        function renderTasks() {
-            const list = document.getElementById('task-list');
-            let html = "";
-            for(let i=0; i<3; i++) {
-                const isLocked = i > 0 && !vStatus[i-1];
-                const isDone = vStatus[i];
-                const isRunning = vTimers[i] < WAIT_TIME && vTimers[i] > 0;
-                let btnText = isDone ? `✅ ${i+1}. Tamam` : (isRunning ? `⏳ ${Math.ceil(vTimers[i]/1000)}s` : `🎬 ${i+1}. Video`);
-                html += `
-                    <div style="margin-bottom:12px; display:flex; flex-direction:column; align-items:center; gap:5px;">
-                        <button class="btn btn-yt ${isLocked?'btn-disabled':''} ${isDone?'btn-success':''}" onclick="startVideoTimer(${i})">${btnText}</button>
-                        <input type="text" maxlength="2" class="pw-input" id="pw-${i}" ${!isDone?'disabled':''} placeholder="??">
-                    </div>`;
-            }
-            list.innerHTML = html;
-        }
-
-        async function checkAllPasswords() {
-            const inputs = [
-                document.getElementById('pw-0').value.toUpperCase(),
-                document.getElementById('pw-1').value.toUpperCase(),
-                document.getElementById('pw-2').value.toUpperCase()
-            ];
-
-            if(inputs[0] === dbPasswords[0] && inputs[1] === dbPasswords[1] && inputs[2] === dbPasswords[2]) {
-                await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
-                user.has_ticket = true;
-                tg.showAlert("Doğru! Bilet alındı.");
-                showScreen('main-screen'); renderMain();
-            } else {
-                tg.showAlert("Hatalı şifre!");
-            }
-        }
+        function getTRTime() { return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Istanbul"})); }
 
         function renderMain() {
             const now = getTRTime();
-            const h = now.getHours();
-            const m = now.getMinutes();
-            const isMatchTime = (h === 13 && m >= 0 && m <= 3);
+            const { hour, minute, durationMinutes } = APP_CONFIG.matchTime;
+            const isMatchTime = (now.getHours() === hour && now.getMinutes() >= minute && now.getMinutes() < minute + durationMinutes);
             const todayStr = now.toISOString().split('T')[0];
-            
             const actionArea = document.getElementById('action-area');
             document.getElementById('u-name').innerText = `@${user.username}`;
 
             if (user.last_played_date === todayStr) {
                 actionArea.innerHTML = `<div class="card" style="color:var(--primary)">Yarın tekrar gel!</div>`;
             } else if (isMatchTime) {
-                if (user.has_ticket) {
-                    actionArea.innerHTML = `<button class="btn btn-blue" onclick="startQuiz()">🚀 BAŞLAT</button>`;
-                } else {
-                    actionArea.innerHTML = `<div class="card"><button class="btn btn-yt" onclick="showScreen('task-screen')">🎫 BİLET AL</button></div>`;
-                }
+                actionArea.innerHTML = user.has_ticket ? `<button class="btn btn-blue" onclick="startQuiz()">🚀 BAŞLAT</button>` : `<button class="btn btn-yt" onclick="showScreen('task-screen')">🎫 BİLET AL</button>`;
             } else {
                 let target = getTRTime();
-                if (h >= 13) target.setDate(target.getDate() + 1);
-                target.setHours(13, 0, 0, 0);
-                
+                if (now.getHours() >= hour) target.setDate(target.getDate() + 1);
+                target.setHours(hour, minute, 0, 0);
                 let diff = target - now;
-                let dh = Math.floor(diff / 3600000).toString().padStart(2, '0');
-                let dm = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
-                let ds = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-
-                actionArea.innerHTML = `
-                    <div class="card">
-                        <p style="margin:0; font-size:0.9rem;">Bir Sonraki Yarışmaya Kalan Süre</p>
-                        <div class="countdown-timer">${dh}:${dm}:${ds}</div>
-                        ${!user.has_ticket ? '<button class="btn btn-yt" style="margin-top:10px" onclick="showScreen(\'task-screen\')">🎫 BİLET AL</button>' : '<p style="color:var(--success); font-weight:bold;">🎫 Biletiniz Hazır!</p>'}
-                    </div>`;
+                let dh = Math.floor(diff / 3600000).toString().padStart(2, '0'), dm = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0'), ds = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+                actionArea.innerHTML = `<div class="card"><p>Sıradaki Yarışma</p><div class="countdown-timer">${dh}:${dm}:${ds}</div>${!user.has_ticket ? '<button class="btn btn-yt" onclick="showScreen(\'task-screen\')">🎫 BİLET AL</button>' : '<p style="color:var(--success)">🎫 Bilet Hazır!</p>'}</div>`;
             }
         }
 
-        async function startQuiz() {
-            const { data } = await _supabase.from('questions').select('*');
-            if(!data || data.length === 0) return;
-            dailyQuestions = data.sort(() => 0.5 - Math.random()).slice(0, 10);
+        function startQuiz() {
+            dailyQuestions = [...APP_CONFIG.questions].sort(() => 0.5 - Math.random()).slice(0, 10);
             currentIdx = 0; score = 0; quizStartTime = Date.now();
             showScreen('quiz-screen'); loadQuestion();
         }
@@ -238,8 +151,7 @@
             container.innerHTML = '';
             q.options.forEach((opt, i) => {
                 const b = document.createElement('button');
-                b.className = 'btn btn-option';
-                b.innerText = opt;
+                b.className = 'btn btn-option'; b.innerText = opt;
                 b.onclick = () => {
                     clearInterval(timer);
                     if(i === q.correct_option) { b.classList.add('btn-success'); score += timeLeft * 10; }
@@ -249,38 +161,54 @@
                 container.appendChild(b);
             });
             if(timer) clearInterval(timer);
-            timer = setInterval(() => {
-                timeLeft--; document.getElementById('quiz-timer').innerText = timeLeft;
-                if(timeLeft <= 0) { clearInterval(timer); currentIdx++; loadQuestion(); }
-            }, 1000);
+            timer = setInterval(() => { timeLeft--; document.getElementById('quiz-timer').innerText = timeLeft; if(timeLeft <= 0) { clearInterval(timer); currentIdx++; loadQuestion(); }}, 1000);
         }
 
         async function endQuiz() {
-            const totalTimeMs = Date.now() - quizStartTime;
-            const today = getTRTime().toISOString().split('T')[0];
+            const timeMs = Date.now() - quizStartTime, today = getTRTime().toISOString().split('T')[0];
             document.getElementById('final-score').innerText = score;
-            document.getElementById('final-time-text').innerText = `${(totalTimeMs/1000).toFixed(2)} Saniye`;
             showScreen('result-screen');
-            await _supabase.from('daily_scores').insert([{ telegram_id: userId, username: user.username, score: score, completion_time: totalTimeMs, play_date: today }]);
+            await _supabase.from('daily_scores').insert([{ telegram_id: userId, username: user.username, score: score, completion_time: timeMs, play_date: today }]);
             await _supabase.from('users').update({ last_played_date: today, has_ticket: false }).eq('telegram_id', userId);
+        }
+
+        async function checkAllPasswords() {
+            const inputs = [document.getElementById('pw-0').value.toUpperCase(), document.getElementById('pw-1').value.toUpperCase(), document.getElementById('pw-2').value.toUpperCase()];
+            if(inputs.every((v, i) => v === APP_CONFIG.videoPasswords[i])) {
+                await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
+                user.has_ticket = true; tg.showAlert("Bilet alındı!"); showScreen('main-screen');
+            } else tg.showAlert("Hatalı şifre!");
+        }
+
+        function startVideoTimer(i) {
+            if (vStatus[i] || (i > 0 && !vStatus[i-1])) return;
+            tg.openLink(YT_VIDEOS[i].url);
+            if (activeInterval) clearInterval(activeInterval);
+            activeInterval = setInterval(() => {
+                vTimers[i] -= 1000; renderTasks();
+                if (vTimers[i] <= 0) { clearInterval(activeInterval); vStatus[i] = true; renderTasks(); }
+            }, 1000);
+        }
+
+        function renderTasks() {
+            let html = "";
+            for(let i=0; i<3; i++) {
+                const isLocked = i > 0 && !vStatus[i-1], isDone = vStatus[i], isRunning = vTimers[i] < WAIT_TIME && vTimers[i] > 0;
+                let btnText = isDone ? `✅ Tamam` : (isRunning ? `⏳ ${Math.ceil(vTimers[i]/1000)}s` : `🎬 Video ${i+1}`);
+                html += `<div style="margin-bottom:10px;"><button class="btn btn-yt ${isLocked?'btn-disabled':''} ${isDone?'btn-success':''}" onclick="startVideoTimer(${i})">${btnText}</button><input type="text" maxlength="2" class="pw-input" id="pw-${i}" ${!isDone?'disabled':''} placeholder="??"></div>`;
+            }
+            document.getElementById('task-list').innerHTML = html;
         }
 
         async function fetchLeaderboard() {
             const today = getTRTime().toISOString().split('T')[0];
-            const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false}).order('completion_time', {ascending: true}).limit(10);
+            const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false}).limit(10);
             const l = document.getElementById('leader-list');
-            l.innerHTML = "";
-            data?.forEach((row, i) => {
-                l.innerHTML += `<div class="leader-row"><span>#${i+1} @${row.username}</span><b>${row.score} P / ${(row.completion_time/1000).toFixed(1)}s</b></div>`;
-            });
+            l.innerHTML = data?.map((r, i) => `<div class="leader-row"><span>#${i+1} @${r.username}</span><b>${r.score} P</b></div>`).join("") || "Henüz kayıt yok.";
             showScreen('leader-screen');
         }
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
-
+        function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
         window.onload = init;
     </script>
 </body>
