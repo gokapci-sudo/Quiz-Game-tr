@@ -1,5 +1,5 @@
 const APP_CONFIG = {
-    announcement: "🚀 Türkiye Genel Kültür Maratonu Başladı! \n\n1️⃣ Her gün saat 13:00'da sorular aktif olur. \n2️⃣ Toplam 10 soruda en yüksek puanı alan kazanır. \n3️⃣ Ödüller yarışma bitiminden hemen sonra cüzdanlara aktarılır. Başarılar!",
+    announcement: "🚀 Türkiye Genel Kültür Maratonu Başladı! \n\n1️⃣ Her gün saat 13:00'da sorular aktif olur. \n2️⃣ Toplam 10 soruda en yüksek puanı alan ve en hızlı olan kazanır. \n3️⃣ Ödüller yarışma bitiminden hemen sonra cüzdanlara aktarılır. Başarılar!",
 
      prizes: { first: "0.50 TON", second: "0.30 TON", third: "0.20 TON" },
     matchTime: { hour: 13, minute: 0, durationMinutes: 5 },
