@@ -1,17 +1,35 @@
-
-// GITHUB ÜZERİNDEN SADECE BURAYI GÜNCELLEYECEKSİN
+// GITHUB ÜZERİNDEN TÜM UYGULAMAYI BURADAN YÖNETEBİLİRSİN
 const APP_CONFIG = {
-    // Video Şifreleri (Sırasıyla 1, 2 ve 3. video)
-    videoPasswords: ["A1", "B2", "C3"],
+    // --- SPONSOR AYARLARI ---
+    sponsors: [
+        {
+            name: "Ana Sponsor",
+            link: "https://t.me/KanalLinkiniz1",
+            img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2iPt1ZPGpwtVwY5fvpN_X3hqThRsBvJIAFA&s"
+        },
+        {
+            name: "Yarışma Sponsoru",
+            link: "https://t.me/KanalLinkiniz2",
+            img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2iPt1ZPGpwtVwY5fvpN_X3hqThRsBvJIAFA&s"
+        }
+    ],
 
-    // Yarışma Başlama Saati (Türkiye Saati)
+    // --- VİDEO GÖREVİ AYARLARI ---
+    videoTasks: [
+        { url: "https://www.youtube.com/watch?v=VIDEO1", password: "A1" },
+        { url: "https://www.youtube.com/watch?v=VIDEO2", password: "B2" },
+        { url: "https://www.youtube.com/watch?v=VIDEO3", password: "C3" }
+    ],
+
+    // --- YARIŞMA ZAMANI (Türkiye Saati) ---
     matchTime: {
         hour: 13,
         minute: 0,
-        durationMinutes: 3 // Yarışma kaç dakika açık kalsın?
+        durationMinutes: 5 // Yarışma butonu 5 dakika boyunca aktif kalır
     },
 
-    // Soru Havuzu
+    // --- SORU HAVUZU ---
+    // İstediğin kadar soru ekleyebilirsin, sistem içinden rastgele 10 tane seçer.
     questions: [
         { 
             question: "TON blockchain birimi nedir?", 
