@@ -24,16 +24,18 @@
         .btn-disabled { background: #475569 !important; opacity: 0.5; cursor: not-allowed; pointer-events: none; }
         .pw-input { width: 70px; padding: 12px; border-radius: 8px; border: 1px solid var(--primary); background: #0f172a; color: #fff; text-align: center; text-transform: uppercase; font-weight: bold; }
         .countdown-timer { font-size: 1.5rem; font-weight: bold; color: var(--gold); margin: 10px 0; font-family: monospace; }
-        .sponsor-box { background: #1e293b; height: 75px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #334155; overflow: hidden; display:block; }
-        .sponsor-box img { width: 100%; height: 100%; object-fit: cover; }
+        .sponsor-box { background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 8px; border: 1px dashed #475569; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #94a3b8; width: 100%; max-width: 450px; }
         .leader-row { display:flex; justify-content:space-between; padding:12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; }
+        /* CÜZDAN BUTONU ORTALAMA */
+        #ton-connect-btn { display: flex; justify-content: center; width: 100%; margin: 10px 0; }
+        #ton-connect-btn * { margin: 0 auto !important; }
     </style>
 </head>
 <body>
 
     <div id="sponsor-screen" class="screen active">
         <h2 style="color: var(--gold)">ARENA SPONSORLARI</h2>
-        <div id="sponsor-list" style="width:100%; max-width:450px;"></div>
+        <div id="sponsor-list" style="width:100%; display: flex; flex-direction: column; align-items: center;"></div>
         <button class="btn btn-blue" onclick="showScreen('main-screen')">GİRİŞ YAP 🚀</button>
     </div>
 
@@ -41,6 +43,13 @@
         <div class="card"><h2 id="u-name">@Oyuncu</h2><div id="ton-connect-btn"></div></div>
         <div id="action-area" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
         <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
+        <button class="btn" style="background:#334155" onclick="showAnnouncements()">📢 DUYURULAR</button>
+    </div>
+
+    <div id="announcement-screen" class="screen">
+        <h2 style="color: var(--gold)">📢 DUYURULAR</h2>
+        <div class="card" id="announcement-text" style="line-height: 1.6; text-align: left;"></div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">ANLADIM ✅</button>
     </div>
 
     <div id="task-screen" class="screen">
@@ -76,67 +85,55 @@
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
 
-        // Yerel bellekten verileri çek veya sıfırla
         let vTimers = JSON.parse(localStorage.getItem('vTimers')) || [30000, 30000, 30000];
         let vStatus = JSON.parse(localStorage.getItem('vStatus')) || [false, false, false];
-        let activeVideoIdx = null;
-
-        let userId = tg.initDataUnsafe?.user?.id || 123456, user = null;
+        let activeVideoIdx = null, userId = tg.initDataUnsafe?.user?.id || 123456, user = null;
         let dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, quizStartTime = 0;
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://inquisitive-sawine-013b08.netlify.app/tonconnect-manifest.json',
-            buttonRootId: 'ton-connect-btn'
+            buttonRootId: 'ton-connect-btn',
+            uiOptions: { language: 'tr' } // CÜZDAN BAĞLA TÜRKÇE YAPILDI
         });
 
         async function init() {
             tg.ready(); tg.expand();
-            document.getElementById('sponsor-list').innerHTML = APP_CONFIG.sponsors.map(s => `<a href="${s.link}" class="sponsor-box"><img src="${s.img}"></a>`).join("");
+            document.getElementById('sponsor-list').innerHTML = APP_CONFIG.sponsors.map(s => `<div class="sponsor-box">${s.text}</div>`).join("");
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
             user = data || (await _supabase.from('users').insert([{ telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", has_ticket: false }]).select().single()).data;
             
-            // Sayaçları her saniye güncelle
             setInterval(() => {
                 if (activeVideoIdx !== null && !vStatus[activeVideoIdx]) {
                     vTimers[activeVideoIdx] -= 1000;
-                    if (vTimers[activeVideoIdx] <= 0) {
-                        vTimers[activeVideoIdx] = 0;
-                        vStatus[activeVideoIdx] = true;
-                        activeVideoIdx = null;
-                    }
-                    saveProgress();
-                    renderTasks();
+                    if (vTimers[activeVideoIdx] <= 0) { vTimers[activeVideoIdx] = 0; vStatus[activeVideoIdx] = true; activeVideoIdx = null; }
+                    saveProgress(); renderTasks();
                 }
                 renderMain();
             }, 1000);
             renderTasks();
         }
 
-        function saveProgress() {
-            localStorage.setItem('vTimers', JSON.stringify(vTimers));
-            localStorage.setItem('vStatus', JSON.stringify(vStatus));
+        function showAnnouncements() {
+            document.getElementById('announcement-text').innerText = APP_CONFIG.announcement;
+            showScreen('announcement-screen');
         }
 
+        function saveProgress() { localStorage.setItem('vTimers', JSON.stringify(vTimers)); localStorage.setItem('vStatus', JSON.stringify(vStatus)); }
         function getTRTime() { return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Istanbul"})); }
 
         function renderMain() {
             const now = getTRTime();
             const { hour, minute, durationMinutes } = APP_CONFIG.matchTime;
             const isMatchTime = (now.getHours() === hour && now.getMinutes() >= minute && now.getMinutes() < minute + durationMinutes);
-            const todayStr = now.toISOString().split('T')[0];
             const actionArea = document.getElementById('action-area');
             document.getElementById('u-name').innerText = `@${user.username}`;
-
-            if (user.last_played_date === todayStr) {
+            if (user.last_played_date === now.toISOString().split('T')[0]) {
                 actionArea.innerHTML = `<div class="card" style="color:var(--primary)">Yarın tekrar gel!</div>`;
             } else if (isMatchTime) {
                 actionArea.innerHTML = user.has_ticket ? `<button class="btn btn-blue" onclick="startQuiz()">🚀 BAŞLAT</button>` : `<button class="btn btn-yt" onclick="showScreen('task-screen')">🎫 BİLET AL</button>`;
             } else {
-                let target = getTRTime();
-                if (now.getHours() >= hour) target.setDate(target.getDate() + 1);
-                target.setHours(hour, minute, 0, 0);
-                let diff = target - now;
-                let dh = Math.floor(diff/3600000).toString().padStart(2,'0'), dm = Math.floor((diff%3600000)/60000).toString().padStart(2,'0'), ds = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
+                let target = getTRTime(); if (now.getHours() >= hour) target.setDate(target.getDate() + 1); target.setHours(hour, minute, 0, 0);
+                let diff = target - now; let dh = Math.floor(diff/3600000).toString().padStart(2,'0'), dm = Math.floor((diff%3600000)/60000).toString().padStart(2,'0'), ds = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
                 actionArea.innerHTML = `<div class="card"><p>Sıradaki Yarışma</p><div class="countdown-timer">${dh}:${dm}:${ds}</div>${!user.has_ticket ? '<button class="btn btn-yt" onclick="showScreen(\'task-screen\')">🎫 BİLET AL</button>' : '<p style="color:var(--success)">🎫 Bilet Hazır!</p>'}</div>`;
             }
         }
@@ -151,46 +148,28 @@
             document.getElementById('task-list').innerHTML = html;
         }
 
-        function startVideoTask(i) {
-            if (vStatus[i] || (i > 0 && !vStatus[i-1])) return;
-            activeVideoIdx = i;
-            tg.openLink(APP_CONFIG.videoTasks[i].url);
-            renderTasks();
-        }
+        function startVideoTask(i) { if (vStatus[i] || (i > 0 && !vStatus[i-1])) return; activeVideoIdx = i; tg.openLink(APP_CONFIG.videoTasks[i].url); renderTasks(); }
 
         async function checkAllPasswords() {
             const inputs = [0,1,2].map(i => document.getElementById(`pw-${i}`).value.toUpperCase());
             if (inputs.every((val, i) => val === APP_CONFIG.videoTasks[i].password)) {
                 await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
-                user.has_ticket = true;
-                localStorage.removeItem('vTimers'); localStorage.removeItem('vStatus'); // Başarılıysa sıfırla
-                tg.showAlert("Tebrikler! Biletiniz tanımlandı.");
-                showScreen('main-screen');
+                user.has_ticket = true; localStorage.removeItem('vTimers'); localStorage.removeItem('vStatus');
+                tg.showAlert("Biletiniz tanımlandı."); showScreen('main-screen');
             } else tg.showAlert("Şifreler hatalı!");
         }
 
-        function startQuiz() {
-            dailyQuestions = [...APP_CONFIG.questions].sort(() => 0.5 - Math.random()).slice(0, 10);
-            currentIdx = 0; score = 0; quizStartTime = Date.now();
-            showScreen('quiz-screen'); loadQuestion();
-        }
+        function startQuiz() { dailyQuestions = [...APP_CONFIG.questions].sort(() => 0.5 - Math.random()).slice(0, 10); currentIdx = 0; score = 0; quizStartTime = Date.now(); showScreen('quiz-screen'); loadQuestion(); }
 
         function loadQuestion() {
             if (currentIdx >= dailyQuestions.length) return endQuiz();
             timeLeft = 15; document.getElementById('quiz-timer').innerText = timeLeft;
             const q = dailyQuestions[currentIdx];
             document.getElementById('question-text').innerText = q.question;
-            const container = document.getElementById('options-container');
-            container.innerHTML = '';
+            const container = document.getElementById('options-container'); container.innerHTML = '';
             q.options.forEach((opt, i) => {
-                const b = document.createElement('button');
-                b.className = 'btn btn-option'; b.innerText = opt;
-                b.onclick = () => {
-                    clearInterval(timer);
-                    if(i === q.correct_option) { b.classList.add('btn-success'); score += timeLeft * 10; }
-                    else { b.classList.add('btn-error'); document.querySelectorAll('.btn-option')[q.correct_option].classList.add('btn-success'); }
-                    setTimeout(() => { currentIdx++; loadQuestion(); }, 1200);
-                };
+                const b = document.createElement('button'); b.className = 'btn btn-option'; b.innerText = opt;
+                b.onclick = () => { clearInterval(timer); if(i === q.correct_option) { b.classList.add('btn-success'); score += timeLeft * 10; } else { b.classList.add('btn-error'); document.querySelectorAll('.btn-option')[q.correct_option].classList.add('btn-success'); } setTimeout(() => { currentIdx++; loadQuestion(); }, 1200); };
                 container.appendChild(b);
             });
             if(timer) clearInterval(timer);
