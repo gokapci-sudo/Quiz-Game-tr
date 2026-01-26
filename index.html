@@ -109,9 +109,9 @@
         const userId = tg.initDataUnsafe?.user?.id || 123456;
         let user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, quizStartTime = 0;
 
-        // Buradaki URL Vercel panelindeki proje adın olan quiz-game-tr ile eşleşmeli
+        // ADRES NETLIFY'A GÖRE DÜZENLENDİ
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://quiz-game-tr.vercel.app/tonconnect-manifest.json',
+            manifestUrl: 'https://inquisitive-sawine-013b08.netlify.app/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-btn'
         });
 
