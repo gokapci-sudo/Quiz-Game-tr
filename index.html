@@ -65,18 +65,18 @@
     <div id="task-screen" class="screen">
         <h2 style="color: var(--gold)">BİLET AL</h2>
         
-        <div class="card" style="border: 2px solid var(--primary);">
+        <div class="card" style="border: 2px solid var(--primary); background: rgba(56, 189, 248, 0.05);">
             <p style="margin:0; font-weight:bold; color:var(--primary);">Hızlı Giriş ⚡</p>
-            <p style="font-size:0.8rem; margin:5px 0;">0.1 TON öde ve görevleri atla.</p>
-            <button class="btn btn-blue" onclick="buyTicketWithTON()" style="margin-top:5px">0.1 TON İLE SATIN AL</button>
+            <p style="font-size:0.75rem; margin:5px 0; opacity:0.8;">Görev yapmadan hemen bilet al.</p>
+            <button class="btn btn-blue" onclick="buyTicketWithTON()" style="margin-top:5px; padding:12px;">0.1 TON İLE SATIN AL</button>
         </div>
 
         <div style="margin: 5px 0; font-size: 0.7rem; color: #64748b;">— VEYA —</div>
 
-        <div class="card">
-            <p style="margin:0; font-weight:bold;">Ücretsiz Bilet 🎬</p>
+        <div class="card" style="width:100%">
+            <p style="margin:0 0 10px 0; font-weight:bold;">Ücretsiz Görevler 🎬</p>
             <div id="task-list"></div>
-            <button class="btn btn-blue" onclick="checkAllPasswords()" style="margin-top:10px">GÖREVLERİ ONAYLA</button>
+            <button class="btn btn-blue" onclick="checkAllPasswords()" style="margin-top:10px">BİLETİ ONAYLA</button>
         </div>
         <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">⬅️ GERİ</button>
     </div>
@@ -112,7 +112,8 @@
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://gokapci-sudo.github.io/Quiz-Game-tr/tonconnect-manifest.json',
-            buttonRootId: 'ton-connect-btn'
+            buttonRootId: 'ton-connect-btn',
+            uiOptions: { language: 'tr' }
         });
 
         async function init() {
@@ -148,25 +149,18 @@
         function renderMain() {
             const now = getTRTime();
             const { hour, minute, durationMinutes } = APP_CONFIG.matchTime;
+            const isMatchTime = (now.getHours() === hour && now.getMinutes() >= minute && now.getMinutes() < minute + durationMinutes);
             const actionArea = document.getElementById('action-area');
             document.getElementById('u-name').innerText = `@${user.username}`;
-
             let target = getTRTime();
             target.setHours(hour, minute, 0, 0);
-
-            // DÜZELTME: Eksi sayaç sorununu çözen mantık
-            if (now >= target) {
-                target.setDate(target.getDate() + 1);
-            }
-
+            if (now >= target && !isMatchTime) { target.setDate(target.getDate() + 1); }
             let diff = target - now;
+            if (diff < 0) diff = 0; 
             let dh = Math.floor(diff/3600000).toString().padStart(2,'0'), 
                 dm = Math.floor((diff%3600000)/60000).toString().padStart(2,'0'), 
                 ds = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-
-            const isMatchTime = (now.getHours() === hour && now.getMinutes() >= minute && now.getMinutes() < minute + durationMinutes);
             const countdownHTML = `<p style="margin-bottom:0; font-size:0.8rem; color:#94a3b8;">Sıradaki yarışma:</p><div class="countdown-timer">${dh}:${dm}:${ds}</div>`;
-
             if (user.last_played_date === now.toISOString().split('T')[0]) {
                 actionArea.innerHTML = `<div class="card"><p style="color:var(--primary); font-weight:bold; margin-top:0;">Yarın tekrar gel!</p>${countdownHTML}</div>`;
             } else if (isMatchTime) {
@@ -176,8 +170,9 @@
             }
         }
 
+        // YENİ: SATIN ALMA FONKSİYONU
         async function buyTicketWithTON() {
-            const amount = "100000000"; // 0.1 TON (nanoTON)
+            const amount = "100000000"; // 0.1 TON (nanoTON cinsinden)
             const destination = "UQAhiYJQNPQmh1J_Jvnlw3kdL8Q6rK0_2LbjXY_CLfMQGVb5"; 
 
             const transaction = {
