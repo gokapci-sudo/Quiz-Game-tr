@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Quiz Game V1.0</title>
+    <title>Quiz Arena V1.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
@@ -23,68 +23,51 @@
         .btn-error { background: var(--error) !important; color: #fff !important; }
         .btn-disabled { background: #475569 !important; opacity: 0.5; cursor: not-allowed; pointer-events: none; }
         .pw-input { width: 70px; padding: 12px; border-radius: 8px; border: 1px solid var(--primary); background: #0f172a; color: #fff; text-align: center; text-transform: uppercase; font-weight: bold; }
-        #ton-connect-btn { display: flex; justify-content: center; margin: 10px 0; width: 100%; }
-        .prize-table { background: rgba(56, 189, 248, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 10px; width: 100%; max-width: 450px; }
+        .countdown-timer { font-size: 1.5rem; font-weight: bold; color: var(--gold); margin: 10px 0; font-family: monospace; }
         .sponsor-box { background: #1e293b; height: 75px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #334155; overflow: hidden; display:block; }
         .sponsor-box img { width: 100%; height: 100%; object-fit: cover; }
-        .leader-row { display:flex; justify-content:space-between; align-items: center; padding:12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; }
-        .countdown-timer { font-size: 1.5rem; font-weight: bold; color: var(--gold); margin: 10px 0; font-family: monospace; }
+        .leader-row { display:flex; justify-content:space-between; padding:12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; }
     </style>
 </head>
 <body>
 
     <div id="sponsor-screen" class="screen active">
-        <h2 style="color: var(--gold); margin-top: 10px;">ARENA SPONSORLARI</h2>
-        <div id="sponsor-list" style="width:100%; max-width:450px; margin: 10px 0;">
-            <a href="#" class="sponsor-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2iPt1ZPGpwtVwY5fvpN_X3hqThRsBvJIAFA&s"></a>
-            <a href="#" class="sponsor-box"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2iPt1ZPGpwtVwY5fvpN_X3hqThRsBvJIAFA&s"></a>
-        </div>
-        <button class="btn btn-blue" onclick="showScreen('main-screen')">ARENAYA GİR 🚀</button>
+        <h2 style="color: var(--gold)">ARENA SPONSORLARI</h2>
+        <div id="sponsor-list" style="width:100%; max-width:450px;"></div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">GİRİŞ YAP 🚀</button>
     </div>
 
     <div id="main-screen" class="screen">
-        <div class="card">
-            <h2 id="u-name">@Oyuncu</h2>
-            <div id="ton-connect-btn"></div>
-        </div>
-        <div id="action-area" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
-        <div class="prize-table">
-            <div style="font-weight: bold; color: var(--gold); margin-bottom: 5px;">🏆 GÜNÜN ÖDÜLÜ</div>
-            <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-                <span>1.: 0.50 TON</span> <span>2.: 0.30 TON</span> <span>3.: 0.20 TON</span>
-            </div>
-        </div>
-        <button class="btn" style="background:#475569; margin-top:10px" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
+        <div class="card"><h2 id="u-name">@Oyuncu</h2><div id="ton-connect-btn"></div></div>
+        <div id="action-area" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
+        <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
     </div>
 
     <div id="task-screen" class="screen">
         <h2 style="color: var(--gold)">BİLET GÖREVİ</h2>
         <div class="card" style="width:100%">
             <div id="task-list"></div>
-            <button class="btn btn-blue" onclick="checkAllPasswords()" style="margin-top:15px">BİLETİ ONAYLA</button>
+            <button class="btn btn-blue" onclick="checkAllPasswords()" style="margin-top:10px">BİLETİ ONAYLA</button>
         </div>
         <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">⬅️ GERİ</button>
     </div>
 
     <div id="quiz-screen" class="screen">
-        <div id="quiz-timer" style="font-size: 2.5rem; color: var(--gold); font-weight: 800; margin: 15px 0;">15</div>
+        <div id="quiz-timer" style="font-size:2.5rem; color:var(--gold); font-weight:800; margin:15px 0;">15</div>
         <div class="card"><h3 id="question-text">...</h3></div>
-        <div id="options-container" style="width: 100%; max-width: 450px;"></div>
+        <div id="options-container" style="width:100%"></div>
     </div>
 
     <div id="result-screen" class="screen">
         <h2 style="color: var(--gold)">BİTTİ!</h2>
-        <div class="card">
-            <h1 id="final-score" style="font-size: 3rem; margin:0; color:var(--primary)">0</h1>
-            <p id="final-time-text" style="color:var(--gold); font-weight:bold;"></p>
-        </div>
+        <div class="card"><h1 id="final-score" style="font-size:3rem; color:var(--primary)">0</h1><p id="final-time-text"></p></div>
         <button class="btn btn-blue" onclick="location.reload()">TAMAM</button>
     </div>
 
     <div id="leader-screen" class="screen">
         <h2 style="color: var(--gold)">🏆 SIRALAMA</h2>
-        <div id="leader-list" style="width:100%; max-width:450px;"></div>
-        <button class="btn btn-blue" onclick="showScreen('main-screen')" style="margin-top:10px">⬅️ GERİ</button>
+        <div id="leader-list" style="width:100%"></div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">GERİ</button>
     </div>
 
     <script>
@@ -93,11 +76,13 @@
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
 
-        const WAIT_TIME = 30000;
-        const YT_VIDEOS = [{url:"#"}, {url:"#"}, {url:"#"}];
+        // Yerel bellekten verileri çek veya sıfırla
+        let vTimers = JSON.parse(localStorage.getItem('vTimers')) || [30000, 30000, 30000];
+        let vStatus = JSON.parse(localStorage.getItem('vStatus')) || [false, false, false];
+        let activeVideoIdx = null;
 
-        let vStatus = [false, false, false], vTimers = [WAIT_TIME, WAIT_TIME, WAIT_TIME], activeInterval = null;
-        let userId = tg.initDataUnsafe?.user?.id || 123456, user = null, dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, quizStartTime = 0;
+        let userId = tg.initDataUnsafe?.user?.id || 123456, user = null;
+        let dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, quizStartTime = 0;
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://inquisitive-sawine-013b08.netlify.app/tonconnect-manifest.json',
@@ -106,10 +91,30 @@
 
         async function init() {
             tg.ready(); tg.expand();
+            document.getElementById('sponsor-list').innerHTML = APP_CONFIG.sponsors.map(s => `<a href="${s.link}" class="sponsor-box"><img src="${s.img}"></a>`).join("");
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
             user = data || (await _supabase.from('users').insert([{ telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", has_ticket: false }]).select().single()).data;
-            setInterval(renderMain, 1000);
+            
+            // Sayaçları her saniye güncelle
+            setInterval(() => {
+                if (activeVideoIdx !== null && !vStatus[activeVideoIdx]) {
+                    vTimers[activeVideoIdx] -= 1000;
+                    if (vTimers[activeVideoIdx] <= 0) {
+                        vTimers[activeVideoIdx] = 0;
+                        vStatus[activeVideoIdx] = true;
+                        activeVideoIdx = null;
+                    }
+                    saveProgress();
+                    renderTasks();
+                }
+                renderMain();
+            }, 1000);
             renderTasks();
+        }
+
+        function saveProgress() {
+            localStorage.setItem('vTimers', JSON.stringify(vTimers));
+            localStorage.setItem('vStatus', JSON.stringify(vStatus));
         }
 
         function getTRTime() { return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Istanbul"})); }
@@ -131,9 +136,37 @@
                 if (now.getHours() >= hour) target.setDate(target.getDate() + 1);
                 target.setHours(hour, minute, 0, 0);
                 let diff = target - now;
-                let dh = Math.floor(diff / 3600000).toString().padStart(2, '0'), dm = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0'), ds = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+                let dh = Math.floor(diff/3600000).toString().padStart(2,'0'), dm = Math.floor((diff%3600000)/60000).toString().padStart(2,'0'), ds = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
                 actionArea.innerHTML = `<div class="card"><p>Sıradaki Yarışma</p><div class="countdown-timer">${dh}:${dm}:${ds}</div>${!user.has_ticket ? '<button class="btn btn-yt" onclick="showScreen(\'task-screen\')">🎫 BİLET AL</button>' : '<p style="color:var(--success)">🎫 Bilet Hazır!</p>'}</div>`;
             }
+        }
+
+        function renderTasks() {
+            let html = "";
+            for(let i=0; i<3; i++) {
+                const isLocked = i > 0 && !vStatus[i-1], isDone = vStatus[i], isRunning = activeVideoIdx === i;
+                let btnText = isDone ? `✅ Tamamlandı` : (isRunning ? `⏳ ${Math.ceil(vTimers[i]/1000)}s` : `🎬 Video ${i+1} İzle`);
+                html += `<div style="margin-bottom:10px;"><button class="btn btn-yt ${isLocked?'btn-disabled':''} ${isDone?'btn-success':''}" onclick="startVideoTask(${i})">${btnText}</button><input type="text" maxlength="2" class="pw-input" id="pw-${i}" ${!isDone?'disabled':''} placeholder="??"></div>`;
+            }
+            document.getElementById('task-list').innerHTML = html;
+        }
+
+        function startVideoTask(i) {
+            if (vStatus[i] || (i > 0 && !vStatus[i-1])) return;
+            activeVideoIdx = i;
+            tg.openLink(APP_CONFIG.videoTasks[i].url);
+            renderTasks();
+        }
+
+        async function checkAllPasswords() {
+            const inputs = [0,1,2].map(i => document.getElementById(`pw-${i}`).value.toUpperCase());
+            if (inputs.every((val, i) => val === APP_CONFIG.videoTasks[i].password)) {
+                await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
+                user.has_ticket = true;
+                localStorage.removeItem('vTimers'); localStorage.removeItem('vStatus'); // Başarılıysa sıfırla
+                tg.showAlert("Tebrikler! Biletiniz tanımlandı.");
+                showScreen('main-screen');
+            } else tg.showAlert("Şifreler hatalı!");
         }
 
         function startQuiz() {
@@ -172,39 +205,10 @@
             await _supabase.from('users').update({ last_played_date: today, has_ticket: false }).eq('telegram_id', userId);
         }
 
-        async function checkAllPasswords() {
-            const inputs = [document.getElementById('pw-0').value.toUpperCase(), document.getElementById('pw-1').value.toUpperCase(), document.getElementById('pw-2').value.toUpperCase()];
-            if(inputs.every((v, i) => v === APP_CONFIG.videoPasswords[i])) {
-                await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
-                user.has_ticket = true; tg.showAlert("Bilet alındı!"); showScreen('main-screen');
-            } else tg.showAlert("Hatalı şifre!");
-        }
-
-        function startVideoTimer(i) {
-            if (vStatus[i] || (i > 0 && !vStatus[i-1])) return;
-            tg.openLink(YT_VIDEOS[i].url);
-            if (activeInterval) clearInterval(activeInterval);
-            activeInterval = setInterval(() => {
-                vTimers[i] -= 1000; renderTasks();
-                if (vTimers[i] <= 0) { clearInterval(activeInterval); vStatus[i] = true; renderTasks(); }
-            }, 1000);
-        }
-
-        function renderTasks() {
-            let html = "";
-            for(let i=0; i<3; i++) {
-                const isLocked = i > 0 && !vStatus[i-1], isDone = vStatus[i], isRunning = vTimers[i] < WAIT_TIME && vTimers[i] > 0;
-                let btnText = isDone ? `✅ Tamam` : (isRunning ? `⏳ ${Math.ceil(vTimers[i]/1000)}s` : `🎬 Video ${i+1}`);
-                html += `<div style="margin-bottom:10px;"><button class="btn btn-yt ${isLocked?'btn-disabled':''} ${isDone?'btn-success':''}" onclick="startVideoTimer(${i})">${btnText}</button><input type="text" maxlength="2" class="pw-input" id="pw-${i}" ${!isDone?'disabled':''} placeholder="??"></div>`;
-            }
-            document.getElementById('task-list').innerHTML = html;
-        }
-
         async function fetchLeaderboard() {
             const today = getTRTime().toISOString().split('T')[0];
             const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false}).limit(10);
-            const l = document.getElementById('leader-list');
-            l.innerHTML = data?.map((r, i) => `<div class="leader-row"><span>#${i+1} @${r.username}</span><b>${r.score} P</b></div>`).join("") || "Henüz kayıt yok.";
+            document.getElementById('leader-list').innerHTML = data?.map((r, i) => `<div class="leader-row"><span>#${i+1} @${r.username}</span><b>${r.score} P</b></div>`).join("") || "Henüz kayıt yok.";
             showScreen('leader-screen');
         }
 
