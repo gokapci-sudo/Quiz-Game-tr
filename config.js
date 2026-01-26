@@ -1,7 +1,20 @@
+// Cüzdan bakiyesini blockchainden çeken fonksiyon
+async function getJackpotAmount() {
+    const adminWallet = "UQAhiYJQNPQmh1J_Jvnlw3kdL8Q6rK0_2LbjXY_CLfMQGVb5";
+    try {
+        const response = await fetch(`https://tonapi.io/v2/accounts/${adminWallet}`);
+        const data = await response.json();
+        // Bakiyeyi nanoTON'dan TON'a çeviriyoruz
+        return (data.balance / 1000000000).toFixed(2);
+    } catch (e) {
+        console.error("Bakiye çekilemedi:", e);
+        return "0.00";
+    }
+}
+
 const APP_CONFIG = {
     announcement: "🚀 Türkiye Genel Kültür Maratonu Başladı! \n\n1️⃣ Her gün saat 13:00'da sorular aktif olur. \n2️⃣ Toplam 10 soruda en yüksek puanı alan ve en hızlı olan kazanır. \n3️⃣ Ödüller yarışma bitiminden hemen sonra cüzdanlara aktarılır. Başarılar!",
-
-     prizes: { first: "0.50 TON", second: "0.30 TON", third: "0.20 TON" },
+    prizes: { first: "0.50 TON", second: "0.30 TON", third: "0.20 TON" },
     matchTime: { hour: 13, minute: 0, durationMinutes: 5 },
     sponsors: [
         { name: "Sponsor 1", text: "", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTK3VxxlZPLvinQYGcmarXPkykgwqDrl55cPwzGZAP_XA&s=10" },
@@ -99,7 +112,7 @@ const APP_CONFIG = {
         { question: "Hangi ilimiz 'Evliyalar Şehri' olarak anılır?", options: ["Konya", "Bursa", "Kastamonu", "Kayseri"], correct_option: 2 },
         { question: "Tortum Şelalesi hangi ilimizdedir?", options: ["Erzurum", "Erzincan", "Artvin", "Rize"], correct_option: 0 },
         { question: "Türkiye'nin en kuzeyindeki deniz feneri hangisidir?", options: ["Şile", "Sinop İnceburun", "Ahırkapı", "Fener"], correct_option: 1 },
-        { question: "Mimar Sinan'ın İstanbul dışındaki tek büyük eseri olan Selimiye nerededir?", options: ["Bursa", "Edirne", "Konya", "Tekirdağ"], correct_option: 1 },
+        { question: "Mimar Sinan's İstanbul dışındaki tek büyük eseri olan Selimiye nerededir?", options: ["Bursa", "Edirne", "Konya", "Tekirdağ"], correct_option: 1 },
         { question: "Türkiye'nin en derin gölü hangisidir?", options: ["Van Gölü", "Eğirdir Gölü", "Salda Gölü", "Manyas Gölü"], correct_option: 2 },
         { question: "Hangi ilimiz 'Taşköprü' sarımsağı ile ünlüdür?", options: ["Sinop", "Kastamonu", "Bolu", "Çankırı"], correct_option: 1 },
         { question: "Milli Mücadele'de Batı Cephesi'ni kapatan antlaşma?", options: ["Lozan", "Mudanya", "Ankara", "Gümrü"], correct_option: 1 },
