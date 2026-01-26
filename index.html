@@ -45,8 +45,15 @@
         <div class="card"><h2 id="u-name">@Oyuncu</h2><div id="ton-connect-btn"></div></div>
         <div id="action-area" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
         
+        <div class="card" style="border: 2px solid var(--gold); background: linear-gradient(45deg, rgba(251, 191, 36, 0.1), transparent); margin-bottom:5px;">
+            <p style="margin:0; font-size:0.65rem; color:var(--gold); font-weight:bold; letter-spacing:1px;">TOPLAM ÖDÜL HAVUZU</p>
+            <h1 id="jackpot-amount" style="margin:5px 0; font-size:2.2rem; color:var(--gold); text-shadow: 0 0 10px rgba(251, 191, 36, 0.4);">
+                ... TON
+            </h1>
+        </div>
+
         <div class="prize-table">
-            <div style="font-weight: bold; color: var(--gold); margin-bottom: 5px; font-size: 0.8rem;">🏆 GÜNÜN ÖDÜLÜ</div>
+            <div style="font-weight: bold; color: var(--gold); margin-bottom: 5px; font-size: 0.8rem;">🏆 SIRALAMA ÖDÜLLERİ</div>
             <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
                 <span>1.: <b id="p1"></b></span> <span>2.: <b id="p2"></b></span> <span>3.: <b id="p3"></b></span>
             </div>
@@ -67,7 +74,7 @@
         
         <div class="card" style="border: 2px solid var(--primary); background: rgba(56, 189, 248, 0.05);">
             <p style="margin:0; font-weight:bold; color:var(--primary);">Hızlı Giriş ⚡</p>
-            <p style="font-size:0.75rem; margin:5px 0; opacity:0.8;">Görev yapmadan hemen bilet al.</p>
+            <p style="font-size:0.75rem; margin:5px 0;">Video izlemeden 0.1 TON ile bilet al.</p>
             <button class="btn btn-blue" onclick="buyTicketWithTON()" style="margin-top:5px; padding:12px;">0.1 TON İLE SATIN AL</button>
         </div>
 
@@ -119,6 +126,11 @@
         async function init() {
             tg.ready(); tg.expand();
             
+            // Canlı Bakiyeyi Güncelle
+            const jackpot = await getJackpotAmount();
+            const jpElement = document.getElementById('jackpot-amount');
+            if(jpElement) jpElement.innerText = jackpot + " TON";
+
             const sList = document.getElementById('sponsor-list');
             sList.innerHTML = APP_CONFIG.sponsors.map(s => `
                 <div class="sponsor-box" style="padding: ${s.img ? '0' : '20px'}; border: ${s.img ? '1px solid #334155' : '1px dashed #475569'};">
@@ -170,21 +182,15 @@
             }
         }
 
-        // YENİ: SATIN ALMA FONKSİYONU
         async function buyTicketWithTON() {
-            const amount = "100000000"; // 0.1 TON (nanoTON cinsinden)
+            const amount = "100000000"; // 0.1 TON
             const destination = "UQAhiYJQNPQmh1J_Jvnlw3kdL8Q6rK0_2LbjXY_CLfMQGVb5"; 
-
             const transaction = {
                 validUntil: Math.floor(Date.now() / 1000) + 600,
                 messages: [{ address: destination, amount: amount }]
             };
-
             try {
-                if (!tonConnectUI.connected) {
-                    await tonConnectUI.openModal();
-                    return;
-                }
+                if (!tonConnectUI.connected) { await tonConnectUI.openModal(); return; }
                 const result = await tonConnectUI.sendTransaction(transaction);
                 if (result) {
                     await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
@@ -192,9 +198,7 @@
                     tg.showAlert("Ödeme başarılı! Biletiniz tanımlandı. 🚀");
                     showScreen('main-screen');
                 }
-            } catch (e) {
-                tg.showAlert("Ödeme iptal edildi veya bir hata oluştu.");
-            }
+            } catch (e) { tg.showAlert("İşlem iptal edildi."); }
         }
 
         function startQuiz() {
