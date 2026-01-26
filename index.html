@@ -23,7 +23,7 @@
         .btn-error { background: var(--error) !important; color: #fff !important; }
         .pw-input { width: 70px; padding: 12px; border-radius: 8px; border: 1px solid var(--primary); background: #0f172a; color: #fff; text-align: center; text-transform: uppercase; font-weight: bold; }
         .countdown-timer { font-size: 1.5rem; font-weight: bold; color: var(--gold); margin: 5px 0; font-family: monospace; }
-        .sponsor-box { background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 8px; border: 1px dashed #475569; font-size: 0.8rem; color: #94a3b8; width: 100%; max-width: 450px; }
+        .sponsor-box { background: #1e293b; height: 80px; border-radius: 12px; margin-bottom: 8px; border: 1px dashed #475569; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #94a3b8; width: 100%; max-width: 450px; overflow: hidden; }
         .prize-table { background: rgba(56, 189, 248, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 10px; width: 100%; max-width: 450px; margin-bottom: 10px; }
         .leader-row { display:flex; justify-content:space-between; padding:12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; font-size: 0.85rem; }
         .winner { border: 1px solid var(--gold); background: rgba(251, 191, 36, 0.1); }
@@ -105,7 +105,15 @@
 
         async function init() {
             tg.ready(); tg.expand();
-            document.getElementById('sponsor-list').innerHTML = APP_CONFIG.sponsors.map(s => `<div class="sponsor-box">${s.text}</div>`).join("");
+            
+            // Sponsorları Yükle (Resim kontrolü eklendi)
+            const sList = document.getElementById('sponsor-list');
+            sList.innerHTML = APP_CONFIG.sponsors.map(s => `
+                <div class="sponsor-box" style="padding: ${s.img ? '0' : '20px'}; border: ${s.img ? '1px solid #334155' : '1px dashed #475569'};">
+                    ${s.img ? `<img src="${s.img}" style="width:100%; height:100%; object-fit: cover;">` : s.text}
+                </div>
+            `).join("");
+
             document.getElementById('p1').innerText = APP_CONFIG.prizes.first;
             document.getElementById('p2').innerText = APP_CONFIG.prizes.second;
             document.getElementById('p3').innerText = APP_CONFIG.prizes.third;
@@ -130,19 +138,17 @@
             const now = getTRTime();
             const { hour, minute, durationMinutes } = APP_CONFIG.matchTime;
             const isMatchTime = (now.getHours() === hour && now.getMinutes() >= minute && now.getMinutes() < minute + durationMinutes);
-            const todayStr = now.toISOString().split('T')[0];
             const actionArea = document.getElementById('action-area');
             document.getElementById('u-name').innerText = `@${user.username}`;
 
-            // Geri sayım hesaplama
             let target = getTRTime();
             if (now.getHours() >= hour && now.getMinutes() >= minute + durationMinutes) target.setDate(target.getDate() + 1);
             target.setHours(hour, minute, 0, 0);
             let diff = target - now;
             let dh = Math.floor(diff/3600000).toString().padStart(2,'0'), dm = Math.floor((diff%3600000)/60000).toString().padStart(2,'0'), ds = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-            const countdownHTML = `<p style="margin-bottom:0; font-size:0.8rem; color:#94a3b8;">Bir sonraki yarışma:</p><div class="countdown-timer">${dh}:${dm}:${ds}</div>`;
+            const countdownHTML = `<p style="margin-bottom:0; font-size:0.8rem; color:#94a3b8;">Sıradaki yarışma:</p><div class="countdown-timer">${dh}:${dm}:${ds}</div>`;
 
-            if (user.last_played_date === todayStr) {
+            if (user.last_played_date === now.toISOString().split('T')[0]) {
                 actionArea.innerHTML = `<div class="card"><p style="color:var(--primary); font-weight:bold; margin-top:0;">Yarın tekrar gel!</p>${countdownHTML}</div>`;
             } else if (isMatchTime) {
                 actionArea.innerHTML = user.has_ticket ? `<button class="btn btn-blue" onclick="startQuiz()">🚀 BAŞLAT</button>` : `<button class="btn btn-yt" onclick="showScreen('task-screen')">🎫 BİLET AL</button>`;
@@ -153,28 +159,19 @@
 
         async function fetchLeaderboard() {
             const today = getTRTime().toISOString().split('T')[0];
-            // Önce PUANA göre, puan eşitse SÜREYE (düşük olan iyi) göre sırala
             const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false}).order('completion_time', {ascending: true});
-            
             let html = "";
             if (data && data.length > 0) {
                 data.forEach((r, i) => {
-                    if (i === 3) html += `<div class="divider"></div>`; // 3. kişiden sonra çizgi çek
+                    if (i === 3) html += `<div class="divider"></div>`;
                     const isWinner = i < 3;
-                    html += `
-                        <div class="leader-row ${isWinner ? 'winner' : ''}">
-                            <span style="display:flex; align-items:center; gap:8px;">
-                                <b style="color:${isWinner?'var(--gold)':'#94a3b8'}">#${i+1}</b> @${r.username}
-                            </span>
-                            <span><b>${r.score} P</b> <small style="font-size:0.6rem; opacity:0.7;">(${(r.completion_time/1000).toFixed(1)}s)</small></span>
-                        </div>`;
+                    html += `<div class="leader-row ${isWinner ? 'winner' : ''}"><span style="display:flex; align-items:center; gap:8px;"><b style="color:${isWinner?'var(--gold)':'#94a3b8'}">#${i+1}</b> @${r.username}</span><span><b>${r.score} P</b> <small style="font-size:0.6rem; opacity:0.7;">(${(r.completion_time/1000).toFixed(1)}s)</small></span></div>`;
                 });
-            } else { html = "<p>Henüz katılım yok.</p>"; }
+            } else html = "<p>Henüz katılım yok.</p>";
             document.getElementById('leader-list').innerHTML = html;
             showScreen('leader-screen');
         }
 
-        // Diğer yardımcı fonksiyonlar (Aynı Kalıyor)
         function showAnnouncements() { document.getElementById('announcement-text').innerText = APP_CONFIG.announcement; showScreen('announcement-screen'); }
         function saveProgress() { localStorage.setItem('vTimers', JSON.stringify(vTimers)); localStorage.setItem('vStatus', JSON.stringify(vStatus)); }
         function renderTasks() {
