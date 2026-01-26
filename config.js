@@ -1,19 +1,19 @@
 const APP_CONFIG = {
     // --- DUYURU AYARLARI ---
-    announcement: "Yeni sponsorlarımızla ödül havuzu büyüyor! Her gün saat 13:00'da buradayız. 🚀",
+    announcement: "Türkiye Genel Kültür maratonu başladı! Her gün saat 13:00'da en hızlı olan kazanır. 🇹🇷",
     
     // --- ÖDÜL HAVUZU GÖSTERGESİ ---
     prizes: { first: "0.50 TON", second: "0.30 TON", third: "0.20 TON" },
 
     // --- SPONSOR AYARLARI ---
     sponsors: [
-        { name: "Sponsor 1", text: "", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTK3VxxlZPLvinQYGcmarXPkykgwqDrl55cPwzGZAP_XA&s=10", link: "#" },
-        { name: "Sponsor 2", text: "", img: "https://egirisim.com/wp-content/uploads/2025/11/n11-yeni-logo-1068x580.jpg", link: "#" },
-        { name: "Sponsor 3", text: "Sponsor alındığında burada görünecektir.", img: "", link: "#" },
-        { name: "Sponsor 4", text: "Sponsor alındığında burada görünecektir.", img: "", link: "#" }
+        { name: "Sponsor 1", text: "", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTK3VxxlZPLvinQYGcmarXPkykgwqDrl55cPwzGZAP_XA&s=10" },
+        { name: "Sponsor 2", text: "", img: "https://egirisim.com/wp-content/uploads/2025/11/n11-yeni-logo-1068x580.jpg" },
+        { name: "Sponsor 3", text: "Sponsor alındığında burada görünecektir.", img: "" },
+        { name: "Sponsor 4", text: "Sponsor alındığında burada görünecektir.", img: "" }
     ],
 
-    // --- VİDEO GÖREVLERİ VE YENİ ŞİFRELER ---
+    // --- VİDEO GÖREVLERİ VE ŞİFRELER ---
     videoTasks: [
         { url: "https://www.youtube.com/watch?v=video1", password: "TX" },
         { url: "https://www.youtube.com/watch?v=video2", password: "K9" },
@@ -23,17 +23,17 @@ const APP_CONFIG = {
     // --- YARIŞMA ZAMANI ---
     matchTime: { hour: 13, minute: 0, durationMinutes: 5 },
 
-    // --- 10 ADET YENİ SORU ---
+    // --- 10 ADET TÜRKİYE GENEL KÜLTÜR SORUSU ---
     questions: [
-        { question: "TON ağının resmi cüzdan uygulaması hangisidir?", options: ["Metamask", "Tonkeeper", "Phantom", "Trust"], correct_option: 1 },
-        { question: "Bitcoin'in maksimum arzı ne kadardır?", options: ["21 Milyon", "100 Milyon", "Sınırsız", "10 Milyon"], correct_option: 0 },
-        { question: "Ethereum hangi konsensüs mekanizmasına geçiş yapmıştır?", options: ["Proof of Work", "Proof of History", "Proof of Stake", "Proof of Burn"], correct_option: 2 },
-        { question: "Blokzincirinde 'HODL' terimi ne anlama gelir?", options: ["Hızlı Satmak", "Varlığı Tutmak", "Madencilik Yapmak", "Transfer Etmek"], correct_option: 1 },
-        { question: "Stablecoin (Sabit coin) olan hangisidir?", options: ["Solana", "USDT", "Avalanche", "Doge"], correct_option: 1 },
-        { question: "İlk NFT projesi olarak kabul edilen hangisidir?", options: ["CryptoPunks", "Bored Ape", "Azuki", "Moonbirds"], correct_option: 0 },
-        { question: "Binance borsasının kendi yerel tokeni hangisidir?", options: ["BUSD", "BNB", "BTC", "SOL"], correct_option: 1 },
-        { question: "Kripto dünyasında 'FOMO' ne demektir?", options: ["Fırsatı Kaçırma Korkusu", "Para Kaybetme Korkusu", "Hızlı Zengin Olma", "Yeni Çıkan Coin"], correct_option: 0 },
-        { question: "Soğuk cüzdan (Cold Wallet) özelliği nedir?", options: ["İnternete bağlı olmaması", "Çok hızlı olması", "Ücretsiz olması", "Telefonda yüklü olması"], correct_option: 0 },
-        { question: "TON projesi ilk olarak kim tarafından geliştirilmeye başlandı?", options: ["Vitalik Buterin", "Telegram Ekibi", "Elon Musk", "Facebook"], correct_option: 1 }
+        { question: "Türkiye'nin yüzölçümü en büyük ili hangisidir?", options: ["Ankara", "İstanbul", "Konya", "Erzurum"], correct_option: 2 },
+        { question: "İstiklal Marşı'mızın şairi kimdir?", options: ["Ziya Gökalp", "Mehmet Akif Ersoy", "Namık Kemal", "Reşat Nuri"], correct_option: 1 },
+        { question: "Türkiye'nin en yüksek dağı hangisidir?", options: ["Erciyes", "Nemrut", "Ağrı Dağı", "Süphan"], correct_option: 2 },
+        { question: "Hangi ilimiz 'Ege'nin İncisi' olarak bilinir?", options: ["Aydın", "Muğla", "İzmir", "Manisa"], correct_option: 2 },
+        { question: "Cumhuriyet kaç yılında ilan edilmiştir?", options: ["1920", "1923", "1919", "1924"], correct_option: 1 },
+        { question: "Mimar Sinan'ın 'Ustalık Eserim' dediği cami hangisidir?", options: ["Süleymaniye", "Selimiye", "Sultanahmet", "Fatih"], correct_option: 1 },
+        { question: "Türkiye'nin en uzun akarsuyu hangisidir?", options: ["Fırat", "Dicle", "Kızılırmak", "Sakarya"], correct_option: 2 },
+        { question: "Aspendos Antik Tiyatrosu hangi ilimizdedir?", options: ["Antalya", "Muğla", "İzmir", "Denizli"], correct_option: 0 },
+        { question: "Türk parasında resmi bulunan tek kadın yazar kimdir?", options: ["Halide Edip", "Fatma Aliye", "Afife Jale", "Sabiha Gökçen"], correct_option: 1 },
+        { question: "Türkiye'nin ilk kadın pilotu kimdir?", options: ["Sabiha Gökçen", "Türkan Saylan", "Leyla Gencer", "Afife Jale"], correct_option: 0 }
     ]
 };
