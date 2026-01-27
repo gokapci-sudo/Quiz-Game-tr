@@ -55,7 +55,9 @@
         <div class="prize-table">
             <div style="font-weight: bold; color: var(--gold); margin-bottom: 5px; font-size: 0.8rem;">🏆 SIRALAMA ÖDÜLLERİ</div>
             <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
-                <span>1.: <b id="p1"></b></span> <span>2.: <b id="p2"></b></span> <span>3.: <b id="p3"></b></span>
+                <span>1.: <b id="p1">Hesaplanıyor...</b></span> 
+                <span>2.: <b id="p2">Hesaplanıyor...</b></span> 
+                <span>3.: <b id="p3">Hesaplanıyor...</b></span>
             </div>
         </div>
 
@@ -126,10 +128,10 @@
         async function init() {
             tg.ready(); tg.expand();
             
-            // Canlı Bakiyeyi Güncelle
-            const jackpot = await getJackpotAmount();
-            const jpElement = document.getElementById('jackpot-amount');
-            if(jpElement) jpElement.innerText = jackpot + " TON";
+            // YENİ: Hem Havuzu Hem Sıralama Ödüllerini Canlı Güncelle
+            if (typeof updatePrizesAndJackpot === "function") {
+                await updatePrizesAndJackpot();
+            }
 
             const sList = document.getElementById('sponsor-list');
             sList.innerHTML = APP_CONFIG.sponsors.map(s => `
@@ -138,10 +140,6 @@
                 </div>
             `).join("");
 
-            document.getElementById('p1').innerText = APP_CONFIG.prizes.first;
-            document.getElementById('p2').innerText = APP_CONFIG.prizes.second;
-            document.getElementById('p3').innerText = APP_CONFIG.prizes.third;
-            
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
             user = data || (await _supabase.from('users').insert([{ telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", has_ticket: false }]).select().single()).data;
             
