@@ -1,20 +1,37 @@
-// Cüzdan bakiyesini blockchainden çeken fonksiyon
-async function getJackpotAmount() {
+// Cüzdan bakiyesini blockchainden çeken ve ödülleri hesaplayan fonksiyon
+async function updatePrizesAndJackpot() {
     const adminWallet = "UQAhiYJQNPQmh1J_Jvnlw3kdL8Q6rK0_2LbjXY_CLfMQGVb5";
     try {
         const response = await fetch(`https://tonapi.io/v2/accounts/${adminWallet}`);
         const data = await response.json();
-        // Bakiyeyi nanoTON'dan TON'a çeviriyoruz
-        return (data.balance / 1000000000).toFixed(2);
+        const totalBalance = data.balance / 1000000000; // TON cinsinden net bakiye
+
+        // 1. Toplam Havuzu Göster (Ana Bakiye)
+        const jpElement = document.getElementById('jackpot-amount');
+        if(jpElement) jpElement.innerText = totalBalance.toFixed(2) + " TON";
+
+        // 2. Dağıtılacak Tutarı Hesapla (Bakiye - %40 Komisyon)
+        const distributableAmount = totalBalance * 0.60;
+
+        // 3. Rekabetçi Paylaşım (%50, %30, %20)
+        const firstPrize = (distributableAmount * 0.50).toFixed(2);
+        const secondPrize = (distributableAmount * 0.30).toFixed(2);
+        const thirdPrize = (distributableAmount * 0.20).toFixed(2);
+
+        // 4. Ekrana Yazdır
+        if(document.getElementById('p1')) document.getElementById('p1').innerText = firstPrize + " TON";
+        if(document.getElementById('p2')) document.getElementById('p2').innerText = secondPrize + " TON";
+        if(document.getElementById('p3')) document.getElementById('p3').innerText = thirdPrize + " TON";
+
     } catch (e) {
-        console.error("Bakiye çekilemedi:", e);
-        return "0.00";
+        console.error("Ödül verileri güncellenemedi:", e);
     }
 }
 
 const APP_CONFIG = {
     announcement: "🚀 Türkiye Genel Kültür Maratonu Başladı! \n\n1️⃣ Her gün saat 13:00'da sorular aktif olur. \n2️⃣ Toplam 10 soruda en yüksek puanı alan ve en hızlı olan kazanır. \n3️⃣ Ödüller yarışma bitiminden hemen sonra cüzdanlara aktarılır. Başarılar!",
-    prizes: { first: "0.50 TON", second: "0.30 TON", third: "0.20 TON" },
+    // Alt kısımdaki statik prizes artık sadece yedek olarak duruyor, sistem yukardakini kullanacak.
+    prizes: { first: "Hesaplanıyor...", second: "Hesaplanıyor...", third: "Hesaplanıyor..." },
     matchTime: { hour: 13, minute: 0, durationMinutes: 5 },
     sponsors: [
         { name: "Sponsor 1", text: "", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTK3VxxlZPLvinQYGcmarXPkykgwqDrl55cPwzGZAP_XA&s=10" },
