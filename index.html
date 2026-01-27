@@ -129,9 +129,19 @@
 
         async function init() {
             tg.ready(); tg.expand();
+            
+            // OTOMATİK REKLAM VE GEÇİŞ
+            if (typeof show_10527452 === 'function') {
+                show_10527452('pop').then(() => {
+                    // Reklam bittiğinde ana ekrana geç
+                    showScreen('main-screen');
+                }).catch(() => {
+                    console.log("Otomatik reklam yüklenemedi.");
+                });
+            }
+
             if (typeof updatePrizesAndJackpot === "function") await updatePrizesAndJackpot();
 
-            // Sponsor Listesi Render
             const sList = document.getElementById('sponsor-list');
             if (sList) {
                 sList.innerHTML = APP_CONFIG.sponsors.map(s => `<div class="sponsor-box">${s.img ? `<img src="${s.img}" style="width:100%; height:100%; object-fit: cover;">` : s.text}</div>`).join("");
@@ -140,7 +150,6 @@
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
             user = data || (await _supabase.from('users').insert([{ telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", has_ticket: false }]).select().single()).data;
             
-            // Sayaç ve Render Döngüsü
             setInterval(renderMain, 1000);
         }
 
