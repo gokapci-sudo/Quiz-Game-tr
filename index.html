@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Quiz Arena V1.0</title>
+    
+    <script src='//libtl.com/sdk.js' data-zone='10527452' data-sdk='show_10527452'></script>
+
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
@@ -26,8 +29,6 @@
         .prize-table { background: rgba(56, 189, 248, 0.1); border: 1px solid var(--primary); border-radius: 12px; padding: 10px; width: 100%; max-width: 450px; margin-bottom: 10px; }
         .leader-row { display:flex; justify-content:space-between; padding:12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; font-size: 0.85rem; }
         .winner { border: 1px solid var(--gold); background: rgba(251, 191, 36, 0.1); }
-        .divider { height: 2px; background: #334155; margin: 15px 0; width: 100%; position: relative; }
-        .divider::after { content: "TÜM KATILIMCILAR"; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--bg); padding: 0 10px; font-size: 0.65rem; color: #64748b; }
         #ton-connect-btn { display: flex; justify-content: center; width: 100%; margin: 10px 0; }
     </style>
 </head>
@@ -42,19 +43,10 @@
     <div id="main-screen" class="screen">
         <div class="card"><h2 id="u-name">@Oyuncu</h2><div id="ton-connect-btn"></div></div>
         <div id="action-area" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
-        
         <div class="card" style="border: 2px solid var(--gold); background: linear-gradient(45deg, rgba(251, 191, 36, 0.1), transparent); margin-bottom:5px;">
             <p style="margin:0; font-size:0.65rem; color:var(--gold); font-weight:bold; letter-spacing:1px;">TOPLAM ÖDÜL HAVUZU</p>
             <h1 id="jackpot-amount" style="margin:5px 0; font-size:2.2rem; color:var(--gold);">... TON</h1>
         </div>
-
-        <div class="prize-table">
-            <div style="font-weight: bold; color: var(--gold); margin-bottom: 5px; font-size: 0.8rem;">🏆 SIRALAMA ÖDÜLLERİ</div>
-            <div style="display:flex; justify-content:space-between; font-size:0.75rem;">
-                <span>1.: <b id="p1">...</b></span> <span>2.: <b id="p2">...</b></span> <span>3.: <b id="p3">...</b></span>
-            </div>
-        </div>
-
         <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
         <button class="btn" style="background:#334155" onclick="showAnnouncements()">📢 DUYURULAR</button>
     </div>
@@ -64,7 +56,7 @@
         
         <div class="card" style="border: 2px solid var(--primary); background: rgba(56, 189, 248, 0.05);">
             <p style="margin:0; font-weight:bold; color:var(--primary);">Hızlı Giriş ⚡</p>
-            <p style="font-size:0.75rem; margin:5px 0;">Beklemeden 0.1 TON ile bilet al.</p>
+            <p style="font-size:0.75rem; margin:5px 0;">Video izlemeden 0.1 TON ile bilet al.</p>
             <button class="btn btn-blue" onclick="buyTicketWithTON()" style="margin-top:5px; padding:12px;">0.1 TON İLE SATIN AL</button>
         </div>
 
@@ -72,8 +64,8 @@
 
         <div class="card" style="border: 2px solid var(--success); background: rgba(16, 185, 129, 0.05);">
             <p style="margin:0; font-weight:bold; color:var(--success);">Ücretsiz Bilet Paketi 🎬</p>
-            <p style="font-size:0.8rem; margin:10px 0;">Yarışmaya ücretsiz girmek için <b>4 adet kısa reklam</b> izlemelisiniz.</p>
-            <button id="ad-btn" class="btn btn-yt" style="background: var(--success);" onclick="watchAdAndGetTicket()">
+            <p style="font-size:0.8rem; margin:10px 0;">Biletinizi ücretsiz almak için <b>4 reklam</b> izlemelisiniz.</p>
+            <button id="ad-btn" class="btn btn-yt" style="background: var(--success);" onclick="watchMonetagAd()">
                 🎬 REKLAM İZLE (0/4)
             </button>
             <p id="ad-info" style="font-size: 0.7rem; color: #94a3b8; margin-top: 5px;">Kalan reklam: 4</p>
@@ -87,17 +79,15 @@
         <div class="card"><h3 id="question-text">...</h3></div>
         <div id="options-container" style="width:100%"></div>
     </div>
-
     <div id="result-screen" class="screen">
         <h2 style="color: var(--gold)">BİTTİ!</h2>
-        <div class="card"><h1 id="final-score" style="font-size:3rem; color:var(--primary)">0</h1><p id="final-time-text"></p></div>
+        <div class="card"><h1 id="final-score" style="font-size:3rem; color:var(--primary)">0</h1></div>
         <button class="btn btn-blue" onclick="location.reload()">TAMAM</button>
     </div>
-
     <div id="leader-screen" class="screen">
-        <h2 style="color: var(--gold)">🏆 GÜNLÜK SIRALAMA</h2>
-        <div id="leader-list" style="width:100%; max-width:450px;"></div>
-        <button class="btn btn-blue" onclick="showScreen('main-screen')" style="margin-top:15px">GERİ</button>
+        <h2 style="color: var(--gold)">🏆 SIRALAMA</h2>
+        <div id="leader-list" style="width:100%"></div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">GERİ</button>
     </div>
 
     <script>
@@ -107,7 +97,6 @@
         const tg = window.Telegram.WebApp;
 
         let userId = tg.initDataUnsafe?.user?.id || 123456, user = null;
-        let dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15, quizStartTime = 0;
         let adsWatchedCount = 0; // Reklam sayacı
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
@@ -116,15 +105,49 @@
             uiOptions: { language: 'tr' }
         });
 
+        // --- MONETAG REKLAM FONKSİYONU ---
+        function watchMonetagAd() {
+            // Monetag'ın sana verdiği Pop-up tetikleyici kod:
+            show_10527452('pop').then(() => {
+                // Reklam başarıyla izlendiğinde burası çalışır:
+                adsWatchedCount++;
+                const adBtn = document.getElementById('ad-btn');
+                const adInfo = document.getElementById('ad-info');
+
+                if (adsWatchedCount < 4) {
+                    adBtn.innerText = `🎬 REKLAM İZLE (${adsWatchedCount}/4)`;
+                    adInfo.innerText = `Kalan reklam: ${4 - adsWatchedCount}`;
+                    tg.showAlert(`Reklam tamam! Bilet için ${4 - adsWatchedCount} reklam daha kaldi. 📺`);
+                } else {
+                    giveTicketAfterAds();
+                }
+            }).catch(e => {
+                // Hata durumunda (Reklam yüklenemezse vb.)
+                tg.showAlert("Reklam şu an hazır değil, lütfen birkaç saniye sonra tekrar deneyin.");
+                console.error("Monetag Hatası:", e);
+            });
+        }
+
+        async function giveTicketAfterAds() {
+            const { error } = await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
+            if (!error) {
+                user.has_ticket = true;
+                adsWatchedCount = 0; // Sayacı sıfırla
+                tg.showAlert("Harika! 4 reklamı tamamladınız, biletiniz verildi! 🎫");
+                showScreen('main-screen');
+                // Reset UI
+                document.getElementById('ad-btn').innerText = `🎬 REKLAM İZLE (0/4)`;
+                document.getElementById('ad-info').innerText = `Kalan reklam: 4`;
+            }
+        }
+
         async function init() {
             tg.ready(); tg.expand();
             if (typeof updatePrizesAndJackpot === "function") await updatePrizesAndJackpot();
             
             const sList = document.getElementById('sponsor-list');
             sList.innerHTML = APP_CONFIG.sponsors.map(s => `
-                <div class="sponsor-box" style="padding: ${s.img ? '0' : '20px'}; border: ${s.img ? '1px solid #334155' : '1px dashed #475569'};">
-                    ${s.img ? `<img src="${s.img}" style="width:100%; height:100%; object-fit: cover;">` : s.text}
-                </div>
+                <div class="sponsor-box">${s.img ? `<img src="${s.img}" style="width:100%; height:100%; object-fit: cover;">` : s.text}</div>
             `).join("");
 
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
@@ -141,6 +164,7 @@
             const isMatchTime = (now.getHours() === hour && now.getMinutes() >= minute && now.getMinutes() < minute + durationMinutes);
             const actionArea = document.getElementById('action-area');
             document.getElementById('u-name').innerText = `@${user.username}`;
+            
             let target = getTRTime(); target.setHours(hour, minute, 0, 0);
             if (now >= target && !isMatchTime) target.setDate(target.getDate() + 1);
             let diff = target - now; if (diff < 0) diff = 0; 
@@ -156,31 +180,6 @@
             }
         }
 
-        async function watchAdAndGetTicket() {
-            const monetagLink = "https://otieu.com/4/10527289"; 
-            tg.openLink(monetagLink); 
-
-            adsWatchedCount++;
-            const adBtn = document.getElementById('ad-btn');
-            const adInfo = document.getElementById('ad-info');
-
-            if (adsWatchedCount < 4) {
-                tg.showAlert(`Reklam açıldı! Bilet için ${4 - adsWatchedCount} reklam daha izlemelisiniz. 📺`);
-                adBtn.innerText = `🎬 REKLAM İZLE (${adsWatchedCount}/4)`;
-                adInfo.innerText = `Kalan reklam: ${4 - adsWatchedCount}`;
-            } else {
-                const { error } = await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
-                if (!error) {
-                    user.has_ticket = true;
-                    adsWatchedCount = 0;
-                    tg.showAlert("Harika! 4 reklamı tamamladınız. Biletiniz tanımlandı! 🎫");
-                    showScreen('main-screen');
-                    adBtn.innerText = `🎬 REKLAM İZLE (0/4)`;
-                    adInfo.innerText = `Kalan reklam: 4`;
-                }
-            }
-        }
-
         async function buyTicketWithTON() {
             const transaction = { validUntil: Math.floor(Date.now()/1000)+600, messages: [{ address: "UQAhiYJQNPQmh1J_Jvnlw3kdL8Q6rK0_2LbjXY_CLfMQGVb5", amount: "100000000" }] };
             try {
@@ -188,58 +187,16 @@
                 const result = await tonConnectUI.sendTransaction(transaction);
                 if (result) {
                     await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
-                    user.has_ticket = true; tg.showAlert("Ödeme başarılı! Biletiniz tanımlandı. 🚀");
-                    showScreen('main-screen');
+                    user.has_ticket = true; tg.showAlert("Bilet alındı!"); showScreen('main-screen');
                 }
-            } catch (e) { tg.showAlert("İşlem iptal edildi."); }
+            } catch (e) { tg.showAlert("İptal edildi."); }
         }
 
-        function startQuiz() {
-            const todaySeed = getTRTime().toISOString().split('T')[0];
-            const seededShuffle = (array, seed) => {
-                let m = array.length, t, i, sNum = seed.split('-').reduce((acc, cur) => acc + parseInt(cur), 0);
-                while (m) { i = Math.floor((Math.abs(Math.sin(sNum++)) * 10000) % m--); t = array[m]; array[m] = array[i]; array[i] = t; }
-                return array;
-            };
-            dailyQuestions = seededShuffle([...APP_CONFIG.questions], todaySeed).slice(0, 10);
-            currentIdx = 0; score = 0; quizStartTime = Date.now(); showScreen('quiz-screen'); loadQuestion(); 
-        }
-
-        function loadQuestion() {
-            if (currentIdx >= dailyQuestions.length) return endQuiz();
-            timeLeft = 15; document.getElementById('quiz-timer').innerText = timeLeft;
-            const q = dailyQuestions[currentIdx];
-            document.getElementById('question-text').innerText = q.question;
-            const container = document.getElementById('options-container'); container.innerHTML = '';
-            q.options.forEach((opt, i) => {
-                const b = document.createElement('button'); b.className = 'btn btn-option'; b.innerText = opt;
-                b.onclick = () => { 
-                    clearInterval(timer); 
-                    if(i === q.correct_option) { b.classList.add('btn-success'); score += timeLeft * 10; } 
-                    else { b.classList.add('btn-error'); document.querySelectorAll('.btn-option')[q.correct_option].classList.add('btn-success'); } 
-                    setTimeout(() => { currentIdx++; loadQuestion(); }, 1200); 
-                };
-                container.appendChild(b);
-            });
-            if(timer) clearInterval(timer);
-            timer = setInterval(() => { timeLeft--; document.getElementById('quiz-timer').innerText = timeLeft; if(timeLeft <= 0) { clearInterval(timer); currentIdx++; loadQuestion(); }}, 1000);
-        }
-
-        async function endQuiz() {
-            const timeMs = Date.now() - quizStartTime, today = getTRTime().toISOString().split('T')[0];
-            document.getElementById('final-score').innerText = score; showScreen('result-screen');
-            await _supabase.from('daily_scores').insert([{ telegram_id: userId, username: user.username, score: score, completion_time: timeMs, play_date: today }]);
-            await _supabase.from('users').update({ last_played_date: today, has_ticket: false }).eq('telegram_id', userId);
-        }
-
+        // --- SIRALAMA, DUYURU VE EKRAN GEÇİŞLERİ ---
         async function fetchLeaderboard() {
             const today = getTRTime().toISOString().split('T')[0];
             const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false}).order('completion_time', {ascending: true});
-            let html = data?.length ? data.map((r, i) => `
-                <div class="leader-row ${i < 3 ? 'winner' : ''}">
-                    <span><b>#${i+1}</b> @${r.username}</span>
-                    <span><b>${r.score} P</b> <small>${(r.completion_time/1000).toFixed(1)}s</small></span>
-                </div>`).join("") : "<p>Henüz katılım yok.</p>";
+            let html = data?.length ? data.map((r, i) => `<div class="leader-row ${i < 3 ? 'winner' : ''}"><span><b>#${i+1}</b> @${r.username}</span><span><b>${r.score} P</b> <small>${(r.completion_time/1000).toFixed(1)}s</small></span></div>`).join("") : "<p>Henüz katılım yok.</p>";
             document.getElementById('leader-list').innerHTML = html;
             showScreen('leader-screen');
         }
