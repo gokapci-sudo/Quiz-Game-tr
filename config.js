@@ -34,8 +34,8 @@ const APP_CONFIG = {
     prizes: { first: "Hesaplanıyor...", second: "Hesaplanıyor...", third: "Hesaplanıyor..." },
     matchTime: { hour: 13, minute: 0, durationMinutes: 5 },
     sponsors: [
-        { name: "Sponsor 1", text: "", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTK3VxxlZPLvinQYGcmarXPkykgwqDrl55cPwzGZAP_XA&s=10" },
-        { name: "Sponsor 2", text: "", img: "https://egirisim.com/wp-content/uploads/2025/11/n11-yeni-logo-1068x580.jpg" },
+        { name: "Sponsor 1", text: "", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRj-GjvYIphnwj4Kyp2tgz9eg8j7Eru5FlEKTbRJbUhBTJKjr57ZXWur5I&s" },
+        { name: "Sponsor 2", text: "", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRj-GjvYIphnwj4Kyp2tgz9eg8j7Eru5FlEKTbRJbUhBTJKjr57ZXWur5I&s" },
         { name: "Sponsor 3", text: "Sponsor alındığında burada görünecektir.", img: "" },
         { name: "Sponsor 4", text: "Sponsor alındığında burada görünecektir.", img: "" }
     ],
