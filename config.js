@@ -29,7 +29,7 @@ async function updatePrizesAndJackpot() {
 }
 
 const APP_CONFIG = {
-    announcement: "🚀 Türkiye Genel Kültür Maratonu Başladı! \n\n1️⃣ Her gün saat 13:00'da sorular aktif olur. \n2️⃣ Toplam 10 soruda en yüksek puanı alan ve en hızlı olan kazanır. \n3️⃣ Ödüller yarışma bitiminden hemen sonra cüzdanlara aktarılır. Başarılar!",
+    announcement: "🚀 Türkiye Genel Kültür Maratonu Başladı! \n\n1️⃣ Her gün saat 13:00'da sorular aktif olur. \n2️⃣ Toplam 10 soruda en yüksek puanı alan ve en hızlı olan kazanır. \n3️⃣ Ödüllü yarışma 1 Mart tarihinde başlayacaktır. Biz talep toplama ve ödül havuzunu  büyütürken takipte kal. \n4️⃣ Herşey hazır olduğunda seni bekliyor olacağız. \n5️⃣ Ödüller yarışma bitiminden hemen sonra cüzdanlara aktarılır. Ton cüzdanını bağlamayı ihmal etme. Başarılar!",
     // Alt kısımdaki statik prizes artık sadece yedek olarak duruyor, sistem yukardakini kullanacak.
     prizes: { first: "Hesaplanıyor...", second: "Hesaplanıyor...", third: "Hesaplanıyor..." },
     matchTime: { hour: 13, minute: 0, durationMinutes: 5 },
