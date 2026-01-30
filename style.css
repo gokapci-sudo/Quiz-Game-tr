@@ -1,3 +1,4 @@
+/* --- RENK VE DEĞİŞKEN TANIMLARI --- */
 :root {
     --bg: #0e1621;
     --card: #17212b;
@@ -8,47 +9,179 @@
     --green: #31b545;
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* --- RESET VE TAM OTURTMA AYARLARI --- */
+* {
+    box-sizing: border-box; /* Paddinglerin genişliği bozmasını engeller */
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
 
 body {
-    margin: 0; padding: 15px;
-    font-family: -apple-system, system-ui, sans-serif;
-    background-color: var(--bg); color: var(--white);
-    display: flex; flex-direction: column; align-items: center;
+    width: 100%;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg);
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Yatayda ortalar */
+    padding: 15px; /* Ekran kenarlarından boşluk bırakır */
+    overflow-x: hidden; /* Yatay kaydırmayı tamamen yasaklar */
 }
 
-.container { width: 100%; max-width: 450px; }
+/* --- ANA KONTEYNER --- */
+.container, .dashboard-container {
+    width: 100%;
+    max-width: 450px; /* İçeriğin çok yayılmasını önler, mobilde tam oturur */
+    display: flex;
+    flex-direction: column;
+}
 
+/* --- KART YAPILARI --- */
 .card {
-    background: var(--card); border-radius: 15px;
-    padding: 15px; margin-bottom: 15px;
-    border: 1px solid #242f3d; width: 100%;
+    background: var(--card);
+    border-radius: 18px;
+    padding: 15px;
+    margin-bottom: 12px;
+    border: 1px solid #242f3d;
+    width: 100%; /* Konteynerine tam oturur */
 }
 
+/* --- SAYAÇ TASARIMI (INDEX) --- */
+.counter-card {
+    text-align: center;
+    padding: 30px 15px;
+    border: 2px solid var(--accent);
+    border-radius: 20px;
+    margin-bottom: 20px;
+    background: linear-gradient(180deg, rgba(36, 129, 204, 0.1) 0%, rgba(14, 22, 33, 0) 100%);
+    width: 100%;
+}
+
+.counter-value {
+    font-size: 38px;
+    font-weight: 900;
+    color: var(--yellow);
+    text-shadow: 0 0 15px rgba(254, 203, 46, 0.3);
+}
+
+/* --- SPONSOR LİSTESİ (ALT ALTA TAM GENİŞLİK) --- */
+.sponsor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.sponsor-box {
+    background: var(--card);
+    border: 1px dashed #3b4754;
+    border-radius: 12px;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 13px;
+    padding: 10px;
+    color: #aeb9c4;
+    width: 100%;
+}
+
+.sponsor-box.highlight {
+    border: 1px solid var(--accent);
+    background: rgba(36, 129, 204, 0.05);
+    color: var(--white);
+}
+
+/* --- BUTONLAR --- */
 .btn-main {
-    width: 100%; min-height: 50px; background: var(--accent);
-    color: white; border: none; border-radius: 12px;
-    font-weight: bold; font-size: 16px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
+    width: 100%;
+    height: 55px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.btn-sub { background: #242f3d; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%; }
+.btn-main:active { opacity: 0.8; transform: scale(0.98); }
 
+.btn-sub {
+    background: #242f3d;
+    color: white;
+    border: none;
+    height: 48px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+/* --- CÜZDAN VE BAKİYE ALANI --- */
 .wallet-box {
-    display: flex; justify-content: space-between; align-items: center;
-    background: rgba(36, 129, 204, 0.1); padding: 12px;
-    border-radius: 12px; border: 1px solid var(--accent); margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(36, 129, 204, 0.1);
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--accent);
+    margin-top: 10px;
+    width: 100%;
 }
 
-#wallet-addr-short { font-family: monospace; color: var(--white); font-size: 14px; }
+#wallet-addr-short {
+    font-family: monospace;
+    font-size: 13px;
+    word-break: break-all; /* Uzun adreslerin taşmasını engeller */
+}
 
-.btn-copy { background: var(--accent); border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer; }
+.btn-copy {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+}
 
-.sponsor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-.sponsor-box { background: var(--card); border: 1px dashed #3b4754; border-radius: 12px; height: 90px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; padding: 8px; color: #8393a3; }
-.sponsor-box.highlight { border: 1px solid var(--accent); color: var(--accent); }
+/* --- GRID YAPISI (2'Lİ BUTONLAR) --- */
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+}
 
-.counter-card { text-align: center; padding: 20px; border: 2px solid var(--accent); border-radius: 20px; margin-bottom: 20px; }
-.counter-value { font-size: 28px; font-weight: 800; color: var(--yellow); }
+/* --- YARDIMCI SINIFLAR --- */
 .hidden { display: none !important; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.yellow-text { color: var(--yellow); font-weight: bold; }
+
+/* Sonuçlar tablosu taşma önleyici */
+.table-container {
+    width: 100%;
+    overflow-x: auto; /* Tablo çok genişse kendi içinde kaysın, sayfa bozulmasın */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td, th {
+    padding: 12px 8px;
+    text-align: left;
+    font-size: 13px;
+    border-bottom: 1px solid #242f3d;
+}
