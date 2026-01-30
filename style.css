@@ -1,25 +1,61 @@
-:root { --bg: #0e1621; --card: #17212b; --accent: #2481cc; --yellow: #fecb2e; --white: #ffffff; }
-body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); color: var(--white); padding: 15px; overflow-x: hidden; }
-.hidden { display: none !important; }
+:root {
+    --bg: #0e1621;         /* Telegram Koyu Arka Plan */
+    --card: #17212b;       /* Kart Arka Planı */
+    --accent: #2481cc;     /* Telegram Mavisi */
+    --yellow: #fecb2e;     /* Altın/Sarı (Bilet ve Sayaç için) */
+    --white: #ffffff;
+    --red: #e64d4d;        /* Admin ve Tehlike Rengi */
+    --green: #31b545;      /* Başarı Rengi */
+}
 
-/* Splash/Giriş Sayfası */
-.splash-container { display: flex; flex-direction: column; height: 90vh; justify-content: center; }
-.counter-card { text-align: center; padding: 25px; border: 2px solid var(--accent); border-radius: 20px; margin-bottom: 20px; }
-.counter-value { font-size: 28px; font-weight: bold; color: var(--yellow); }
-.sponsor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-.sponsor-box { background: var(--card); border: 1px dashed #444; height: 90px; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 10px; text-align: center; font-size: 11px; color: #aaa; }
-.sponsor-box.highlight { border-color: var(--accent); color: var(--accent); }
+body {
+    margin: 0; padding: 15px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg);
+    color: var(--white);
+    line-height: 1.5;
+    overflow-x: hidden;
+}
 
-/* Dashboard Sayfası */
-.card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; }
-.btn-main { width: 100%; padding: 16px; background: var(--accent); border: none; color: white; border-radius: 12px; font-weight: bold; font-size: 16px; }
-.pulse { animation: pulse 2s infinite; }
-@keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
-.schedule-grid { display: flex; justify-content: space-around; margin: 10px 0; }
-.time-box { background: #242f3d; padding: 5px 15px; border-radius: 8px; color: var(--yellow); font-weight: bold; }
-.nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.btn-sub { background: #242f3d; color: white; border: none; padding: 12px; border-radius: 10px; }
-.btn-admin { grid-column: span 2; background: #e64d4d; color: white; border: none; padding: 12px; border-radius: 10px; margin-top: 5px; }
-.disabled { opacity: 0.5; cursor: not-allowed; }
-.ticket-status-ok { background: rgba(49, 181, 69, 0.1); color: #31b545; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; }
-.btn-buy-ticket { width: 100%; background: var(--yellow); border: none; padding: 12px; border-radius: 10px; font-weight: bold; }
+/* Kart Yapıları */
+.card, .sponsor-box, .req-item, .ad-card {
+    background: var(--card);
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid #242f3d;
+}
+
+/* Buton Standartları */
+.btn-main, .btn-action, .btn-wallet, .btn-buy-ticket, .btn-sub, .btn-admin, .btn-option {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: white;
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+.btn-main { background: var(--accent); }
+.btn-sub { background: #242f3d; color: var(--white); }
+.btn-yellow { background: var(--yellow); color: #000; }
+.btn-admin { background: var(--red); }
+.btn-option { background: #242f3d; border: 1px solid #3b4754; margin-bottom: 10px; }
+.btn-option:active { background: var(--accent); }
+
+.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+/* Yazı Tipleri ve Rozetler */
+h2, h3 { margin-top: 0; color: var(--white); }
+.badge { background: var(--red); font-size: 0.7rem; padding: 2px 8px; border-radius: 5px; vertical-align: middle; }
+.yellow-text { color: var(--yellow); font-weight: bold; }
+
+/* Grid Yapıları */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
