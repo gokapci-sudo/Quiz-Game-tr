@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Arena - Yönetim Paneli</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --success: #10b981; --error: #ef4444; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .section { background: var(--card); padding: 20px; border-radius: 15px; margin-bottom: 30px; border: 1px solid #334155; }
+        h2 { color: var(--gold); border-bottom: 2px solid var(--gold); padding-bottom: 10px; }
+        
+        /* Tablo Stilleri */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #334155; font-size: 0.9rem; }
+        th { color: var(--primary); }
+        
+        /* Form Stilleri */
+        input, select, textarea { width: 100%; padding: 10px; margin: 8px 0; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; }
+        .btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
+        .btn-add { background: var(--success); }
+        .btn-pay { background: var(--primary); color: black; }
+        .btn-del { background: var(--error); }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .status-wait { background: var(--gold); color: black; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🛡️ Arena Kontrol Merkezi</h1>
+
+    <div class="section">
+        <h2>Soru Ekle</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <label>Soru Metni</label>
+                <textarea id="q-text" rows="3" placeholder="Soru nedir?"></textarea>
+            </div>
+            <div>
+                <label>Şıklar (Virgülle ayır)</label>
+                <input id="q-options" type="text" placeholder="A şıkkı, B şıkkı, C şıkkı, D şıkkı">
+                <label>Doğru Şık İndeksi (0-3)</label>
+                <input id="q-correct" type="number" min="0" max="3" value="0">
+                <button class="btn btn-add" style="width: 100%;" onclick="addQuestion()">SORUYU KAYDET</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Bekleyen Ödeme Talepleri</h2>
+        <table id="withdraw-table">
+            <thead>
+                <tr>
+                    <th>Kullanıcı</th>
+                    <th>Cüzdan Adresi</th>
+                    <th>Miktar (TON)</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Tüm Oyuncular</h2>
+        <table id="user-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Bakiye</th>
+                    <th>Bilet Var mı?</th>
+                    <th>Cüzdan</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
+    const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1'; // Kendi KEY'in olduğundan emin ol
+    const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
+
+    async function fetchData() {
+        // Ödeme Taleplerini Çek
+        const { data: requests } = await _supabase.from('withdraw_requests').select('*').eq('status', 'Bekliyor');
+        const reqTable = document.querySelector('#withdraw-table tbody');
+        reqTable.innerHTML = requests.map(r => `
+            <tr>
+                <td>@${r.username}</td>
+                <td style="font-family: monospace; font-size: 0.8rem;">${r.wallet_address}</td>
+                <td><b style="color:var(--gold)">${r.amount} TON</b></td>
+                <td><button class="btn btn-pay" onclick="completePayment(${r.id}, ${r.user_id}, ${r.amount})">ÖDENDİ İŞARETLE</button></td>
+            </tr>
+        `).join("");
+
+        // Kullanıcıları Çek
+        const { data: users } = await _supabase.from('users').select('*').order('balance', {ascending: false});
+        const userTable = document.querySelector('#user-table tbody');
+        userTable.innerHTML = users.map(u => `
+            <tr>
+                <td>@${u.username}</td>
+                <td>${u.balance.toFixed(2)} TON</td>
+                <td>${u.has_ticket ? '✅' : '❌'}</td>
+                <td style="font-size: 0.7rem;">${u.wallet_address || '-'}</td>
+            </tr>
+        `).join("");
+    }
+
+    // SORU EKLEME
+    async function addQuestion() {
+        const text = document.getElementById('q-text').value;
+        const options = document.getElementById('q-options').value.split(',').map(s => s.trim());
+        const correct = parseInt(document.getElementById('q-correct').value);
+
+        if(!text || options.length < 2) return alert("Eksik bilgi!");
+
+        const { error } = await _supabase.from('questions').insert([{
+            question: text,
+            options: JSON.stringify(options),
+            correct_option: correct
+        }]);
+
+        if(!error) {
+            alert("Soru eklendi!");
+            location.reload();
+        } else alert("Hata: " + error.message);
+    }
+
+    // ÖDEMEYİ TAMAMLA
+    async function completePayment(reqId, userId, amount) {
+        if(!confirm("Bu kullanıcıya ödemeyi manuel olarak yaptıysanız onaylayın. Bakiyesi düşülecektir.")) return;
+
+        // 1. Talebi güncelle
+        await _supabase.from('withdraw_requests').update({ status: 'Ödendi' }).eq('id', reqId);
+        
+        // 2. Kullanıcı bakiyesini sıfırla (veya miktarı düş)
+        const { data: userData } = await _supabase.from('users').select('balance').eq('id', userId).single();
+        const newBalance = Math.max(0, userData.balance - amount);
+        
+        await _supabase.from('users').update({ balance: newBalance }).eq('id', userId);
+
+        alert("İşlem Başarılı! Bakiyeden düşüldü.");
+        fetchData();
+    }
+
+    fetchData();
+</script>
+</body>
+</html>
