@@ -8,3 +8,13 @@ body { font-family: 'Segoe UI', sans-serif; background: #0e1621; color: white; m
 .hidden { display: none; }
 .btn-admin { background: #e64d4d; margin-top: 10px; width: 100%; border-radius: 8px; border: none; color: white; padding: 8px; }
 .times { display: flex; justify-content: space-around; margin: 10px 0; font-weight: bold; color: #fecb2e; }
+
+
+.options-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 20px; }
+.btn-option { 
+    background: #242f3d; color: white; border: 1px solid #3b4754; 
+    padding: 15px; border-radius: 10px; cursor: pointer; font-size: 16px; transition: 0.2s;
+}
+.btn-option:active { background: #2481cc; transform: scale(0.98); }
+.quiz-header { display: flex; justify-content: space-between; padding: 10px; font-weight: bold; background: #17212b; border-radius: 8px; margin-bottom: 10px; }
+#timer-display { color: #fecb2e; }
