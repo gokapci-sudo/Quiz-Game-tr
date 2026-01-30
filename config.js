@@ -4,8 +4,8 @@ const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
 const APP_CONFIG = {
     matchTimes: ["10:00", "14:00", "20:00"],
-    entryWindow: 3,
-    adminID: 1369398784
+    entryWindow: 3, 
+    adminID: 1369398784 
 };
 
 function getRaceStatus() {
