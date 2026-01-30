@@ -10,59 +10,71 @@
     <div class="dashboard-container">
         <header style="display:flex; align-items:center; margin-bottom:20px;">
             <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:0 15px;">⬅</button>
-            <h2 style="margin-left:15px;">ADMİN</h2>
+            <h2 style="margin-left:15px;">ADMİN PANEL</h2>
         </header>
 
         <section class="card">
-            <h3 class="yellow-text">📢 DUYURU YAYINLA</h3>
-            <textarea id="ann-in" placeholder="Duyuru metni..." style="width:100%; height:60px; background:var(--bg); color:white; border-radius:10px; padding:10px;"></textarea>
-            <button onclick="addAnn()" class="btn-sub" style="margin-top:10px; background:var(--accent);">PAYLAŞ</button>
-        </section>
-
-        <section class="card">
             <h3 class="yellow-text">💸 BEKLEYEN ÇEKİMLER</h3>
-            <div id="w-list"></div>
+            <div id="w-list" style="margin-top:10px;"><p>Yükleniyor...</p></div>
         </section>
 
         <section class="card">
-            <h3 class="yellow-text">🏆 ÖDÜL & SIFIRLA</h3>
-            <input type="number" id="pz" placeholder="Toplam Havuz" style="width:100%; padding:10px; margin-bottom:5px;">
-            <button onclick="resetAll()" class="btn-main" style="background:var(--red);">DAĞIT VE SIFIRLA</button>
+            <h3 class="yellow-text">📢 DUYURU YAYINLA</h3>
+            <textarea id="ann-text" placeholder="Duyuru metni..." style="width:100%; height:80px; background:#0e1621; color:white; border:1px solid #242f3d; padding:10px; margin-top:10px; border-radius:10px;"></textarea>
+            <button onclick="sendAnn()" class="btn-sub" style="margin-top:10px; background:var(--accent);">DUYURUYU PAYLAŞ</button>
+        </section>
+
+        <section class="card">
+            <h3 class="yellow-text">❓ SORU EKLE</h3>
+            <input type="text" id="qt" placeholder="Soru..." style="width:100%; padding:10px; margin:5px 0;">
+            <input type="text" id="o0" placeholder="A"> <input type="text" id="o1" placeholder="B">
+            <input type="text" id="o2" placeholder="C"> <input type="text" id="o3" placeholder="D">
+            <select id="co" style="width:100%; padding:10px; margin-top:5px;"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
+            <button onclick="saveQ()" class="btn-sub" style="margin-top:10px;">SORUYU KAYDET</button>
+        </section>
+
+        <section class="card">
+            <button onclick="distributeAndReset()" class="btn-main" style="background:var(--red);">🏆 ÖDÜLLERİ DAĞIT VE SIFIRLA</button>
         </section>
     </div>
+
     <script>
         const tg = window.Telegram.WebApp;
-        async function loadW() {
+
+        async function loadWithdrawals() {
             const { data } = await supabaseClient.from('withdrawals').select('*').eq('status', 'pending');
             const cont = document.getElementById('w-list');
-            if(!data || data.length === 0) cont.innerHTML = "Talep yok.";
-            else cont.innerHTML = data.map(w => `
-                <div class="card" style="font-size:12px; border:1px solid #333;">
-                    ID: ${w.telegram_id} | <b>${w.amount} TON</b><br>
-                    <small>${w.wallet_address}</small><br>
-                    <button onclick="done(${w.id})" class="btn-sub" style="background:var(--green); height:25px; margin-top:5px;">ÖDENDİ</button>
+            if(!data || data.length === 0) { cont.innerHTML = "Bekleyen talep yok."; return; }
+            cont.innerHTML = data.map(w => `
+                <div class="card" style="background:#1c252f; border:1px solid #333;">
+                    <b>${w.amount} TON</b> - ID: ${w.telegram_id}<br>
+                    <small style="word-break:break-all;">${w.wallet_address}</small><br>
+                    <button onclick="approve(${w.id})" class="btn-sub" style="background:var(--green); height:30px; margin-top:10px;">ÖDENDİ</button>
                 </div>
             `).join('');
         }
-        async function done(id) {
+
+        async function approve(id) {
             await supabaseClient.from('withdrawals').update({ status: 'completed' }).eq('id', id);
-            tg.showAlert("Onaylandı."); loadW();
+            tg.showAlert("Onaylandı."); loadWithdrawals();
         }
-        async function addAnn() {
-            const val = document.getElementById('ann-in').value;
-            await supabaseClient.from('announcements').insert([{ content: val }]);
-            tg.showAlert("Duyuru Yayında!"); document.getElementById('ann-in').value = "";
+
+        async function sendAnn() {
+            const val = document.getElementById('ann-text').value;
+            if(!val) return;
+            const { error } = await supabaseClient.from('announcements').insert([{ content: val }]);
+            if(!error) { tg.showAlert("Duyuru yayınlandı!"); document.getElementById('ann-text').value = ""; }
         }
-        async function resetAll() {
-            if(!confirm("Emin misiniz?")) return;
-            const pz = document.getElementById('pz').value;
-            const { data: ws } = await supabaseClient.from('profiles').select('*').gt('score', 0).order('score',{ascending:false}).limit(3);
-            const r = [0.5, 0.35, 0.15];
-            if(ws) for(let i=0; i<ws.length; i++) await supabaseClient.from('profiles').update({ balance: ws[i].balance + (pz * r[i]) }).eq('telegram_id', ws[i].telegram_id);
-            await supabaseClient.from('profiles').update({ score: 0, completion_time: 0 }).neq('telegram_id', 0);
-            tg.showAlert("Sıfırlandı!");
+
+        async function saveQ() {
+            const q = document.getElementById('qt').value;
+            const os = [document.getElementById('o0').value, document.getElementById('o1').value, document.getElementById('o2').value, document.getElementById('o3').value];
+            const co = parseInt(document.getElementById('co').value);
+            await supabaseClient.from('questions').insert([{ question_text: q, options: os, correct_option: co }]);
+            tg.showAlert("Soru kaydedildi.");
         }
-        loadW();
+
+        loadWithdrawals();
     </script>
 </body>
 </html>
