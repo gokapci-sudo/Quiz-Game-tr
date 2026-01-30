@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quiz Arena - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <section class="card profile-card">
+            <div class="user-row">
+                <span id="display-username" class="username">@Yükleniyor...</span>
+                <span id="admin-badge" class="badge hidden">Admin</span>
+            </div>
+            <div id="wallet-area">
+                <button id="connect-wallet-btn" class="btn-wallet" onclick="connectWallet()">Cüzdan Bağla</button>
+                <div id="active-wallet" class="wallet-box hidden">
+                    <span id="wallet-addr-short"></span>
+                    <button onclick="copyWallet()" class="btn-copy">📋</button>
+                </div>
+            </div>
+            <div class="balance-row">
+                <div class="balance-info">
+                    <small>Bakiyeniz</small>
+                    <div><strong id="user-balance">0.00</strong> <span class="unit">TON</span></div>
+                </div>
+                <button id="withdraw-btn" class="btn-action hidden" onclick="requestWithdraw()">Çekim Yap</button>
+            </div>
+        </section>
+
+        <section class="card quiz-card">
+            <div id="ticket-info-area"></div>
+            <div class="schedule-area">
+                <p class="section-title">Yarışma Saatleri (TSİ)</p>
+                <div class="schedule-grid">
+                    <div class="time-box">10:00</div>
+                    <div class="time-box">15:00</div>
+                    <div class="time-box">20:00</div>
+                </div>
+            </div>
+            <button id="start-quiz-btn" class="btn-main disabled" disabled>YARIŞMAYA BAŞLA</button>
+        </section>
+
+        <footer class="nav-grid">
+            <button onclick="window.location.href='results.html'" class="btn-sub">🏆 Sonuçlar</button>
+            <button onclick="window.location.href='announcements.html'" class="btn-sub">📢 Duyurular</button>
+            <button id="admin-panel-btn" class="btn-admin hidden" onclick="window.location.href='admin.html'">⚙️ Admin Paneli</button>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
