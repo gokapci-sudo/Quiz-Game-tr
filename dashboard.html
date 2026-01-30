@@ -3,42 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="dashboard-container">
+    <div class="container">
         <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; justify-content:space-between;">
                 <b id="display-username">@Yükleniyor...</b>
-                <span id="admin-badge" class="hidden" style="background:var(--red); font-size:10px; padding:2px 6px; border-radius:4px;">ADMIN</span>
+                <span id="admin-badge" class="hidden" style="background:var(--red); padding:2px 5px; border-radius:5px; font-size:10px;">ADMIN</span>
             </div>
-            <hr style="border:0; border-top:1px solid #242f3d; margin:12px 0;">
-            <div id="wallet-area">
-                <button class="btn-main" style="min-height:40px; font-size:14px;" onclick="connectWallet()">Cüzdan Bağla</button>
+            <div id="wallet-area" style="margin-top:15px;">
+                <button id="connect-wallet-btn" class="btn-main" onclick="openTelegramWallet()" style="min-height:40px; font-size:14px;">💎 Telegram Cüzdanı Bağla</button>
+                <div id="active-wallet" class="wallet-box hidden">
+                    <code id="wallet-addr-short"></code>
+                    <button onclick="copyWallet()" class="btn-copy">📋</button>
+                </div>
             </div>
             <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
-                <span>Bakiye: <b id="user-balance" class="yellow-text">0.00</b> TON</span>
-                <button id="withdraw-btn" class="hidden btn-main" style="width:auto; min-height:30px; font-size:12px; padding:0 15px; background:var(--green);" onclick="requestWithdraw()">ÇEK</button>
+                <span>Bakiye: <b id="user-balance" style="color:var(--yellow);">0.00</b> TON</span>
+                <button id="withdraw-btn" class="hidden" onclick="requestWithdraw()" style="background:var(--green); border:none; color:white; padding:8px 15px; border-radius:10px; font-weight:bold;">ÇEKİM YAP</button>
             </div>
         </div>
-
         <div class="card" style="text-align:center;">
             <div id="ticket-info-area" style="margin-bottom:15px;"></div>
-            <div class="grid-2" style="margin-bottom:15px;">
-                <div class="card" style="margin:0; padding:10px; font-size:12px; color:var(--yellow);">10:00</div>
-                <div class="card" style="margin:0; padding:10px; font-size:12px; color:var(--yellow);">15:00</div>
-                <div class="card" style="margin:0; padding:10px; font-size:12px; color:var(--yellow); grid-column:span 2;">20:00</div>
-            </div>
-            <button id="start-quiz-btn" class="btn-main" style="background:var(--green); opacity:0.5;" disabled>YARIŞMA SAATİNİ BEKLE</button>
+            <button id="start-quiz-btn" class="btn-main" style="opacity:0.5;" disabled>YARIŞMA SAATİNİ BEKLE</button>
         </div>
-
         <div class="grid-2">
             <button class="btn-sub" onclick="location.href='results.html'">🏆 Sıralama</button>
             <button class="btn-sub" onclick="location.href='announcements.html'">📢 Duyurular</button>
-            <button id="admin-panel-btn" class="btn-admin hidden" style="grid-column:span 2;" onclick="location.href='admin.html'">⚙️ ADMİN PANELİ</button>
+            <button id="admin-panel-btn" class="btn-sub hidden" style="background:var(--red); grid-column:span 2;" onclick="location.href='admin.html'">⚙️ ADMİN PANELİ</button>
         </div>
     </div>
     <script src="script.js"></script>
