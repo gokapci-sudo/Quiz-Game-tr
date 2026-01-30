@@ -10,8 +10,8 @@ const APP_CONFIG = {
     
     // Sponsorlar (Giriş ekranında görünecekler)
     sponsors: [
-        { text: "🚀 TON Arena Official", img: "" },
-        { text: "💎 Premium Sponsor", img: "" }
+        { text: "🚀 TON Arena Official", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTe_k3M3tt2EgqZA4aDiUH4GkwAfxLNCMzFpP6E4w61dw&s=10" },
+        { text: "💎 Premium Sponsor", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTe_k3M3tt2EgqZA4aDiUH4GkwAfxLNCMzFpP6E4w61dw&s=10" }
     ],
 
     // Ödül Havuzu Gösterimi (Manuel bilgi amaçlı)
