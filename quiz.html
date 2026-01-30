@@ -5,54 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="config.js"></script>
 </head>
 <body>
     <div class="container">
-        <div class="card" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent);">
-            <span id="question-number" style="font-weight: bold; color: var(--yellow);">Yükleniyor...</span>
-            <div style="text-align: right;">
-                <div id="quiz-timer" style="color: var(--accent); font-size: 11px; font-weight: bold;">KALAN: 03:00</div>
-                <div id="q-timer" style="color: var(--red); font-weight: 900; font-size: 18px;">15s</div>
-            </div>
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+            <span id="question-number" class="yellow-text">...</span>
+            <div id="q-timer" style="color: var(--red); font-weight: 900; font-size: 20px;">15s</div>
         </div>
         <div class="card">
-            <h2 id="question-text" style="font-size: 18px; margin-bottom: 20px; min-height: 60px;">...</h2>
-            <div id="options-container" style="display: grid; gap: 10px;"></div>
+            <h2 id="question-text" style="font-size: 18px; min-height: 60px;">Soru yükleniyor...</h2>
+            <div id="options-container" style="display: grid; gap: 10px; margin-top: 20px;"></div>
         </div>
     </div>
 
     <script>
-        const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
-        const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
-        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
-        const tg = window.Telegram.WebApp;
-
-        let questions = [], currentIdx = 0, score = 0;
-        let qTimeLeft = 15, quizTimeLeft = 180;
-        let qTimer, quizTimer;
-        const startTimestamp = Date.now();
+        let questions = [], currentIdx = 0, score = 0, qTimer;
+        const startTime = Date.now();
 
         async function start() {
-            const { data } = await supabaseClient.from('questions').select('*').limit(20);
-            if (!data || data.length === 0) return location.href='dashboard.html';
+            const { data } = await supabaseClient.from('questions').select('*').limit(10);
             questions = data;
-            
-            quizTimer = setInterval(() => {
-                quizTimeLeft--;
-                let min = Math.floor(quizTimeLeft / 60);
-                let sec = quizTimeLeft % 60;
-                document.getElementById('quiz-timer').innerText = `KALAN: ${min}:${sec < 10 ? '0'+sec : sec}`;
-                if (quizTimeLeft <= 0) finish();
-            }, 1000);
             showQ();
         }
 
         function showQ() {
             if (currentIdx >= questions.length) return finish();
             const q = questions[currentIdx];
-            document.getElementById('question-number').innerText = `SORU: ${currentIdx + 1}/${questions.length}`;
+            document.getElementById('question-number').innerText = `SORU: ${currentIdx + 1}/10`;
             document.getElementById('question-text').innerText = q.question_text;
+            
             const container = document.getElementById('options-container');
             container.innerHTML = '';
             q.options.forEach((opt, i) => {
@@ -62,12 +44,14 @@
                 btn.onclick = () => answer(i);
                 container.appendChild(btn);
             });
-            qTimeLeft = 15;
+
+            let timeLeft = 15;
+            document.getElementById('q-timer').innerText = "15s";
             clearInterval(qTimer);
             qTimer = setInterval(() => {
-                qTimeLeft--;
-                document.getElementById('q-timer').innerText = qTimeLeft + "s";
-                if (qTimeLeft <= 0) answer(-1);
+                timeLeft--;
+                document.getElementById('q-timer').innerText = timeLeft + "s";
+                if (timeLeft <= 0) answer(-1);
             }, 1000);
         }
 
@@ -79,9 +63,8 @@
 
         async function finish() {
             clearInterval(qTimer);
-            clearInterval(quizTimer);
-            const timeTaken = Math.floor((Date.now() - startTimestamp) / 1000);
-            const user = tg.initDataUnsafe?.user || { id: 1369398784 };
+            const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+            const user = window.Telegram.WebApp.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
 
             await supabaseClient.from('profiles').update({ 
                 score: score, 
@@ -89,8 +72,15 @@
                 has_ticket: false 
             }).eq('telegram_id', user.id);
 
-            tg.showAlert(`BİTTİ!\nSkor: ${score}\nSüre: ${timeTaken}sn`);
-            location.href = 'dashboard.html';
+            document.body.innerHTML = `
+                <div class="container">
+                    <div class="card" style="text-align:center; padding:40px 20px;">
+                        <h2 class="yellow-text">TEST BİTTİ!</h2>
+                        <p style="margin:15px 0;">Skor: ${score} | Süre: ${timeTaken}sn</p>
+                        <p style="font-size:12px; opacity:0.7;">Sıralama yarışmadan 4 dakika sonra kesinleşecektir.</p>
+                        <button onclick="location.href='dashboard.html'" class="btn-main" style="margin-top:20px;">Dashboard</button>
+                    </div>
+                </div>`;
         }
         start();
     </script>
