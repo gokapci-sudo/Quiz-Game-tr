@@ -2,69 +2,107 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bilet Al - TON Quiz</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bilet Al - Quiz Arena</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <button onclick="window.history.back()" class="btn-back">⬅ Geri</button>
-            <h2>Bilet Edinme Merkezi</h2>
+        <header style="margin-bottom: 20px;">
+            <button onclick="location.href='dashboard.html'" class="btn-sub" style="width: auto; padding: 10px 20px;">⬅ Geri Dön</button>
         </header>
 
-        <section class="ticket-options">
-            <div class="ad-card">
-                <h3>Ücretsiz Bilet</h3>
-                <p>Kısa bir reklam izleyerek günlük biletini alabilirsin.</p>
-                <button id="watch-ad-btn" class="btn-action">Reklam İzle & Bilet Al</button>
+        <div class="card" style="text-align: center; border: 1px solid var(--yellow);">
+            <div style="font-size: 50px; margin-bottom: 10px;">🎫</div>
+            <h2 class="yellow-text">YARIŞMA BİLETİ</h2>
+            <p style="opacity: 0.8; font-size: 14px; margin: 10px 0;">Bu bilet ile gün içindeki tüm yarışmalara katılma hakkı kazanırsınız.</p>
+            
+            <hr style="border: 0; border-top: 1px solid #242f3d; margin: 15px 0;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px;">
+                <span>Bilet Fiyatı:</span>
+                <span style="font-size: 1.2rem; font-weight: bold; color: var(--yellow);">1.00 TON</span>
             </div>
-
-            <hr>
-
-            <div class="pay-card">
-                <h3>TON ile Bilet Al</h3>
-                <p>Beklemeden hemen yarışmaya katıl.</p>
-                <p><strong>Ücret: 0.10 TON</strong></p>
-                <button id="buy-ticket-btn" class="btn-main">Şimdi Satın Al</button>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px;">
+                <span>Bakiyeniz:</span>
+                <span id="my-balance" style="font-weight: bold;">0.00 TON</span>
             </div>
-        </section>
+        </div>
 
-        <div id="status-msg" class="status-message"></div>
+        <div id="action-area">
+            <button id="buy-btn" class="btn-main" onclick="buyTicket()">BİLETİ SATIN AL</button>
+        </div>
+
+        <div class="card" style="margin-top: 20px; font-size: 12px; opacity: 0.6; text-align: center;">
+            ⚠️ Bakiyeniz yetersizse lütfen cüzdanınızdan bota transfer yapın veya admin ile iletişime geçin.
+        </div>
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
         const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
         const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
         const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+        const tg = window.Telegram.WebApp;
+        const MY_ID = 1369398784; // Test için, TG'den açınca otomatik çekilecek
 
-        async function giveTicket() {
-            const user = tg.initDataUnsafe?.user;
-            if (!user) return;
+        let currentBalance = 0;
+        const ticketPrice = 1.00;
 
-            const { error } = await supabaseClient
-                .from('profiles')
-                .update({ has_ticket: true })
-                .eq('telegram_id', user.id);
+        async function initBilet() {
+            tg.ready();
+            const user = tg.initDataUnsafe?.user || { id: MY_ID };
+            
+            // Kullanıcı verilerini çek
+            const { data } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
+            
+            if (data) {
+                currentBalance = parseFloat(data.balance || 0);
+                document.getElementById('my-balance').innerText = currentBalance.toFixed(2) + " TON";
 
-            if (!error) {
-                document.getElementById('status-msg').innerText = "✅ Biletiniz tanımlandı! Ana sayfaya dönün.";
-                tg.showAlert("Biletiniz başarıyla alındı!");
-            } else {
-                tg.showAlert("Bir hata oluştu, lütfen tekrar deneyin.");
+                if (data.has_ticket) {
+                    document.getElementById('action-area').innerHTML = `
+                        <div class="ticket-status-ok" style="background: rgba(49, 181, 69, 0.1);">
+                            ✅ Zaten bir biletiniz var!
+                        </div>
+                    `;
+                } else if (currentBalance < ticketPrice) {
+                    const btn = document.getElementById('buy-btn');
+                    btn.innerText = "YETERSİZ BAKİYE";
+                    btn.style.background = "#3b4754";
+                    btn.disabled = true;
+                }
             }
         }
 
-        // Reklam İzle Butonu (Monetag entegrasyonu buraya gelecek)
-        document.getElementById('watch-ad-btn').addEventListener('click', () => {
-            // Buraya Monetag interstitial veya reward video kodu gelecek
-            tg.showConfirm("Reklamı sonuna kadar izlediğinizde biletiniz tanımlanacaktır. Onaylıyor musunuz?", (ok) => {
-                if (ok) giveTicket();
-            });
-        });
+        async function buyTicket() {
+            const user = tg.initDataUnsafe?.user || { id: MY_ID };
+            
+            if (currentBalance >= ticketPrice) {
+                const newBalance = currentBalance - ticketPrice;
+
+                // 1. Bakiyeyi düşür ve Bileti aktif et
+                const { error } = await supabaseClient
+                    .from('profiles')
+                    .update({ 
+                        balance: newBalance,
+                        has_ticket: true 
+                    })
+                    .eq('telegram_id', user.id);
+
+                if (!error) {
+                    tg.showConfirm("Bilet başarıyla alındı! Yarışmaya hazır mısın?", (ok) => {
+                        window.location.href = "dashboard.html";
+                    });
+                } else {
+                    tg.showAlert("İşlem sırasında bir hata oluştu.");
+                }
+            }
+        }
+
+        initBilet();
     </script>
 </body>
 </html>
