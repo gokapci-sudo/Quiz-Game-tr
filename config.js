@@ -1,25 +1,35 @@
+const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
+const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
+const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
 const APP_CONFIG = {
     matchTimes: ["10:00", "14:00", "20:00"],
-    entryWindow: 3, // Yarışma kapısı 3 dk açık
-    resultWindow: 4 // 4. dakikada sonuçlar kesinleşir
+    entryWindow: 3, // Yarışma 3 dakika sürer
+    resultWait: 4,  // 4. dakikada biletler sıfırlanır (görsel olarak)
+    adminID: 1369398784
 };
 
-// Ortak Zaman Kontrolü
 function getRaceStatus() {
     const now = new Date();
-    const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+    const currentStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
     
     let active = false;
-    let next = APP_CONFIG.matchTimes[0];
+    let nextMatch = APP_CONFIG.matchTimes[0];
 
     for (let time of APP_CONFIG.matchTimes) {
         const [h, m] = time.split(':').map(Number);
         const raceDate = new Date();
         raceDate.setHours(h, m, 0);
-        const diff = (now - raceDate) / 60000;
+        
+        const diff = (now - raceDate) / 60000; // Dakika farkı
 
-        if (diff >= 0 && diff < APP_CONFIG.entryWindow) active = true;
-        if (time > currentTime) { next = time; break; }
+        if (diff >= 0 && diff < APP_CONFIG.entryWindow) {
+            active = true;
+        }
+        if (time > currentStr) {
+            nextMatch = time;
+            break;
+        }
     }
-    return { active, next };
+    return { active, nextMatch };
 }
