@@ -1,61 +1,113 @@
 :root {
-    --bg: #0e1621;         /* Telegram Koyu Arka Plan */
-    --card: #17212b;       /* Kart Arka Planı */
-    --accent: #2481cc;     /* Telegram Mavisi */
-    --yellow: #fecb2e;     /* Altın/Sarı (Bilet ve Sayaç için) */
+    --bg: #0e1621;
+    --card: #17212b;
+    --accent: #2481cc;
+    --yellow: #fecb2e;
     --white: #ffffff;
-    --red: #e64d4d;        /* Admin ve Tehlike Rengi */
-    --green: #31b545;      /* Başarı Rengi */
+    --red: #e64d4d;
+    --green: #31b545;
+}
+
+* {
+    box-sizing: border-box; /* Taşmaları önlemek için kritik */
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
-    margin: 0; padding: 15px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 12px; /* Mobil cihazlar için kenar payı */
+    font-family: -apple-system, system-ui, sans-serif;
     background-color: var(--bg);
     color: var(--white);
-    line-height: 1.5;
-    overflow-x: hidden;
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Kapsayıcılar */
+.splash-container, .dashboard-container {
+    width: 100%;
+    max-width: 500px; /* Bilgisayarda çok yayılmasın */
+    margin: 0 auto;
 }
 
 /* Kart Yapıları */
-.card, .sponsor-box, .req-item, .ad-card {
+.card {
     background: var(--card);
-    border-radius: 15px;
+    border-radius: 12px;
     padding: 15px;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     border: 1px solid #242f3d;
+    width: 100%;
 }
 
-/* Buton Standartları */
-.btn-main, .btn-action, .btn-wallet, .btn-buy-ticket, .btn-sub, .btn-admin, .btn-option {
+/* Sponsor Izgarası - Mobil Uyumlu */
+.sponsor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Her zaman 2 sütun */
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.sponsor-box {
+    background: var(--card);
+    border: 1px dashed #3b4754;
+    border-radius: 10px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 10px;
+    padding: 8px;
+    color: #8393a3;
+}
+
+.sponsor-box.highlight {
+    border: 1px solid var(--accent);
+    color: var(--accent);
+}
+
+/* Butonlar - Mobil Parmak Dostu */
+.btn-main, .btn-sub, .btn-admin {
     width: 100%;
-    padding: 14px;
+    min-height: 50px; /* Mobilde dokunma kolaylığı */
     border-radius: 12px;
     border: none;
     font-weight: bold;
-    font-size: 15px;
+    font-size: 16px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    color: white;
-    display: block;
-    text-align: center;
-    text-decoration: none;
-    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+    margin-bottom: 8px;
 }
 
-.btn-main { background: var(--accent); }
-.btn-sub { background: #242f3d; color: var(--white); }
-.btn-yellow { background: var(--yellow); color: #000; }
-.btn-admin { background: var(--red); }
-.btn-option { background: #242f3d; border: 1px solid #3b4754; margin-bottom: 10px; }
-.btn-option:active { background: var(--accent); }
+.btn-main { background: var(--accent); color: white; }
+.btn-sub { background: #242f3d; color: white; font-size: 14px; }
+.btn-admin { background: var(--red); color: white; margin-top: 5px; }
 
-.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
 
-/* Yazı Tipleri ve Rozetler */
-h2, h3 { margin-top: 0; color: var(--white); }
-.badge { background: var(--red); font-size: 0.7rem; padding: 2px 8px; border-radius: 5px; vertical-align: middle; }
-.yellow-text { color: var(--yellow); font-weight: bold; }
+.hidden { display: none !important; }
 
-/* Grid Yapıları */
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* Sayaç ve Metinler */
+.counter-card {
+    text-align: center;
+    padding: 20px 10px;
+    border: 2px solid var(--accent);
+    border-radius: 15px;
+    margin-bottom: 20px;
+}
+
+.counter-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--yellow);
+}
