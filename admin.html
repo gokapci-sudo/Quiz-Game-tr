@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="config.js"></script>
     <style>
         .admin-section { margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05); }
@@ -88,7 +89,6 @@
         const tg = window.Telegram.WebApp;
 
         async function loadInitialData() {
-            // Mevcut ayarları çekip kutucuklara doldur
             const { data: settings } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
             if (settings) {
                 document.getElementById('total-prize-in').value = settings.total_prize;
@@ -114,9 +114,23 @@
         }
 
         async function loadWithdrawals() {
-            const { data, error } = await supabaseClient.from('withdrawals').select('*').ilike('status', 'pending');
+            // Hata Düzeltme: .ilike yerine doğrudan .eq kullanarak daha kesin sonuç alıyoruz
+            const { data, error } = await supabaseClient
+                .from('withdrawals')
+                .select('*')
+                .eq('status', 'pending');
+
             const cont = document.getElementById('w-list');
-            if(!data || data.length === 0) { cont.innerHTML = "<p style='font-size:12px; opacity:0.5;'>Bekleyen talep yok.</p>"; return; }
+            
+            if (error) {
+                cont.innerHTML = `<p style='color:red; font-size:12px;'>Hata: ${error.message}</p>`;
+                return;
+            }
+
+            if(!data || data.length === 0) { 
+                cont.innerHTML = "<p style='font-size:12px; opacity:0.5;'>Bekleyen talep yok.</p>"; 
+                return; 
+            }
             
             cont.innerHTML = data.map(w => `
                 <div class="card" style="background:#1c252f; border:1px solid #333; padding: 12px; margin-bottom: 10px;">
@@ -149,11 +163,19 @@
             
             if(!q || os.some(o => !o)) return tg.showAlert("Lütfen tüm alanları doldurun!");
 
-            const { error } = await supabaseClient.from('questions').insert([{ question_text: q, options: os, correct_option: co }]);
+            // PostgreSQL TEXT[] formatı için veri dizisini doğrudan gönderiyoruz
+            const { error } = await supabaseClient.from('questions').insert([{ 
+                question_text: q, 
+                options: os, 
+                correct_option: co 
+            }]);
+
             if(!error) {
                 tg.showAlert("Soru sisteme eklendi!");
                 document.getElementById('qt').value = "";
-                os.forEach((_, i) => document.getElementById('o'+i).value = "");
+                for(let i=0; i<4; i++) document.getElementById('o'+i).value = "";
+            } else {
+                tg.showAlert("Hata: " + error.message);
             }
         }
 
