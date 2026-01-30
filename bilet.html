@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bilet Al - Quiz Arena</title>
     <link rel="stylesheet" href="style.css">
+    
+    <script src='//libtl.com/sdk.js' data-zone='10527453' data-sdk='show_10527453'></script>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div class="container">
         <header style="margin-bottom: 20px;">
-            <button onclick="location.href='dashboard.html'" class="btn-sub" style="width: auto; padding: 10px 20px;">⬅ Geri</button>
+            <button onclick="location.href='dashboard.html'" class="btn-sub" style="width: auto; padding: 10px 20px;">⬅ Geri Dön</button>
         </header>
 
         <div class="card" style="text-align: center; border: 1px solid var(--yellow);">
@@ -30,7 +34,7 @@
 
         <div class="card" style="border: 1px dashed var(--accent);">
             <h3 style="font-size: 16px; margin-bottom: 10px;">📺 Ücretsiz Bilet</h3>
-            <p style="font-size: 12px; opacity: 0.7; margin-bottom: 15px;">5 adet kısa reklam izleyerek biletinizi ücretsiz alabilirsiniz.</p>
+            <p style="font-size: 12px; opacity: 0.7; margin-bottom: 15px;">5 reklam izleyerek biletinizi ücretsiz alabilirsiniz.</p>
             
             <div id="ad-progress-container" style="margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
@@ -53,59 +57,91 @@
         const tg = window.Telegram.WebApp;
         const MY_ID = 1369398784;
 
-        let watchedAds = 0;
+        let watchedAds = parseInt(localStorage.getItem('ad_progress')) || 0;
         let userBalance = 0;
 
         async function init() {
             tg.ready();
+            updateAdUI();
             const user = tg.initDataUnsafe?.user || { id: MY_ID };
-            const { data } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
             
+            const { data } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
             if (data) {
-                userBalance = data.balance || 0;
+                userBalance = parseFloat(data.balance || 0);
                 if (data.has_ticket) {
-                    document.body.innerHTML = '<div class="container"><div class="card" style="text-align:center;"><h3>✅ Biletiniz Mevcut</h3><button onclick="location.href=\'dashboard.html\'" class="btn-main" style="margin-top:15px;">Dashboard\'a Dön</button></div></div>';
+                    showSuccessState();
                 }
             }
         }
 
         function watchAd() {
-            // BURASI MONETAG TETİKLEME ALANI OLACAK
-            // Şimdilik simüle ediyoruz:
-            watchedAds++;
-            updateAdUI();
+            const btn = document.getElementById('ad-btn');
+            btn.disabled = true;
+            btn.innerText = "⏳ Reklam Hazırlanıyor...";
 
-            if (watchedAds >= 5) {
-                grantFreeTicket();
-            } else {
-                tg.showAlert(`Reklam başarıyla izlendi! Kalan: ${5 - watchedAds}`);
-            }
+            // Monetag Fonksiyonu (SDK'dan gelir)
+            show_10527453('pop').then(() => {
+                watchedAds++;
+                updateAdUI();
+                btn.disabled = false;
+                btn.innerText = "REKLAM İZLE (+1)";
+
+                if (watchedAds >= 5) {
+                    grantFreeTicket();
+                } else {
+                    tg.showAlert(`Reklam başarıyla izlendi! (${watchedAds}/5)`);
+                }
+            }).catch(e => {
+                tg.showAlert("Reklam şu an yüklenemedi, lütfen tekrar deneyin.");
+                btn.disabled = false;
+                btn.innerText = "REKLAM İZLE (+1)";
+                console.error("Ad Error:", e);
+            });
         }
 
         function updateAdUI() {
             const percent = (watchedAds / 5) * 100;
             document.getElementById('ad-bar').style.width = percent + "%";
             document.getElementById('ad-count-text').innerText = `${watchedAds} / 5`;
+            localStorage.setItem('ad_progress', watchedAds);
         }
 
         async function grantFreeTicket() {
             const user = tg.initDataUnsafe?.user || { id: MY_ID };
             const { error } = await supabaseClient.from('profiles').update({ has_ticket: true }).eq('telegram_id', user.id);
-            
             if (!error) {
-                tg.showAlert("Tebrikler! 5 reklam izleyerek ücretsiz biletinizi kazandınız.");
+                localStorage.removeItem('ad_progress');
+                tg.showAlert("Tebrikler! Ücretsiz biletiniz tanımlandı.");
                 location.href = "dashboard.html";
             }
         }
 
         async function buyTicket() {
             if (userBalance < 1) {
-                tg.showAlert("Yetersiz bakiye! Lütfen reklam izleyerek bilet alın.");
+                tg.showAlert("Yetersiz bakiye! Lütfen reklam izleyerek ücretsiz bilet kazanın.");
                 return;
             }
             const user = tg.initDataUnsafe?.user || { id: MY_ID };
-            await supabaseClient.from('profiles').update({ balance: userBalance - 1, has_ticket: true }).eq('telegram_id', user.id);
-            location.href = "dashboard.html";
+            const { error } = await supabaseClient.from('profiles').update({ 
+                balance: userBalance - 1, 
+                has_ticket: true 
+            }).eq('telegram_id', user.id);
+
+            if (!error) {
+                tg.showAlert("Biletiniz başarıyla alındı!");
+                location.href = "dashboard.html";
+            }
+        }
+
+        function showSuccessState() {
+            document.querySelector('.container').innerHTML = `
+                <div class="card" style="text-align:center; margin-top:50px;">
+                    <div style="font-size:50px;">✅</div>
+                    <h3 style="margin:15px 0;">Biletiniz Aktif!</h3>
+                    <p style="opacity:0.7; font-size:14px; margin-bottom:20px;">Sıradaki yarışmaya katılmaya hazırsınız.</p>
+                    <button onclick="location.href='dashboard.html'" class="btn-main">Panel'e Dön</button>
+                </div>
+            `;
         }
 
         init();
