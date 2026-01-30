@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
@@ -9,57 +10,121 @@
 <body>
     <div class="dashboard-container">
         <header style="display:flex; align-items:center; margin-bottom:20px;">
-            <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:0 15px;">⬅</button>
-            <h2 style="margin-left:15px;">ADMİN</h2>
+            <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:0 15px;">⬅ Geri</button>
+            <h2 style="margin-left:15px;">ADMİN PANELİ</h2>
         </header>
 
-        <section class="card">
-            <h3 class="yellow-text">📢 DUYURU YAYINLA</h3>
-            <textarea id="ann-in" placeholder="Duyuru metni..." style="width:100%; height:60px; background:var(--bg); color:white; padding:10px;"></textarea>
-            <button onclick="addAnn()" class="btn-sub" style="margin-top:10px; background:var(--accent);">YAYINLA</button>
+        <section class="card" style="border: 1px solid var(--accent);">
+            <h3 class="yellow-text">💸 BEKLEYEN ÇEKİMLER</h3>
+            <div id="w-list" style="margin-top:10px; min-height: 50px;">
+                <p style="opacity: 0.5;">Talepler taranıyor...</p>
+            </div>
+            <button onclick="loadWithdrawals()" class="btn-sub" style="font-size: 10px; margin-top: 10px;">YENİLE 🔄</button>
         </section>
 
         <section class="card">
-            <h3 class="yellow-text">💸 BEKLEYEN ÇEKİMLER</h3>
-            <div id="w-list">Yükleniyor...</div>
+            <h3 class="yellow-text">📢 DUYURU YAYINLA</h3>
+            <textarea id="ann-text" placeholder="Duyuru metni..." style="width:100%; height:80px; background:#0e1621; color:white; border:1px solid #242f3d; padding:10px; margin-top:10px; border-radius:10px;"></textarea>
+            <button onclick="sendAnnouncement()" class="btn-sub" style="margin-top:10px; background:var(--accent);">DUYURUYU PAYLAŞ</button>
         </section>
 
         <section class="card">
             <h3 class="yellow-text">❓ SORU EKLE</h3>
-            <input type="text" id="qt" placeholder="Soru..." style="width:100%; padding:10px; margin:5px 0;">
+            <input type="text" id="qt" placeholder="Soru metni..." style="width:100%; padding:10px; margin:5px 0;">
             <div class="grid-2">
-                <input type="text" id="o0" placeholder="A"> <input type="text" id="o1" placeholder="B">
-                <input type="text" id="o2" placeholder="C"> <input type="text" id="o3" placeholder="D">
+                <input type="text" id="o0" placeholder="A şıkkı"> <input type="text" id="o1" placeholder="B şıkkı">
+                <input type="text" id="o2" placeholder="C şıkkı"> <input type="text" id="o3" placeholder="D şıkkı">
             </div>
-            <select id="co" style="width:100%; padding:10px; margin-top:5px;"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
-            <button onclick="addQ()" class="btn-sub" style="margin-top:10px;">KAYDET</button>
+            <select id="co" style="width:100%; padding:10px; margin-top:5px;">
+                <option value="0">Doğru Cevap: A</option>
+                <option value="1">Doğru Cevap: B</option>
+                <option value="2">Doğru Cevap: C</option>
+                <option value="3">Doğru Cevap: D</option>
+            </select>
+            <button onclick="saveQuestion()" class="btn-sub" style="margin-top:10px;">SORUYU KAYDET</button>
         </section>
     </div>
+
     <script>
         const tg = window.Telegram.WebApp;
-        async function loadW() {
-            const { data } = await supabaseClient.from('withdrawals').select('*').eq('status', 'pending');
+
+        async function loadWithdrawals() {
             const cont = document.getElementById('w-list');
-            if(!data || data.length === 0) cont.innerHTML = "Talep yok.";
-            else cont.innerHTML = data.map(w => `<div class="card">${w.amount} TON - ${w.telegram_id}<br><small>${w.wallet_address}</small><br><button onclick="done(${w.id})" class="btn-sub" style="background:var(--green); height:25px; margin-top:5px;">ÖDENDİ</button></div>`).join('');
+            
+            // Hata ayıklama için filtreyi biraz genişletiyoruz
+            const { data, error } = await supabaseClient
+                .from('withdrawals')
+                .select('*')
+                .ilike('status', 'pending'); // 'ilike' büyük/küçük harf duyarlılığını kaldırır
+
+            if (error) {
+                cont.innerHTML = `<p style="color:red;">Hata: ${error.message}</p>`;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                cont.innerHTML = '<p style="text-align:center; opacity:0.5;">Bekleyen çekim talebi bulunamadı.</p>';
+                return;
+            }
+
+            cont.innerHTML = data.map(w => `
+                <div class="card" style="background:#1c252f; border:1px solid #333; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <b style="color:var(--yellow);">${w.amount} TON</b>
+                        <span style="font-size:10px; opacity:0.6;">ID: ${w.telegram_id}</span>
+                    </div>
+                    <code style="font-size:10px; word-break:break-all; display:block; background:#000; padding:5px; border-radius:5px;">${w.wallet_address}</code>
+                    <button onclick="approveWithdraw(${w.id})" class="btn-sub" style="background:var(--green); height:30px; margin-top:10px; font-size:11px;">ÖDEME YAPILDI</button>
+                </div>
+            `).join('');
         }
-        async function done(id) {
-            await supabaseClient.from('withdrawals').update({ status: 'completed' }).eq('id', id);
-            tg.showAlert("Onaylandı."); loadW();
+
+        async function approveWithdraw(id) {
+            const { error } = await supabaseClient
+                .from('withdrawals')
+                .update({ status: 'completed' })
+                .eq('id', id);
+
+            if (!error) {
+                tg.showAlert("İşlem başarıyla tamamlandı.");
+                loadWithdrawals();
+            } else {
+                tg.showAlert("Güncelleme hatası: " + error.message);
+            }
         }
-        async function addAnn() {
-            const val = document.getElementById('ann-in').value;
-            await supabaseClient.from('announcements').insert([{ content: val }]);
-            tg.showAlert("Yayınlandı!"); document.getElementById('ann-in').value = "";
+
+        async function sendAnnouncement() {
+            const text = document.getElementById('ann-text').value;
+            if(!text) return;
+            const { error } = await supabaseClient.from('announcements').insert([{ content: text }]);
+            if(!error) {
+                tg.showAlert("Duyuru yayınlandı!");
+                document.getElementById('ann-text').value = "";
+            }
         }
-        async function addQ() {
+
+        async function saveQuestion() {
             const q = document.getElementById('qt').value;
-            const os = [document.getElementById('o0').value, document.getElementById('o1').value, document.getElementById('o2').value, document.getElementById('o3').value];
-            const co = parseInt(document.getElementById('co').value);
-            await supabaseClient.from('questions').insert([{ question_text: q, options: os, correct_option: co }]);
-            tg.showAlert("Soru Eklendi!");
+            const opts = [
+                document.getElementById('o0').value,
+                document.getElementById('o1').value,
+                document.getElementById('o2').value,
+                document.getElementById('o3').value
+            ];
+            const correct = parseInt(document.getElementById('co').value);
+
+            const { error } = await supabaseClient.from('questions').insert([
+                { question_text: q, options: opts, correct_option: correct }
+            ]);
+
+            if(!error) {
+                tg.showAlert("Soru eklendi!");
+                document.getElementById('qt').value = "";
+            }
         }
-        loadW();
+
+        // Sayfa açıldığında yükle
+        loadWithdrawals();
     </script>
 </body>
 </html>
