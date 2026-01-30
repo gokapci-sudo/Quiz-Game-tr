@@ -2,30 +2,34 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Kontrol Paneli</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Quiz Arena</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="admin-body">
-    <h2>🛠 Admin Yönetim Paneli</h2>
+<body>
+    <header style="margin-bottom: 20px;">
+        <button onclick="window.location.href='dashboard.html'" class="btn-sub" style="width: auto; display: inline-block;">⬅ Geri</button>
+        <h2 style="display: inline-block; margin-left: 10px;">Yönetim Paneli</h2>
+    </header>
 
-    <section class="admin-section">
+    <section class="card">
         <h3>💰 Çekim Talepleri</h3>
-        <div id="withdrawal-list">Yükleniyor...</div>
+        <div id="withdrawal-list"><p>Yükleniyor...</p></div>
     </section>
 
-    <section class="admin-section">
-        <h3>📢 Duyuru Yayınla</h3>
-        <textarea id="announcement-text" placeholder="Duyuru metni..."></textarea>
-        <button onclick="postAnnouncement()" class="btn-main">Yayınla</button>
+    <section class="card">
+        <h3>📢 Yeni Duyuru</h3>
+        <textarea id="ann-content" class="card" style="width:100%; height:80px; background:#0e1621; border-color:#3b4754; color:white;"></textarea>
+        <button onclick="addAnn()" class="btn-main">Yayınla</button>
     </section>
 
-    <section class="admin-section">
+    <section class="card">
         <h3>❓ Soru Ekle</h3>
-        <input type="text" id="q-text" placeholder="Soru nedir?">
-        <input type="text" id="q-options" placeholder="A,B,C,D (Virgülle ayır)">
-        <input type="number" id="q-correct" placeholder="Doğru Şık İndeksi (0-3)">
-        <button onclick="addQuestion()" class="btn-main">Soru Kaydet</button>
+        <input type="text" id="q-text" placeholder="Soru Metni" class="card" style="width:100%; margin-bottom:5px;">
+        <input type="text" id="q-opts" placeholder="A,B,C,D (Virgülle ayır)" class="card" style="width:100%; margin-bottom:5px;">
+        <input type="number" id="q-correct" placeholder="Doğru İndeks (0-3)" class="card" style="width:100%; margin-bottom:10px;">
+        <button onclick="addQuest()" class="btn-main">Soruyu Kaydet</button>
     </section>
 
     <script>
@@ -33,40 +37,41 @@
         const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
         const supabaseAdmin = supabase.createClient(SB_URL, SB_KEY);
 
-        // Çekim Taleplerini Listele
-        async function fetchRequests() {
+        async function loadRequests() {
             const { data } = await supabaseAdmin.from('withdrawals').select('*').eq('status', 'pending');
-            let html = "";
+            const list = document.getElementById('withdrawal-list');
+            list.innerHTML = data?.length ? "" : "Bekleyen talep yok.";
             data?.forEach(req => {
-                html += `
-                    <div class="req-item">
-                        ID: ${req.telegram_id} | Miktar: ${req.amount} TON <br>
-                        Cüzdan: ${req.wallet_address} <br>
-                        <button onclick="approveWithdraw('${req.id}', ${req.telegram_id})" class="btn-approve">Ödendi Yap & Sıfırla</button>
-                    </div><hr>`;
+                list.innerHTML += `
+                    <div class="req-item" style="border: 1px solid #333; padding: 10px; margin-bottom: 10px;">
+                        ID: ${req.telegram_id} <br> Miktar: <span class="yellow-text">${req.amount} TON</span> <br>
+                        <button onclick="approve('${req.id}', ${req.telegram_id})" class="btn-main" style="padding:5px; margin-top:5px; font-size:12px; background:#31b545;">ÖDENDİ YAP & SIFIRLA</button>
+                    </div>`;
             });
-            document.getElementById('withdrawal-list').innerHTML = html || "Bekleyen talep yok.";
         }
 
-        // Ödendi Yap ve Bakiyeyi Sıfırla
-        async function approveWithdraw(requestId, userId) {
-            // 1. Talebi güncelle
-            await supabaseAdmin.from('withdrawals').update({ status: 'paid' }).eq('id', requestId);
-            // 2. Kullanıcı bakiyesini sıfırla
+        async function approve(reqId, userId) {
+            await supabaseAdmin.from('withdrawals').update({ status: 'paid' }).eq('id', reqId);
             await supabaseAdmin.from('profiles').update({ balance: 0.00 }).eq('telegram_id', userId);
-            
-            alert("İşlem başarılı! Bakiye sıfırlandı.");
-            fetchRequests();
+            alert("Ödeme onaylandı ve kullanıcı bakiyesi sıfırlandı.");
+            loadRequests();
         }
 
-        // Duyuru Ekle
-        async function postAnnouncement() {
-            const content = document.getElementById('announcement-text').value;
+        async function addAnn() {
+            const content = document.getElementById('ann-content').value;
             await supabaseAdmin.from('announcements').insert([{ content }]);
-            alert("Duyuru yayınlandı!");
+            alert("Duyuru yayınlandı.");
         }
 
-        window.onload = fetchRequests;
+        async function addQuest() {
+            const text = document.getElementById('q-text').value;
+            const opts = document.getElementById('q-opts').value.split(',');
+            const correct = document.getElementById('q-correct').value;
+            await supabaseAdmin.from('questions').insert([{ question_text: text, options: opts, correct_option: parseInt(correct) }]);
+            alert("Soru eklendi.");
+        }
+
+        loadRequests();
     </script>
 </body>
 </html>
