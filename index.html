@@ -1,35 +1,44 @@
-const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
-const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
-const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="counter-card">
+            <small style="display:block; margin-bottom:5px; opacity:0.8;">TOPLAM KATILIMCI</small>
+            <div id="big-counter" class="counter-value">...</div>
+        </div>
 
-const APP_CONFIG = {
-    matchTimes: ["10:00", "14:00", "20:00"],
-    entryWindow: 3, // Yarışma 3 dakika sürer
-    resultWait: 4,  // 4. dakikada biletler sıfırlanır (görsel olarak)
-    adminID: 1369398784
-};
+        <div class="sponsor-list">
+            <div class="sponsor-box highlight">🚀 TON Türkiye Resmi Sponsoru</div>
+            <div class="sponsor-box">Reklam Alanı</div>
+            <div class="sponsor-box highlight">🎬 5 Reklam İzle, Biletini Al!</div>
+        </div>
 
-function getRaceStatus() {
-    const now = new Date();
-    const currentStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-    
-    let active = false;
-    let nextMatch = APP_CONFIG.matchTimes[0];
+        <button id="entry-btn" class="btn-main">GİRİŞ YAP</button>
+    </div>
 
-    for (let time of APP_CONFIG.matchTimes) {
-        const [h, m] = time.split(':').map(Number);
-        const raceDate = new Date();
-        raceDate.setHours(h, m, 0);
-        
-        const diff = (now - raceDate) / 60000; // Dakika farkı
+    <script>
+        async function init() {
+            const { count } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
+            document.getElementById('big-counter').innerText = (1388 + (count || 0)).toLocaleString();
 
-        if (diff >= 0 && diff < APP_CONFIG.entryWindow) {
-            active = true;
+            document.getElementById('entry-btn').onclick = async () => {
+                const tg = window.Telegram.WebApp;
+                const user = tg.initDataUnsafe?.user || { id: 1369398784, username: "admin" };
+                await supabaseClient.from('profiles').upsert({ 
+                    telegram_id: user.id, 
+                    username: user.username || "isimsiz" 
+                });
+                window.location.href = "dashboard.html";
+            };
         }
-        if (time > currentStr) {
-            nextMatch = time;
-            break;
-        }
-    }
-    return { active, nextMatch };
-}
+        init();
+    </script>
+</body>
+</html>
