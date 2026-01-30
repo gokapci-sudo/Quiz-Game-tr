@@ -12,9 +12,8 @@
         <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:10px;">⬅ Geri</button>
         <div class="card" style="text-align:center; margin-top:20px;">
             <h2 class="yellow-text">BİLET AL</h2>
-            <p>Reklam izle (5/5) veya bakiye ile al.</p>
         </div>
-        <button id="ad-btn" onclick="watchAd()" class="btn-main">📺 REKLAM İZLE (<span id="count">0</span>/5)</button>
+        <button onclick="watchAd()" class="btn-main">📺 REKLAM İZLE (<span id="count">0</span>/5)</button>
         <button onclick="buy()" class="btn-main" style="background:var(--accent); margin-top:10px;">💰 1.00 TON İLE AL</button>
     </div>
     <script>
@@ -42,7 +41,7 @@
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
             await supabaseClient.from('profiles').update({ has_ticket: true }).eq('telegram_id', user.id);
             localStorage.setItem('ads', 0);
-            tg.showAlert("Bilet Tanımlandı!"); location.href="dashboard.html";
+            tg.showAlert("Bilet Alındı!"); location.href="dashboard.html";
         }
     </script>
 </body>
