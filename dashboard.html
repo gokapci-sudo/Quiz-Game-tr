@@ -12,59 +12,30 @@
         <div class="card">
             <div style="display:flex; justify-content:space-between;">
                 <b id="display-username">@Yükleniyor...</b>
-                <span id="admin-badge" class="hidden" style="background:var(--red); padding:2px 5px; border-radius:5px; font-size:10px;">ADMIN</span>
-            </div>
-            <div id="wallet-area" style="margin-top:15px;">
-                <button id="connect-wallet-btn" class="btn-main" onclick="openTelegramWallet()" style="min-height:40px; font-size:14px;">💎 Telegram Cüzdanı Bağla</button>
-                <div id="active-wallet" class="wallet-box hidden">
-                    <code id="wallet-addr-short"></code>
-                    <button onclick="copyWallet()" class="btn-copy">📋</button>
-                </div>
             </div>
             <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
                 <span>Bakiye: <b id="user-balance" style="color:var(--yellow);">0.00</b> TON</span>
-                <button id="withdraw-btn" class="hidden" onclick="requestWithdraw()" style="background:var(--green); border:none; color:white; padding:8px 15px; border-radius:10px; font-weight:bold;">ÇEKİM YAP</button>
+                <button id="withdraw-btn" class="hidden" onclick="requestWithdraw()" style="background:var(--green); border:none; color:white; padding:8px 12px; border-radius:8px;">ÇEK</button>
             </div>
         </div>
 
         <div class="card" style="text-align:center;">
-            <div id="ticket-info-area" style="margin-bottom:15px;"></div>
-            <button id="start-quiz-btn" class="btn-main" style="opacity:0.5;" disabled>YARIŞMA SAATİNİ BEKLE</button>
-        </div>
-
-        <div class="card" style="margin-top: 10px; background: rgba(36, 129, 204, 0.05); border-style: dashed;">
-            <h3 style="font-size: 11px; opacity: 0.6; margin-bottom: 8px; text-align: center; letter-spacing: 1px;">🕒 YARIŞMA SAATLERİ</h3>
-            <div id="race-schedule" style="display: flex; justify-content: center; gap: 12px; font-weight: bold; color: var(--accent); font-size: 15px;">
-                </div>
+            <button id="start-quiz-btn" class="btn-main" style="opacity:0.5;" disabled>LÜTFEN BEKLEYİN...</button>
         </div>
 
         <div class="card" style="text-align: center; border: 1px solid var(--yellow); background: linear-gradient(180deg, rgba(254, 203, 46, 0.05) 0%, rgba(23, 33, 43, 1) 100%);">
-            <small style="opacity: 0.7; font-size: 10px; font-weight: bold; letter-spacing: 1px;">TOPLAM ÖDÜL HAVUZU</small>
-            <div id="total-prize-amount" style="font-size: 26px; font-weight: 900; color: var(--yellow); margin: 5px 0;">0.00 TON</div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);">
-                <div>
-                    <div style="font-size: 20px;">🥇</div>
-                    <div id="p1-reward" style="font-weight: bold; font-size: 14px; color: #fff;">0</div>
-                    <div style="font-size: 9px; opacity: 0.5;">%50</div>
-                </div>
-                <div>
-                    <div style="font-size: 20px;">🥈</div>
-                    <div id="p2-reward" style="font-weight: bold; font-size: 14px; color: #fff;">0</div>
-                    <div style="font-size: 9px; opacity: 0.5;">%30</div>
-                </div>
-                <div>
-                    <div style="font-size: 20px;">🥉</div>
-                    <div id="p3-reward" style="font-weight: bold; font-size: 14px; color: #fff;">0</div>
-                    <div style="font-size: 9px; opacity: 0.5;">%20</div>
-                </div>
+            <small style="opacity: 0.7; font-size: 10px; font-weight: bold;">TOPLAM ÖDÜL HAVUZU</small>
+            <div id="total-prize-amount" style="font-size: 24px; font-weight: 900; color: var(--yellow); margin: 5px 0;">0.00 TON</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 10px;">
+                <div>🥇<br><span id="p1-reward" style="font-size:12px;">0</span></div>
+                <div>🥈<br><span id="p2-reward" style="font-size:12px;">0</span></div>
+                <div>🥉<br><span id="p3-reward" style="font-size:12px;">0</span></div>
             </div>
         </div>
 
         <div class="grid-2">
             <button class="btn-sub" onclick="location.href='results.html'">🏆 Sıralama</button>
-            <button class="btn-sub" onclick="location.href='announcements.html'">📢 Duyurular</button>
-            <button id="admin-panel-btn" class="btn-sub hidden" style="background:var(--red); grid-column:span 2;" onclick="location.href='admin.html'">⚙️ ADMİN PANELİ</button>
+            <button id="admin-panel-btn" class="btn-sub hidden" style="background:var(--red); grid-column:span 2;" onclick="location.href='admin.html'">⚙️ ADMİN</button>
         </div>
     </div>
 
@@ -73,74 +44,61 @@
         const tgApp = window.Telegram.WebApp;
         let hasTicket = false;
 
-        async function loadDashboardSettings() {
-            const { data, error } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+        async function init() {
             const user = tgApp.initDataUnsafe?.user || { id: 1369398784 };
-            const { data: profile } = await supabaseClient.from('profiles').select('has_ticket').eq('telegram_id', user.id).single();
+            const { data: profile } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
             hasTicket = profile?.has_ticket || false;
 
-            if (data && !error) {
-                const times = data.race_times.split(',');
-                document.getElementById('race-schedule').innerHTML = times.map(t => `<span>${t.trim()}</span>`).join('<span style="opacity:0.2">|</span>');
-                
-                const total = parseFloat(data.total_prize);
+            const { data: sett } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+            if (sett) {
+                const total = parseFloat(sett.total_prize);
                 document.getElementById('total-prize-amount').innerText = total.toFixed(2) + " TON";
                 document.getElementById('p1-reward').innerText = (total * 0.5).toFixed(2);
                 document.getElementById('p2-reward').innerText = (total * 0.3).toFixed(2);
                 document.getElementById('p3-reward').innerText = (total * 0.2).toFixed(2);
 
-                checkRaceTime(data.race_times);
-                setInterval(() => checkRaceTime(data.race_times), 30000);
+                processLogic(sett.race_times);
+                setInterval(() => processLogic(sett.race_times), 10000);
             }
         }
 
-        function checkRaceTime(raceTimesString) {
+        function processLogic(timesStr) {
             const now = new Date();
-            const times = raceTimesString.split(',').map(t => t.trim());
-            const startBtn = document.getElementById('start-quiz-btn');
-            const raceDurationMinutes = 20;
+            const times = timesStr.split(',').map(t => t.trim());
+            const btn = document.getElementById('start-quiz-btn');
+            
+            let currentRaceStart = null;
+            let isRaceTime = false;
+            let isExpired = false;
 
-            let isRaceLive = false;
+            times.forEach(t => {
+                const [h, m] = t.split(':').map(Number);
+                const start = new Date(); start.setHours(h, m, 0);
+                const end = new Date(start.getTime() + 3 * 60000); // Yarışma 3 dk
+                const expire = new Date(start.getTime() + 4 * 60000); // Reset 4 dk
 
-            times.forEach(startTime => {
-                const [hour, min] = startTime.split(':').map(Number);
-                const raceDate = new Date();
-                raceDate.setHours(hour, min, 0);
-                const raceEndDate = new Date(raceDate.getTime() + raceDurationMinutes * 60000);
-
-                if (now >= raceDate && now <= raceEndDate) {
-                    isRaceLive = true;
+                if (now >= start && now <= expire) {
+                    isRaceTime = true;
+                    if (now > end) isExpired = true; // 3. dakikadan sonraysa
                 }
             });
 
-            if (isRaceLive) {
-                if (hasTicket) {
-                    // Yarışma saati ve bilet var -> KATIL
-                    startBtn.disabled = false;
-                    startBtn.style.opacity = "1";
-                    startBtn.style.background = "var(--green)";
-                    startBtn.innerText = "YARIŞMAYA KATIL";
-                    startBtn.onclick = () => location.href = 'quiz.html';
+            if (isRaceTime) {
+                if (hasTicket && !isExpired) {
+                    btn.disabled = false; btn.style.opacity = "1"; btn.style.background = "var(--green)";
+                    btn.innerText = "YARIŞMAYA KATIL";
+                    btn.onclick = () => location.href = 'quiz.html';
                 } else {
-                    // Yarışma saati ama bilet yok (veya kullanılmış) -> BİLET AL
-                    startBtn.disabled = false;
-                    startBtn.style.opacity = "1";
-                    startBtn.style.background = "var(--yellow)";
-                    startBtn.style.color = "black";
-                    startBtn.innerText = "BİLET AL";
-                    startBtn.onclick = () => location.href = 'bilet.html';
+                    btn.disabled = false; btn.style.opacity = "1"; btn.style.background = "var(--yellow)";
+                    btn.style.color = "black"; btn.innerText = "BİLET AL";
+                    btn.onclick = () => location.href = 'bilet.html';
                 }
             } else {
-                // Yarışma saati değil
-                startBtn.disabled = true;
-                startBtn.style.opacity = "0.5";
-                startBtn.style.background = "#242f3d";
-                startBtn.style.color = "white";
-                startBtn.innerText = "YARIŞMA SAATİNİ BEKLE";
+                btn.disabled = true; btn.style.opacity = "0.5"; btn.style.background = "#242f3d";
+                btn.style.color = "white"; btn.innerText = "YARIŞMA SAATİNİ BEKLE";
             }
         }
-
-        document.addEventListener('DOMContentLoaded', loadDashboardSettings);
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
