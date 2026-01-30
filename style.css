@@ -1,0 +1,10 @@
+body { font-family: 'Segoe UI', sans-serif; background: #0e1621; color: white; margin: 0; padding: 10px; }
+.ad-container { background: #17212b; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 10px; border: 1px solid #242f3d; }
+.ticket-counter { font-weight: bold; color: #40a7e3; margin-top: 5px; }
+.user-panel { background: #17212b; padding: 20px; border-radius: 15px; text-align: center; }
+.btn-wallet { background: #2481cc; border: none; color: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+.btn-main { width: 100%; padding: 15px; background: #31b545; border: none; color: white; border-radius: 12px; font-weight: bold; margin-top: 20px; }
+.btn-main.disabled { background: #555; cursor: not-allowed; }
+.hidden { display: none; }
+.btn-admin { background: #e64d4d; margin-top: 10px; width: 100%; border-radius: 8px; border: none; color: white; padding: 8px; }
+.times { display: flex; justify-content: space-around; margin: 10px 0; font-weight: bold; color: #fecb2e; }
