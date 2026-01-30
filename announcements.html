@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Duyurular - Quiz Arena</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header style="display: flex; align-items: center; margin-bottom: 20px;">
+            <button onclick="location.href='dashboard.html'" class="btn-sub" style="width: auto; padding: 10px 15px; margin-bottom: 0;">⬅</button>
+            <h2 style="margin: 0 auto; font-size: 1.2rem;">📢 DUYURULAR</h2>
+        </header>
+
+        <div id="ann-list">
+            <div id="loader" style="text-align: center; padding: 20px; opacity: 0.5;">Duyurular yükleniyor...</div>
+        </div>
+    </div>
+
+    <script>
+        const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
+        const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
+        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+        const tg = window.Telegram.WebApp;
+
+        async function loadAnnouncements() {
+            // En yeni duyuruyu en üstte göstermek için 'created_at' bazlı sıralama
+            const { data, error } = await supabaseClient
+                .from('announcements')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            const list = document.getElementById('ann-list');
+            const loader = document.getElementById('loader');
+
+            if (data && data.length > 0) {
+                loader.classList.add('hidden');
+                list.innerHTML = ""; // Listeyi temizle
+                
+                data.forEach(item => {
+                    const date = new Date(item.created_at).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'long',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    list.innerHTML += `
+                        <div class="card" style="border-left: 4px solid var(--accent); animation: fadeIn 0.5s ease;">
+                            <div style="font-size: 0.75rem; color: var(--accent); margin-bottom: 8px; font-weight: bold;">
+                                📅 ${date}
+                            </div>
+                            <div style="font-size: 0.95rem; line-height: 1.6; color: rgba(255,255,255,0.9);">
+                                ${item.content}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                loader.innerText = "Henüz bir duyuru yayınlanmadı.";
+            }
+        }
+
+        tg.ready();
+        loadAnnouncements();
+    </script>
+
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</body>
+</html>
