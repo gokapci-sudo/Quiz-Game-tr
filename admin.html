@@ -10,71 +10,56 @@
     <div class="dashboard-container">
         <header style="display:flex; align-items:center; margin-bottom:20px;">
             <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:0 15px;">⬅</button>
-            <h2 style="margin-left:15px;">ADMİN PANEL</h2>
+            <h2 style="margin-left:15px;">ADMİN</h2>
         </header>
 
         <section class="card">
-            <h3 class="yellow-text">💸 BEKLEYEN ÇEKİMLER</h3>
-            <div id="w-list" style="margin-top:10px;"><p>Yükleniyor...</p></div>
+            <h3 class="yellow-text">📢 DUYURU YAYINLA</h3>
+            <textarea id="ann-in" placeholder="Duyuru metni..." style="width:100%; height:60px; background:var(--bg); color:white; padding:10px;"></textarea>
+            <button onclick="addAnn()" class="btn-sub" style="margin-top:10px; background:var(--accent);">YAYINLA</button>
         </section>
 
         <section class="card">
-            <h3 class="yellow-text">📢 DUYURU YAYINLA</h3>
-            <textarea id="ann-text" placeholder="Duyuru metni..." style="width:100%; height:80px; background:#0e1621; color:white; border:1px solid #242f3d; padding:10px; margin-top:10px; border-radius:10px;"></textarea>
-            <button onclick="sendAnn()" class="btn-sub" style="margin-top:10px; background:var(--accent);">DUYURUYU PAYLAŞ</button>
+            <h3 class="yellow-text">💸 BEKLEYEN ÇEKİMLER</h3>
+            <div id="w-list">Yükleniyor...</div>
         </section>
 
         <section class="card">
             <h3 class="yellow-text">❓ SORU EKLE</h3>
             <input type="text" id="qt" placeholder="Soru..." style="width:100%; padding:10px; margin:5px 0;">
-            <input type="text" id="o0" placeholder="A"> <input type="text" id="o1" placeholder="B">
-            <input type="text" id="o2" placeholder="C"> <input type="text" id="o3" placeholder="D">
+            <div class="grid-2">
+                <input type="text" id="o0" placeholder="A"> <input type="text" id="o1" placeholder="B">
+                <input type="text" id="o2" placeholder="C"> <input type="text" id="o3" placeholder="D">
+            </div>
             <select id="co" style="width:100%; padding:10px; margin-top:5px;"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
-            <button onclick="saveQ()" class="btn-sub" style="margin-top:10px;">SORUYU KAYDET</button>
-        </section>
-
-        <section class="card">
-            <button onclick="distributeAndReset()" class="btn-main" style="background:var(--red);">🏆 ÖDÜLLERİ DAĞIT VE SIFIRLA</button>
+            <button onclick="addQ()" class="btn-sub" style="margin-top:10px;">KAYDET</button>
         </section>
     </div>
-
     <script>
         const tg = window.Telegram.WebApp;
-
-        async function loadWithdrawals() {
+        async function loadW() {
             const { data } = await supabaseClient.from('withdrawals').select('*').eq('status', 'pending');
             const cont = document.getElementById('w-list');
-            if(!data || data.length === 0) { cont.innerHTML = "Bekleyen talep yok."; return; }
-            cont.innerHTML = data.map(w => `
-                <div class="card" style="background:#1c252f; border:1px solid #333;">
-                    <b>${w.amount} TON</b> - ID: ${w.telegram_id}<br>
-                    <small style="word-break:break-all;">${w.wallet_address}</small><br>
-                    <button onclick="approve(${w.id})" class="btn-sub" style="background:var(--green); height:30px; margin-top:10px;">ÖDENDİ</button>
-                </div>
-            `).join('');
+            if(!data || data.length === 0) cont.innerHTML = "Talep yok.";
+            else cont.innerHTML = data.map(w => `<div class="card">${w.amount} TON - ${w.telegram_id}<br><small>${w.wallet_address}</small><br><button onclick="done(${w.id})" class="btn-sub" style="background:var(--green); height:25px; margin-top:5px;">ÖDENDİ</button></div>`).join('');
         }
-
-        async function approve(id) {
+        async function done(id) {
             await supabaseClient.from('withdrawals').update({ status: 'completed' }).eq('id', id);
-            tg.showAlert("Onaylandı."); loadWithdrawals();
+            tg.showAlert("Onaylandı."); loadW();
         }
-
-        async function sendAnn() {
-            const val = document.getElementById('ann-text').value;
-            if(!val) return;
-            const { error } = await supabaseClient.from('announcements').insert([{ content: val }]);
-            if(!error) { tg.showAlert("Duyuru yayınlandı!"); document.getElementById('ann-text').value = ""; }
+        async function addAnn() {
+            const val = document.getElementById('ann-in').value;
+            await supabaseClient.from('announcements').insert([{ content: val }]);
+            tg.showAlert("Yayınlandı!"); document.getElementById('ann-in').value = "";
         }
-
-        async function saveQ() {
+        async function addQ() {
             const q = document.getElementById('qt').value;
             const os = [document.getElementById('o0').value, document.getElementById('o1').value, document.getElementById('o2').value, document.getElementById('o3').value];
             const co = parseInt(document.getElementById('co').value);
             await supabaseClient.from('questions').insert([{ question_text: q, options: os, correct_option: co }]);
-            tg.showAlert("Soru kaydedildi.");
+            tg.showAlert("Soru Eklendi!");
         }
-
-        loadWithdrawals();
+        loadW();
     </script>
 </body>
 </html>
