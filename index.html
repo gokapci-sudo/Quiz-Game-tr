@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Quiz Arena V3.0 - Admin Integrated</title>
+    <title>Quiz Arena V3.0 - Final</title>
     
     <script src='//libtl.com/sdk.js' data-zone='10527452' data-sdk='show_10527452'></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -13,17 +13,29 @@
 
     <style>
         :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --yt: #ff0000; --success: #10b981; --error: #ef4444; --safe-top: env(safe-area-inset-top); }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         body { margin:0; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; text-align:center; min-height: 100vh; overflow-x: hidden; padding-top: var(--safe-top); }
+        
         .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; position: fixed; top:0; left:0; }
         .screen.active { display:flex; }
+        
         .card { background:var(--card); padding:15px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 450px; }
-        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; }
-        .btn-blue { background:var(--primary); color:#000; }
-        .btn-gold { background: var(--gold); color: #000; }
-        .btn-admin { background: linear-gradient(45deg, #fbbf24, #f59e0b); color: #000; border: 2px solid #fff; margin-top: 20px; box-shadow: 0 0 15px rgba(251,191,36,0.4); }
-        .admin-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: left; font-size: 0.8rem; border: 1px solid #475569; }
-        input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; margin-bottom: 10px; }
+        .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; text-decoration: none; }
+        
+        /* Dinamik Alanlar */
+        .balance-box { font-size: 2.2rem; color: var(--gold); font-weight: 800; margin: 10px 0; }
+        #ton-connect-btn { display: flex; justify-content: center; margin: 15px 0; }
+        
+        /* Ödül Tablosu */
+        .prize-table { background: rgba(251, 191, 36, 0.05); border: 1px solid var(--gold); border-radius: 15px; padding: 15px; width: 100%; max-width: 450px; margin: 10px 0; }
+        .prize-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(251, 191, 36, 0.1); }
+        
+        /* Sponsorlar */
+        .sponsor-box { background: #1e293b; height: 80px; border-radius: 12px; margin-bottom: 8px; border: 1px dashed #475569; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 450px; overflow: hidden; }
+        
+        /* Admin Paneli */
+        .admin-btn { background: linear-gradient(45deg, #fbbf24, #f59e0b); color: #000; margin-top: 20px; }
+        .req-card { background: #0f172a; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: left; border: 1px solid var(--primary); }
     </style>
 </head>
 <body>
@@ -31,109 +43,144 @@
     <div id="sponsor-screen" class="screen active">
         <h2 style="color: var(--gold);">ARENA SPONSORLARI</h2>
         <div id="sponsor-list" style="width:100%; display: flex; flex-direction: column; align-items: center;"></div>
-        <button class="btn btn-blue" onclick="handleEntry()">GİRİŞ YAP 🚀</button>
+        <div id="ticket-info" class="card" style="border-color: var(--gold); color: var(--gold); font-weight: bold;">🎫 Biletler kontrol ediliyor...</div>
+        <button class="btn" style="background:var(--primary); color:#000" onclick="handleEntry()">GİRİŞ YAP 🚀</button>
     </div>
 
     <div id="main-screen" class="screen">
         <div class="card">
-            <h2 id="u-name">@Oyuncu</h2>
+            <h2 id="u-name" style="margin:0;">@Oyuncu</h2>
             <div id="ton-connect-btn"></div>
-            <div style="font-size: 2rem; color: var(--gold); font-weight: 800;"><span id="u-balance">0.00</span> TON</div>
-            <button id="withdraw-btn" class="btn btn-gold" disabled onclick="requestWithdraw()">KAZANÇ TALEP ET</button>
+            <div class="balance-box"><span id="u-balance">0.00</span> <small style="font-size:0.9rem">TON</small></div>
+            <button id="withdraw-btn" class="btn" style="background:var(--gold); color:#000" disabled onclick="requestWithdraw()">KAZANÇ TALEP ET</button>
         </div>
 
         <div id="action-area" style="width:100%; display: flex; flex-direction: column; align-items: center;"></div>
-        
+
+        <div class="prize-table">
+            <div style="font-weight: bold; color: var(--gold); margin-bottom: 10px;">🏆 GÜNLÜK ÖDÜLLER</div>
+            <div class="prize-row"><span>🥇 1. Oyuncu</span> <b id="p1">...</b></div>
+            <div class="prize-row"><span>🥈 2. Oyuncu</span> <b id="p2">...</b></div>
+            <div class="prize-row"><span>🥉 3. Oyuncu</span> <b id="p3">...</b></div>
+        </div>
+
         <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
+        <button class="btn" style="background:#334155" onclick="showAnnouncements()">📢 DUYURULAR</button>
         
-        <button id="admin-gate" class="btn btn-admin" style="display:none;" onclick="showScreen('admin-screen'); loadAdminData();">🛡️ YÖNETİCİ PANELİ</button>
+        <button id="admin-gate" class="btn admin-btn" style="display:none" onclick="showScreen('admin-screen'); loadAdminData();">🛡️ YÖNETİCİ PANELİ</button>
+    </div>
+
+    <div id="announcement-screen" class="screen">
+        <h2 style="color: var(--gold)">📢 DUYURULAR</h2>
+        <div class="card" id="ann-content" style="text-align: left; white-space: pre-wrap;"></div>
+        <button class="btn" style="background:var(--primary); color:#000" onclick="showScreen('main-screen')">ANLADIM ✅</button>
     </div>
 
     <div id="admin-screen" class="screen">
-        <h2 style="color: var(--gold)">🛡️ ADMİN KONTROL</h2>
-        
-        <div class="card">
-            <h3>Soru Ekle</h3>
-            <textarea id="adm-q" placeholder="Soru Metni"></textarea>
-            <input id="adm-opts" placeholder="Şık1, Şık2, Şık3, Şık4">
-            <input id="adm-correct" type="number" placeholder="Doğru Şık (0-3)">
-            <button class="btn btn-blue" onclick="adminAddQuestion()">SORU KAYDET</button>
-        </div>
-
+        <h2 style="color: var(--gold)">🛡️ YÖNETİCİ</h2>
         <div class="card">
             <h3>Ödeme Talepleri</h3>
-            <div id="adm-withdrawals">Yükleniyor...</div>
+            <div id="adm-req-list">Yükleniyor...</div>
         </div>
-
-        <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">KAPAT</button>
+        <div class="card">
+            <h3>Hızlı Soru Ekle</h3>
+            <input id="adm-q" placeholder="Soru" style="width:100%; padding:10px; margin-bottom:5px;">
+            <input id="adm-o" placeholder="A,B,C,D" style="width:100%; padding:10px; margin-bottom:5px;">
+            <input id="adm-c" type="number" placeholder="Doğru İndeks (0-3)" style="width:100%; padding:10px; margin-bottom:5px;">
+            <button class="btn" style="background:var(--success)" onclick="adminAddQ()">EKLE</button>
+        </div>
+        <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">GERİ</button>
     </div>
 
     <script>
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
-        const MY_ADMIN_ID = 8333089188; // SADECE BU ID PANELİ GÖRÜR
-        
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
+        const MY_ID = 8333089188;
+
         let userId = tg.initDataUnsafe?.user?.id || 123456, user = null;
+
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://gokapci-sudo.github.io/Quiz-Game-tr/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect-btn'
+        });
 
         async function init() {
             tg.ready(); tg.expand();
             
-            // Admin Kontrolü
-            if (userId === MY_ADMIN_ID) {
-                document.getElementById('admin-gate').style.display = 'block';
+            // Sponsor ve Ödülleri Yükle (Config.js'den)
+            if(window.APP_CONFIG) {
+                document.getElementById('sponsor-list').innerHTML = APP_CONFIG.sponsors.map(s => `<div class="sponsor-box">${s.text}</div>`).join("");
+                document.getElementById('p1').innerText = APP_CONFIG.prizes.p1;
+                document.getElementById('p2').innerText = APP_CONFIG.prizes.p2;
+                document.getElementById('p3').innerText = APP_CONFIG.prizes.p3;
             }
 
-            // Kullanıcı verisi çekme
+            // Admin Kontrolü
+            if(userId === MY_ID) document.getElementById('admin-gate').style.display = 'block';
+
+            // Kullanıcı Kaydı
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
-            if (data) user = data; else {
+            if(data) user = data; else {
                 const { data: nUser } = await _supabase.from('users').insert([{telegram_id:userId, username:tg.initDataUnsafe?.user?.username || "Oyuncu"}]).select().single();
                 user = nUser;
             }
-            // ... (Zamanlayıcılar ve diğer init işlemleri)
+
+            setInterval(updateUIPanel, 1000);
         }
 
-        // --- ADMİN FONKSİYONLARI ---
-        async function loadAdminData() {
-            const { data: reqs } = await _supabase.from('withdraw_requests').select('*').eq('status', 'Bekliyor');
-            const container = document.getElementById('adm-withdrawals');
-            container.innerHTML = reqs?.length ? reqs.map(r => `
-                <div class="admin-item">
-                    <b>@${r.username}</b> - ${r.amount} TON<br>
-                    <small style="word-break:break-all;">${r.wallet_address}</small><br>
-                    <button class="btn btn-blue" style="padding:5px; margin-top:5px; font-size:0.7rem;" onclick="adminPayConfirm(${r.id}, ${r.user_id}, ${r.amount})">ÖDENDİ İŞARETLE</button>
-                </div>
-            `).join("") : "Bekleyen talep yok.";
-        }
-
-        async function adminAddQuestion() {
-            const q = document.getElementById('adm-q').value;
-            const opts = document.getElementById('adm-opts').value.split(',');
-            const corr = parseInt(document.getElementById('adm-correct').value);
+        function updateUIPanel() {
+            if(!user) return;
+            document.getElementById('u-name').innerText = "@" + user.username;
+            document.getElementById('u-balance').innerText = user.balance.toFixed(2);
+            document.getElementById('withdraw-btn').disabled = user.balance < 2.0;
             
-            await _supabase.from('questions').insert([{ question: q, options: JSON.stringify(opts), correct_option: corr }]);
-            alert("Soru eklendi!");
-            document.getElementById('adm-q').value = "";
+            // Yarışma Durumu (Config.js saatlerine göre)
+            const now = new Date();
+            const actionArea = document.getElementById('action-area');
+            actionArea.innerHTML = `<div class="card">Yarışma saati bekleniyor...</div>`;
         }
 
-        async function adminPayConfirm(reqId, uId, amount) {
-            if(!confirm("Ödemeyi yaptınız mı? Kullanıcının bakiyesi düşecek.")) return;
-            await _supabase.from('withdraw_requests').update({ status: 'Ödendi' }).eq('id', reqId);
-            const { data: u } = await _supabase.from('users').select('balance').eq('id', uId).single();
-            await _supabase.from('users').update({ balance: Math.max(0, u.balance - amount) }).eq('id', uId);
-            alert("Başarılı!");
-            loadAdminData();
+        function showAnnouncements() {
+            document.getElementById('ann-content').innerText = APP_CONFIG.announcement;
+            showScreen('announcement-screen');
         }
 
-        // ... (Diğer Quiz ve Menü kodları - Önceki cevapta verdiklerimin aynısı)
-        
-        window.onload = init;
+        async function requestWithdraw() {
+            const { error } = await _supabase.from('withdraw_requests').insert([{
+                user_id: user.id, telegram_id: userId, username: user.username,
+                wallet_address: tonConnectUI.account?.address || "Bağlı Değil",
+                amount: user.balance
+            }]);
+            if(!error) tg.showAlert("Talep alındı! Admin onayından sonra bakiye gönderilecektir.");
+        }
+
+        // --- ADMİN MANTIĞI ---
+        async function loadAdminData() {
+            const { data } = await _supabase.from('withdraw_requests').select('*').eq('status', 'Bekliyor');
+            document.getElementById('adm-req-list').innerHTML = data?.map(r => `
+                <div class="req-card">
+                    <b>@${r.username}</b>: ${r.amount} TON<br>
+                    <button onclick="confirmPay(${r.id}, ${r.user_id}, ${r.amount})" style="background:var(--success); border:none; color:white; padding:5px; border-radius:5px; margin-top:5px;">ÖDENDİ</button>
+                </div>
+            `).join("") || "Talep yok.";
+        }
+
+        async function confirmPay(id, uid, amt) {
+            await _supabase.from('withdraw_requests').update({status:'Ödendi'}).eq('id', id);
+            await _supabase.from('users').update({balance: 0}).eq('id', uid);
+            alert("Onaylandı!"); loadAdminData();
+        }
+
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
+
         function handleEntry() { showScreen('main-screen'); }
+
+        window.onload = init;
     </script>
 </body>
 </html>
