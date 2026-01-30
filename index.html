@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quiz Arena</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="splash-container">
+    <div class="container">
         <div class="counter-card">
-            <small style="opacity:0.7">TOPLAM BİLETLİ KATILIMCI</small>
-            <div id="big-counter" class="counter-value">1388 + ...</div>
+            <small style="display:block; margin-bottom:5px; opacity:0.8;">TOPLAM KATILIMCI</small>
+            <div id="big-counter" class="counter-value">...</div>
         </div>
 
-        <div class="sponsor-grid">
+        <div class="sponsor-list">
             <div class="sponsor-box">2x Sponsorlarımız Burada Görünecektir.</div>
             <div class="sponsor-box">2x Sponsorlarımız Burada Görünecektir.</div>
             <div class="sponsor-box highlight">2x Bu Alana Reklam Verebilirsiniz</div>
@@ -27,20 +26,27 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
-        const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
-        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+        const supabaseClient = supabase.createClient("https://arumdxephyjteoypjaxh.supabase.co", "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1");
 
         async function init() {
             tg.ready(); tg.expand();
-            const { count } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
-            document.getElementById('big-counter').innerText = `1388 + ${count || 0}`;
+
+            // 1. Veritabanından biletli kullanıcı sayısını çek
+            const { count, error } = await supabaseClient
+                .from('profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('has_ticket', true);
+
+            // 2. 1388 + Veritabanındaki biletli sayısı
+            const biletliSayisi = count || 0;
+            const toplamGosterim = 1388 + biletliSayisi;
             
+            // 3. Ekrana Yazdır
+            document.getElementById('big-counter').innerText = toplamGosterim.toLocaleString();
+
             document.getElementById('entry-btn').onclick = async () => {
                 const user = tg.initDataUnsafe?.user;
-                if (user) {
-                    await supabaseClient.from('profiles').upsert({ telegram_id: user.id, username: user.username || "isimsiz" });
-                }
+                if (user) await supabaseClient.from('profiles').upsert({ telegram_id: user.id, username: user.username || "isimsiz" });
                 window.location.href = "dashboard.html";
             };
         }
