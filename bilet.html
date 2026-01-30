@@ -9,46 +9,39 @@
 </head>
 <body>
     <div class="container">
-        <header><button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:10px 20px;">⬅ Geri</button></header>
-        <div class="card" style="text-align:center;"><div style="font-size:40px;">🎫</div><h2 class="yellow-text">BİLET MERKEZİ</h2></div>
-        
-        <div class="card" style="border:1px dashed var(--accent);">
-            <h3>📺 Reklam İzle (Kalan: <span id="ad-count">5</span>)</h3>
-            <button id="ad-btn" onclick="watchAd()" class="btn-main" style="margin-top:10px;">REKLAM İZLE</button>
+        <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:10px;">⬅ Geri</button>
+        <div class="card" style="text-align:center; margin-top:20px;">
+            <h2 class="yellow-text">BİLET AL</h2>
+            <p>Reklam izle (5/5) veya bakiye ile al.</p>
         </div>
-
-        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>Bakiyenle Al (1.00 TON):</span>
-            <button onclick="buyTicket()" style="background:var(--yellow); color:black; border:none; padding:10px 15px; border-radius:8px; font-weight:bold;">SATIN AL</button>
-        </div>
+        <button id="ad-btn" onclick="watchAd()" class="btn-main">📺 REKLAM İZLE (<span id="count">0</span>/5)</button>
+        <button onclick="buy()" class="btn-main" style="background:var(--accent); margin-top:10px;">💰 1.00 TON İLE AL</button>
     </div>
     <script>
         const tg = window.Telegram.WebApp;
-        let ads = parseInt(localStorage.getItem('ads_done')) || 0;
-        document.getElementById('ad-count').innerText = 5 - ads;
+        let c = parseInt(localStorage.getItem('ads')) || 0;
+        document.getElementById('count').innerText = c;
 
         function watchAd() {
-            if(typeof show_10527452 !== 'function') return tg.showAlert("Reklam hazır değil.");
+            if(typeof show_10527452 !== 'function') return;
             show_10527452('pop').then(() => {
-                ads++; localStorage.setItem('ads_done', ads);
-                document.getElementById('ad-count').innerText = 5 - ads;
-                if(ads >= 5) grant();
+                c++; localStorage.setItem('ads', c);
+                document.getElementById('count').innerText = c;
+                if(c >= 5) grant();
             });
         }
-
-        async function buyTicket() {
+        async function buy() {
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
-            const { data } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', user.id).single();
-            if(data && data.balance >= 1.0) {
-                await supabaseClient.from('profiles').update({ balance: data.balance - 1 }).eq('telegram_id', user.id);
+            const { data: p } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', user.id).single();
+            if(p.balance >= 1.0) {
+                await supabaseClient.from('profiles').update({ balance: p.balance - 1 }).eq('telegram_id', user.id);
                 grant();
-            } else tg.showAlert("Bakiye Yetersiz!");
+            } else tg.showAlert("Yetersiz Bakiye!");
         }
-
         async function grant() {
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
             await supabaseClient.from('profiles').update({ has_ticket: true }).eq('telegram_id', user.id);
-            localStorage.removeItem('ads_done');
+            localStorage.setItem('ads', 0);
             tg.showAlert("Bilet Tanımlandı!"); location.href="dashboard.html";
         }
     </script>
