@@ -1,94 +1,167 @@
+/* --- TEMEL AYARLAR --- */
 :root {
-    --bg: #0e1621;
-    --card: #17212b;
-    --accent: #2481cc;
-    --yellow: #fecb2e;
+    --bg: #0e1621;         /* Telegram Koyu Arka Plan */
+    --card: #17212b;       /* Kart Arka Planı */
+    --accent: #2481cc;     /* Telegram Mavisi */
+    --yellow: #fecb2e;     /* Altın/Sarı (Bilet ve Sayaç) */
     --white: #ffffff;
-    --red: #e64d4d;
-    --green: #31b545;
+    --red: #e64d4d;        /* Admin ve Hata */
+    --green: #31b545;      /* Başarı ve Çekim */
 }
 
 * {
-    box-sizing: border-box; /* Taşmaları önlemek için kritik */
-    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent; /* Mobilde tıklama gölgesini kaldırır */
 }
 
 body {
     margin: 0;
-    padding: 12px; /* Mobil cihazlar için kenar payı */
-    font-family: -apple-system, system-ui, sans-serif;
+    padding: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background-color: var(--bg);
     color: var(--white);
-    font-size: 14px;
+    line-height: 1.4;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    align-items: center;
 }
 
-/* Kapsayıcılar */
 .splash-container, .dashboard-container {
     width: 100%;
-    max-width: 500px; /* Bilgisayarda çok yayılmasın */
-    margin: 0 auto;
+    max-width: 450px; /* Masaüstünde çok yayılmasını önler */
 }
 
-/* Kart Yapıları */
+/* --- KART YAPILARI --- */
 .card {
     background: var(--card);
-    border-radius: 12px;
+    border-radius: 15px;
     padding: 15px;
-    margin-bottom: 12px;
+    margin-bottom: 15px;
     border: 1px solid #242f3d;
     width: 100%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
-/* Sponsor Izgarası - Mobil Uyumlu */
+/* --- SPONSOR VE IZGARA DÜZENİ --- */
 .sponsor-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Her zaman 2 sütun */
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin: 15px 0;
+    margin: 20px 0;
 }
 
 .sponsor-box {
     background: var(--card);
     border: 1px dashed #3b4754;
-    border-radius: 10px;
-    height: 90px;
+    border-radius: 12px;
+    height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    font-size: 10px;
-    padding: 8px;
+    font-size: 11px;
+    padding: 10px;
     color: #8393a3;
 }
 
 .sponsor-box.highlight {
     border: 1px solid var(--accent);
     color: var(--accent);
+    background: rgba(36, 129, 204, 0.05);
 }
 
-/* Butonlar - Mobil Parmak Dostu */
-.btn-main, .btn-sub, .btn-admin {
+/* --- BUTONLAR --- */
+.btn-main {
     width: 100%;
-    min-height: 50px; /* Mobilde dokunma kolaylığı */
-    border-radius: 12px;
+    min-height: 50px;
+    background: var(--accent);
+    color: white;
     border: none;
+    border-radius: 12px;
     font-weight: bold;
     font-size: 16px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.2s;
-    margin-bottom: 8px;
+    transition: transform 0.1s, opacity 0.2s;
 }
 
-.btn-main { background: var(--accent); color: white; }
-.btn-sub { background: #242f3d; color: white; font-size: 14px; }
-.btn-admin { background: var(--red); color: white; margin-top: 5px; }
+.btn-main:active { transform: scale(0.98); }
 
+.btn-sub {
+    background: #242f3d;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    width: 100%;
+}
+
+.btn-admin {
+    background: var(--red);
+    margin-top: 10px;
+}
+
+.btn-buy-ticket {
+    background: var(--yellow);
+    color: #000;
+}
+
+/* --- CÜZDAN VE BAKİYE ÖZELLİKLERİ --- */
+.wallet-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0e1621;
+    padding: 12px;
+    border-radius: 10px;
+    margin-top: 10px;
+    border: 1px solid #242f3d;
+}
+
+#wallet-addr-short {
+    color: var(--accent);
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.btn-copy {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+/* --- SAYAÇ VE ROZETLER --- */
+.counter-card {
+    text-align: center;
+    padding: 25px 15px;
+    border: 2px solid var(--accent);
+    border-radius: 20px;
+    margin-bottom: 25px;
+    background: rgba(36, 129, 204, 0.05);
+}
+
+.counter-value {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--yellow);
+    text-shadow: 0 0 15px rgba(254, 203, 46, 0.3);
+}
+
+.badge {
+    background: var(--red);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+/* --- DİĞER --- */
 .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -97,17 +170,30 @@ body {
 
 .hidden { display: none !important; }
 
-/* Sayaç ve Metinler */
-.counter-card {
+.yellow-text { color: var(--yellow); font-weight: bold; }
+
+.ticket-status-ok {
+    background: rgba(49, 181, 69, 0.1);
+    color: var(--green);
+    padding: 12px;
+    border-radius: 10px;
     text-align: center;
-    padding: 20px 10px;
-    border: 2px solid var(--accent);
-    border-radius: 15px;
-    margin-bottom: 20px;
+    font-weight: bold;
+    border: 1px solid var(--green);
 }
 
-.counter-value {
-    font-size: 26px;
-    font-weight: 800;
-    color: var(--yellow);
+/* Animasyonlar */
+.pulse {
+    animation: pulse-animation 2s infinite;
 }
+
+@keyframes pulse-animation {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+/* Tablo Düzeni (Results için) */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; opacity: 0.6; font-size: 12px; padding: 10px; }
+td { padding: 12px 10px; border-bottom: 1px solid #242f3d; }
