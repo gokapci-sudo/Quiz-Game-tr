@@ -10,18 +10,21 @@
 <body>
     <div class="dashboard-container">
         <header class="card" style="display:flex; justify-content:space-between; align-items:center;">
-            <span id="display-username" class="yellow-text">...</span>
+            <div><span id="display-username" class="yellow-text">@...</span></div>
             <button id="admin-panel-btn" onclick="location.href='admin.html'" class="btn-sub hidden" style="width:auto; height:30px;">Panel</button>
         </header>
 
         <section class="card">
-            <small>Bakiyeniz</small>
-            <div style="font-size:26px; font-weight:bold;"><span id="user-balance">0.00</span> TON</div>
-            <button id="withdraw-btn" onclick="requestWithdraw()" class="btn-main hidden" style="background:var(--green); height:40px; margin-top:10px;">ÇEKİM YAP (Min 2.0)</button>
-            <button id="connect-btn" onclick="setWallet()" class="btn-sub" style="margin-top:10px;">💎 Cüzdan Bağla</button>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div><small>Bakiye</small><div style="font-size:24px; font-weight:bold;"><span id="user-balance">0.00</span> TON</div></div>
+                <button id="withdraw-btn" onclick="requestWithdraw()" class="btn-sub hidden" style="width:auto; background:var(--green);">Çekim Yap</button>
+            </div>
+            <div id="wallet-area" style="margin-top:10px;">
+                <button id="connect-btn" onclick="openWallet()" class="btn-sub">💎 Cüzdan Bağla</button>
+            </div>
         </section>
 
-        <div id="ticket-info"></div>
+        <div id="ticket-info-area"></div>
 
         <div class="grid-2">
             <button onclick="location.href='results.html'" class="btn-sub">📊 Sıralama</button>
@@ -32,39 +35,42 @@
         const tg = window.Telegram.WebApp;
         async function init() {
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
-            const { data: p } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
-            if(p) {
-                document.getElementById('display-username').innerText = "@" + p.username;
-                document.getElementById('user-balance').innerText = p.balance.toFixed(2);
-                if(p.balance >= 2.0) document.getElementById('withdraw-btn').classList.remove('hidden');
+            const { data: profile } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
+            
+            if(profile) {
+                document.getElementById('display-username').innerText = `@${profile.username}`;
+                document.getElementById('user-balance').innerText = profile.balance.toFixed(2);
+                if(profile.balance >= 2.0) document.getElementById('withdraw-btn').classList.remove('hidden');
                 if(user.id === APP_CONFIG.adminID) document.getElementById('admin-panel-btn').classList.remove('hidden');
                 
                 const status = getRaceStatus();
-                const area = document.getElementById('ticket-info');
-                if(status.active && p.has_ticket) area.innerHTML = `<button onclick="location.href='quiz.html'" class="btn-main" style="background:var(--green)">🏁 YARIŞMAYA GİR</button>`;
-                else if(p.has_ticket) area.innerHTML = `<div class="card" style="text-align:center; color:var(--green);">✅ Bilet Hazır (Saat: ${status.nextMatch})</div>`;
+                const area = document.getElementById('ticket-info-area');
+                if(status.active && profile.has_ticket) area.innerHTML = `<button onclick="location.href='quiz.html'" class="btn-main" style="background:var(--green)">🏁 YARIŞMAYA GİR</button>`;
+                else if(profile.has_ticket) area.innerHTML = `<div class="card" style="text-align:center; color:var(--green);">✅ Bilet Hazır (Saat: ${status.nextMatch})</div>`;
                 else area.innerHTML = `<button onclick="location.href='bilet.html'" class="btn-main" style="background:var(--yellow); color:black;">🎫 BİLET AL</button>`;
             }
         }
+
         async function requestWithdraw() {
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
             const { data: p } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
-            if(!p.wallet_address) return tg.showAlert("Lütfen cüzdan bağlayın!");
+            if(!p.wallet_address) return tg.showAlert("Önce cüzdan bağlayın!");
 
-            // ADIM 1: Talebi Gönder
+            // KRİTİK: Önce withdrawals tablosuna yaz
             const { error: wErr } = await supabaseClient.from('withdrawals').insert([{ 
                 telegram_id: user.id, wallet_address: p.wallet_address, amount: p.balance, status: 'pending' 
             }]);
 
-            if(wErr) return tg.showAlert("Hata: " + wErr.message);
-
-            // ADIM 2: Bakiye Sıfırla
-            await supabaseClient.from('profiles').update({ balance: 0 }).eq('telegram_id', user.id);
-            tg.showAlert("Talep Admine iletildi!");
-            location.reload();
+            if(!wErr) {
+                // Kayıt başarılıysa bakiyeyi sıfırla
+                await supabaseClient.from('profiles').update({ balance: 0 }).eq('telegram_id', user.id);
+                tg.showAlert("Talep alındı!"); location.reload();
+            } else {
+                tg.showAlert("Hata: Talep iletilemedi.");
+            }
         }
-        function setWallet() {
-            const addr = prompt("TON Cüzdan Adresiniz:");
+        function openWallet() {
+            const addr = prompt("Cüzdan Adresiniz:");
             if(addr) supabaseClient.from('profiles').update({ wallet_address: addr }).eq('telegram_id', tg.initDataUnsafe?.user?.id || APP_CONFIG.adminID).then(() => location.reload());
         }
         init();
