@@ -70,39 +70,77 @@
 
     <script src="script.js"></script>
     <script>
-        // Sayfa açıldığında ödül ve saat ayarlarını yükle
-        async function loadDashboardSettings() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('settings')
-                    .select('*')
-                    .eq('id', 1)
-                    .single();
+        const tgApp = window.Telegram.WebApp;
+        let hasTicket = false;
 
-                if (data && !error) {
-                    // Yarışma Saatleri
-                    const times = data.race_times.split(',');
-                    document.getElementById('race-schedule').innerHTML = times
-                        .map(t => `<span>${t.trim()}</span>`)
-                        .join('<span style="opacity:0.2">|</span>');
-                    
-                    // Ödül Havuzu ve Matematiksel Dağılım
-                    const total = parseFloat(data.total_prize);
-                    document.getElementById('total-prize-amount').innerText = total.toFixed(2) + " TON";
-                    document.getElementById('p1-reward').innerText = (total * 0.5).toFixed(2);
-                    document.getElementById('p2-reward').innerText = (total * 0.3).toFixed(2);
-                    document.getElementById('p3-reward').innerText = (total * 0.2).toFixed(2);
-                }
-            } catch (err) {
-                console.error("Ayarlar yüklenirken hata oluştu:", err);
+        async function loadDashboardSettings() {
+            const { data, error } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+            
+            // Kullanıcının bilet durumunu da çekelim (script.js içindeki veriyi kullanabiliriz ama garanti olsun)
+            const user = tgApp.initDataUnsafe?.user || { id: 1369398784 };
+            const { data: profile } = await supabaseClient.from('profiles').select('has_ticket').eq('telegram_id', user.id).single();
+            hasTicket = profile?.has_ticket || false;
+
+            if (data && !error) {
+                // Saatleri Çizelgeye Yaz
+                const times = data.race_times.split(',');
+                document.getElementById('race-schedule').innerHTML = times.map(t => `<span>${t.trim()}</span>`).join('<span style="opacity:0.2">|</span>');
+                
+                // Ödülleri Hesapla
+                const total = parseFloat(data.total_prize);
+                document.getElementById('total-prize-amount').innerText = total.toFixed(2) + " TON";
+                document.getElementById('p1-reward').innerText = (total * 0.5).toFixed(2);
+                document.getElementById('p2-reward').innerText = (total * 0.3).toFixed(2);
+                document.getElementById('p3-reward').innerText = (total * 0.2).toFixed(2);
+
+                // Zaman Kontrolünü Başlat
+                checkRaceTime(data.race_times);
+                setInterval(() => checkRaceTime(data.race_times), 30000); // 30 saniyede bir kontrol et
             }
         }
 
-        // DOM yüklendiğinde çalıştır
-        document.addEventListener('DOMContentLoaded', () => {
-            loadDashboardSettings();
-            // script.js içindeki init fonksiyonunun çalıştığından emin olun
-        });
+        function checkRaceTime(raceTimesString) {
+            const now = new Date();
+            const times = raceTimesString.split(',').map(t => t.trim());
+            const startBtn = document.getElementById('start-quiz-btn');
+            const raceDurationMinutes = 20; // Yarışma başladıktan sonra 20 dk aktif kalır
+
+            let isRaceLive = false;
+
+            times.forEach(startTime => {
+                const [hour, min] = startTime.split(':').map(Number);
+                const raceDate = new Date();
+                raceDate.setHours(hour, min, 0);
+
+                const raceEndDate = new Date(raceDate.getTime() + raceDurationMinutes * 60000);
+
+                if (now >= raceDate && now <= raceEndDate) {
+                    isRaceLive = true;
+                }
+            });
+
+            if (isRaceLive) {
+                startBtn.disabled = false;
+                startBtn.style.opacity = "1";
+                startBtn.style.background = "var(--green)";
+                startBtn.innerText = "YARIŞMAYA KATIL";
+                startBtn.onclick = () => {
+                    if(hasTicket) {
+                        location.href = 'quiz.html';
+                    } else {
+                        tgApp.showAlert("Yarışmaya katılmak için biletiniz olmalı!");
+                        location.href = 'bilet.html';
+                    }
+                };
+            } else {
+                startBtn.disabled = true;
+                startBtn.style.opacity = "0.5";
+                startBtn.style.background = "#242f3d";
+                startBtn.innerText = "YARIŞMA SAATİNİ BEKLE";
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDashboardSettings);
     </script>
 </body>
 </html>
