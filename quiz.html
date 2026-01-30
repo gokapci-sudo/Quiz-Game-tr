@@ -1,47 +1,189 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="config.js"></script>
+    <style>
+        .option-btn {
+            width: 100%;
+            background: #242f3d;
+            border: 1px solid #333;
+            color: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 12px;
+            text-align: left;
+            font-size: 15px;
+            transition: 0.2s;
+        }
+        .option-btn:active { transform: scale(0.98); background: var(--accent); }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #1c252f;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        #progress-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--yellow);
+            transition: width 0.3s;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <div class="card" style="display:flex; justify-content:space-between; align-items:center;"><span id="q-num" class="yellow-text">...</span><div id="timer" style="color:var(--red); font-weight:900; font-size:20px;">15s</div></div>
-        <div class="card"><h2 id="q-text" style="min-height:60px;">...</h2><div id="opts" style="display:grid; gap:10px; margin-top:20px;"></div></div>
+        <div id="quiz-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span id="question-number" style="font-size: 12px; opacity: 0.6;">Soru: 1/10</span>
+                <span id="timer-display" style="font-weight: bold; color: var(--yellow);">00:00</span>
+            </div>
+            
+            <div class="progress-bar">
+                <div id="progress-fill"></div>
+            </div>
+
+            <div class="card" id="quiz-area">
+                <h3 id="question-text" style="margin-bottom: 20px; min-height: 60px;">Soru yükleniyor...</h3>
+                <div id="options-container">
+                    </div>
+            </div>
+        </div>
     </div>
+
     <script>
-        let qs = [], idx = 0, score = 0, t, start = Date.now();
-        async function init() {
-            const { data } = await supabaseClient.from('questions').select('*').limit(10);
-            qs = data; show();
+        const tgApp = window.Telegram.WebApp;
+        let questions = [];
+        let currentIdx = 0;
+        let score = 0;
+        let startTime;
+        let totalQuestions = 10; // Her yarışmada kaç soru çıkacaksa
+
+        async function startQuiz() {
+            startTime = Date.now();
+            updateTimer();
+            
+            // Veritabanından rastgele sorular çek
+            const { data, error } = await supabaseClient
+                .from('questions')
+                .select('*')
+                .limit(totalQuestions);
+
+            if (error || !data || data.length === 0) {
+                tgApp.showAlert("Sorular yüklenemedi. Lütfen daha sonra deneyin.");
+                location.href = 'dashboard.html';
+                return;
+            }
+
+            questions = data;
+            showQuestion();
+            setInterval(updateTimer, 1000);
         }
-        function show() {
-            if(idx >= qs.length) return end();
-            const q = qs[idx];
-            document.getElementById('q-num').innerText = `SORU: ${idx+1}/10`;
-            document.getElementById('q-text').innerText = q.question_text;
-            const cont = document.getElementById('opts'); cont.innerHTML = '';
-            q.options.forEach((o, i) => {
-                const b = document.createElement('button'); b.className = 'btn-sub'; b.innerText = o;
-                b.onclick = () => { if(i === q.correct_option) score += 10; idx++; show(); };
-                cont.appendChild(b);
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const secs = (elapsed % 60).toString().padStart(2, '0');
+            const timerElem = document.getElementById('timer-display');
+            if(timerElem) timerElem.innerText = `${mins}:${secs}`;
+        }
+
+        function showQuestion() {
+            const q = questions[currentIdx];
+            document.getElementById('question-text').innerText = q.question_text;
+            document.getElementById('question-number').innerText = `Soru: ${currentIdx + 1}/${questions.length}`;
+            document.getElementById('progress-fill').style.width = `${((currentIdx) / questions.length) * 100}%`;
+
+            const optionsDiv = document.getElementById('options-container');
+            optionsDiv.innerHTML = '';
+
+            q.options.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(i);
+                optionsDiv.appendChild(btn);
             });
-            let left = 15; clearInterval(t);
-            t = setInterval(() => { 
-                left--; document.getElementById('timer').innerText = left+"s";
-                if(left <= 0) { idx++; show(); }
-            }, 1000);
         }
-        async function end() {
-            clearInterval(t);
-            const time = Math.floor((Date.now() - start) / 1000);
-            const user = window.Telegram.WebApp.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
-            await supabaseClient.from('profiles').update({ score: score, completion_time: time, has_ticket: false }).eq('telegram_id', user.id);
-            document.body.innerHTML = `<div class="container"><div class="card" style="text-align:center; padding:40px;"><h2>BİTTİ! 🏁</h2><p>Puan: ${score} | Süre: ${time}s</p><button onclick="location.href='dashboard.html'" class="btn-main" style="margin-top:20px;">Tamam</button></div></div>`;
+
+        function handleAnswer(selectedIdx) {
+            if (selectedIdx === questions[currentIdx].correct_option) {
+                score++;
+            }
+
+            currentIdx++;
+
+            if (currentIdx < questions.length) {
+                showQuestion();
+            } else {
+                finishQuiz();
+            }
         }
-        init();
+
+        function finishQuiz() {
+            const endTime = Date.now();
+            const duration = ((endTime - startTime) / 1000).toFixed(2);
+            document.getElementById('progress-fill').style.width = '100%';
+
+            const quizArea = document.getElementById('quiz-area');
+            quizArea.innerHTML = `
+                <div style="text-align:center; padding:10px;">
+                    <h2 style="color:var(--yellow); margin-bottom:15px;">🏁 TEST BİTTİ</h2>
+                    <p style="font-size:18px; margin-bottom:5px;">Doğru Sayısı: <b>${score}</b></p>
+                    <p style="font-size:14px; opacity:0.7; margin-bottom:25px;">Süre: <b>${duration} saniye</b></p>
+                    
+                    <button id="save-result-btn" class="btn-main" style="background:var(--green); border:none; color:white;">
+                        YARIŞMAYI BİTİR VE KAYDET
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('save-result-btn').onclick = async () => {
+                const btn = document.getElementById('save-result-btn');
+                btn.disabled = true;
+                btn.innerText = "KAYDEDİLİYOR...";
+
+                try {
+                    const user = tgApp.initDataUnsafe?.user || { id: 1369398784, username: 'testuser' };
+
+                    // 1. Skoru Kaydet
+                    const { error: resError } = await supabaseClient
+                        .from('results')
+                        .insert([{ 
+                            telegram_id: user.id, 
+                            score: score, 
+                            duration: parseFloat(duration),
+                            username: user.username || "Anonim"
+                        }]);
+
+                    if (resError) throw resError;
+
+                    // 2. Bileti Harca
+                    await supabaseClient
+                        .from('profiles')
+                        .update({ has_ticket: false })
+                        .eq('telegram_id', user.id);
+
+                    tgApp.showAlert("Sonuçlarınız kaydedildi!", () => {
+                        location.href = 'dashboard.html';
+                    });
+
+                } catch (err) {
+                    console.error(err);
+                    tgApp.showAlert("Hata: " + err.message);
+                    btn.disabled = false;
+                    btn.innerText = "TEKRAR DENE";
+                }
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', startQuiz);
     </script>
 </body>
 </html>
