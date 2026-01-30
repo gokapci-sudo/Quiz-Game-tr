@@ -1,79 +1,235 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="config.js"></script>
-</head>
+    <script src="config.js"></script> </head>
 <body>
-    <div class="dashboard-container">
-        <header class="card" style="display:flex; justify-content:space-between; align-items:center;">
-            <div><span id="display-username" class="yellow-text">@...</span></div>
-            <button id="admin-panel-btn" onclick="location.href='admin.html'" class="btn-sub hidden" style="width:auto; height:30px;">Panel</button>
-        </header>
-
-        <section class="card">
+    <div class="container">
+        <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div><small>Bakiye</small><div style="font-size:24px; font-weight:bold;"><span id="user-balance">0.00</span> TON</div></div>
-                <button id="withdraw-btn" onclick="requestWithdraw()" class="btn-sub hidden" style="width:auto; background:var(--green);">Çekim Yap</button>
+                <b id="display-username">@Yükleniyor...</b>
+                <span id="admin-badge" class="hidden" style="background:var(--red); padding:2px 8px; border-radius:5px; font-size:10px; font-weight:bold;">ADMIN</span>
             </div>
-            <div id="wallet-area" style="margin-top:10px;">
-                <button id="connect-btn" onclick="openWallet()" class="btn-sub">💎 Cüzdan Bağla</button>
+            
+            <div id="wallet-area" style="margin-top:15px;">
+                <button id="connect-wallet-btn" class="btn-main" onclick="openWalletPrompt()" style="min-height:40px; font-size:14px;">💎 TON Cüzdanı Bağla</button>
+                
+                <div id="active-wallet" class="wallet-box hidden" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <code id="wallet-addr-short" style="color: var(--accent); font-family: monospace;"></code>
+                    <button onclick="copyWalletAddress()" class="btn-copy" style="background:none; border:none; cursor:pointer;">📋</button>
+                </div>
             </div>
-        </section>
 
-        <div id="ticket-info-area"></div>
+            <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:center;">
+                <span>Bakiye: <b id="user-balance" style="color:var(--yellow);">0.00</b> TON</span>
+                <button id="withdraw-btn" class="hidden" onclick="requestWithdraw()" style="background:var(--green); border:none; color:white; padding:8px 15px; border-radius:10px; font-weight:bold; cursor:pointer;">ÇEKİM YAP</button>
+            </div>
+        </div>
+
+        <div class="card" style="text-align:center;">
+            <div id="ticket-info-area" style="margin-bottom:15px; font-weight: bold;">
+                </div>
+            <button id="start-quiz-btn" class="btn-main" style="opacity:0.5;" disabled>YARIŞMA SAATİNİ BEKLE</button>
+        </div>
+
+        <div class="card" style="margin-top: 10px; background: rgba(36, 129, 204, 0.05); border: 1px dashed var(--accent);">
+            <h3 style="font-size: 11px; opacity: 0.6; margin-bottom: 8px; text-align: center; letter-spacing: 1px;">🕒 YARIŞMA SAATLERİ</h3>
+            <div id="race-schedule" style="display: flex; justify-content: center; gap: 12px; font-weight: bold; color: var(--accent); font-size: 15px;">
+                </div>
+        </div>
+
+        <div class="card" style="text-align: center; border: 1px solid var(--yellow); background: linear-gradient(180deg, rgba(254, 203, 46, 0.05) 0%, rgba(23, 33, 43, 1) 100%);">
+            <small style="opacity: 0.7; font-size: 10px; font-weight: bold; letter-spacing: 1px;">TOPLAM ÖDÜL HAVUZU</small>
+            <div id="total-prize-amount" style="font-size: 26px; font-weight: 900; color: var(--yellow); margin: 5px 0;">0.00 TON</div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <div>
+                    <div style="font-size: 20px;">🥇</div>
+                    <div id="p1-reward" style="font-weight: bold; font-size: 14px; color: #fff;">0</div>
+                    <div style="font-size: 9px; opacity: 0.5;">%50</div>
+                </div>
+                <div>
+                    <div style="font-size: 20px;">🥈</div>
+                    <div id="p2-reward" style="font-weight: bold; font-size: 14px; color: #fff;">0</div>
+                    <div style="font-size: 9px; opacity: 0.5;">%30</div>
+                </div>
+                <div>
+                    <div style="font-size: 20px;">🥉</div>
+                    <div id="p3-reward" style="font-weight: bold; font-size: 14px; color: #fff;">0</div>
+                    <div style="font-size: 9px; opacity: 0.5;">%20</div>
+                </div>
+            </div>
+        </div>
 
         <div class="grid-2">
-            <button onclick="location.href='results.html'" class="btn-sub">📊 Sıralama</button>
-            <button onclick="location.href='announcements.html'" class="btn-sub">📢 Duyurular</button>
+            <button class="btn-sub" onclick="location.href='results.html'">🏆 Sıralama</button>
+            <button class="btn-sub" onclick="location.href='announcements.html'">📢 Duyurular</button>
+            <button id="admin-panel-btn" class="btn-sub hidden" style="background:var(--red); grid-column:span 2; color: white;" onclick="location.href='admin.html'">⚙️ ADMİN PANELİ</button>
         </div>
     </div>
+
     <script>
-        const tg = window.Telegram.WebApp;
-        async function init() {
-            const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
-            const { data: profile } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
+        const tgApp = window.Telegram.WebApp;
+        let hasTicket = false;
+        let userWallet = "";
+
+        async function loadDashboard() {
+            const user = tgApp.initDataUnsafe?.user || { id: 1369398784, username: "test_user" };
             
-            if(profile) {
-                document.getElementById('display-username').innerText = `@${profile.username}`;
+            // 1. Profil Verilerini Çek
+            const { data: profile, error: pError } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('telegram_id', user.id)
+                .single();
+
+            if (profile) {
+                document.getElementById('display-username').innerText = `@${profile.username || 'Oyuncu'}`;
                 document.getElementById('user-balance').innerText = profile.balance.toFixed(2);
-                if(profile.balance >= 2.0) document.getElementById('withdraw-btn').classList.remove('hidden');
-                if(user.id === APP_CONFIG.adminID) document.getElementById('admin-panel-btn').classList.remove('hidden');
-                
-                const status = getRaceStatus();
-                const area = document.getElementById('ticket-info-area');
-                if(status.active && profile.has_ticket) area.innerHTML = `<button onclick="location.href='quiz.html'" class="btn-main" style="background:var(--green)">🏁 YARIŞMAYA GİR</button>`;
-                else if(profile.has_ticket) area.innerHTML = `<div class="card" style="text-align:center; color:var(--green);">✅ Bilet Hazır (Saat: ${status.nextMatch})</div>`;
-                else area.innerHTML = `<button onclick="location.href='bilet.html'" class="btn-main" style="background:var(--yellow); color:black;">🎫 BİLET AL</button>`;
+                hasTicket = profile.has_ticket;
+                userWallet = profile.wallet_address;
+
+                // Bilet Bilgisi Alanı
+                const infoArea = document.getElementById('ticket-info-area');
+                infoArea.innerHTML = hasTicket 
+                    ? '<span style="color:var(--green)">✅ BİLETİNİZ AKTİF</span>' 
+                    : '<span style="color:var(--red)">❌ BİLETİNİZ YOK</span>';
+
+                // Admin Kontrolü
+                if (user.id == 1369398784 || profile.is_admin) {
+                    document.getElementById('admin-badge').classList.remove('hidden');
+                    document.getElementById('admin-panel-btn').classList.remove('hidden');
+                }
+
+                // Cüzdan Görünümü
+                if (userWallet) {
+                    document.getElementById('connect-wallet-btn').classList.add('hidden');
+                    document.getElementById('active-wallet').classList.remove('hidden');
+                    document.getElementById('wallet-addr-short').innerText = userWallet.substring(0,8) + "..." + userWallet.slice(-4);
+                }
+
+                // Çekim Butonu (Min 2.0 TON)
+                if (profile.balance >= 2.0) {
+                    document.getElementById('withdraw-btn').classList.remove('hidden');
+                }
             }
+
+            // 2. Genel Ayarları Çek (Ödül & Saatler)
+            const { data: settings } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+            if (settings) {
+                const times = settings.race_times.split(',');
+                document.getElementById('race-schedule').innerHTML = times.map(t => `<span>${t.trim()}</span>`).join('<span style="opacity:0.2">|</span>');
+                
+                const total = parseFloat(settings.total_prize);
+                document.getElementById('total-prize-amount').innerText = total.toFixed(2) + " TON";
+                document.getElementById('p1-reward').innerText = (total * 0.5).toFixed(2);
+                document.getElementById('p2-reward').innerText = (total * 0.3).toFixed(2);
+                document.getElementById('p3-reward').innerText = (total * 0.2).toFixed(2);
+
+                checkRaceTime(settings.race_times);
+                setInterval(() => checkRaceTime(settings.race_times), 10000);
+            }
+        }
+
+        function checkRaceTime(raceTimesString) {
+            const now = new Date();
+            const times = raceTimesString.split(',').map(t => t.trim());
+            const startBtn = document.getElementById('start-quiz-btn');
+            
+            const raceActiveLimit = 3; 
+            const totalExpiryLimit = 4; 
+
+            let isRaceWindow = false; 
+            let isJoinable = false;   
+
+            times.forEach(startTime => {
+                const [hour, min] = startTime.split(':').map(Number);
+                const raceDate = new Date();
+                raceDate.setHours(hour, min, 0);
+
+                const raceEndDate = new Date(raceDate.getTime() + raceActiveLimit * 60000);
+                const expireDate = new Date(raceDate.getTime() + totalExpiryLimit * 60000);
+
+                if (now >= raceDate && now <= expireDate) {
+                    isRaceWindow = true;
+                    if (now <= raceEndDate) isJoinable = true;
+                }
+            });
+
+            if (isRaceWindow) {
+                if (isJoinable && hasTicket) {
+                    startBtn.disabled = false;
+                    startBtn.style.opacity = "1";
+                    startBtn.style.background = "var(--green)";
+                    startBtn.style.color = "white";
+                    startBtn.innerText = "YARIŞMAYA KATIL";
+                    startBtn.onclick = () => location.href = 'quiz.html';
+                } else {
+                    startBtn.disabled = false;
+                    startBtn.style.opacity = "1";
+                    startBtn.style.background = "var(--yellow)";
+                    startBtn.style.color = "black";
+                    startBtn.innerText = "BİLET AL";
+                    startBtn.onclick = () => location.href = 'bilet.html';
+                }
+            } else {
+                startBtn.disabled = true;
+                startBtn.style.opacity = "0.5";
+                startBtn.style.background = "#242f3d";
+                startBtn.style.color = "white";
+                startBtn.innerText = "YARIŞMA SAATİNİ BEKLE";
+            }
+        }
+
+        // Cüzdan ve Çekim İşlemleri
+        function openWalletPrompt() {
+            const addr = prompt("Lütfen TON Cüzdan Adresinizi Girin:");
+            if (addr && addr.length > 10) {
+                saveWallet(addr);
+            }
+        }
+
+        async function saveWallet(addr) {
+            const userId = tgApp.initDataUnsafe?.user?.id || 1369398784;
+            const { error } = await supabaseClient
+                .from('profiles')
+                .update({ wallet_address: addr })
+                .eq('telegram_id', userId);
+            
+            if(!error) {
+                tgApp.showAlert("Cüzdan başarıyla bağlandı!");
+                location.reload();
+            }
+        }
+
+        function copyWalletAddress() {
+            navigator.clipboard.writeText(userWallet);
+            tgApp.showAlert("Adres kopyalandı!");
         }
 
         async function requestWithdraw() {
-            const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
-            const { data: p } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
-            if(!p.wallet_address) return tg.showAlert("Önce cüzdan bağlayın!");
-
-            // KRİTİK: Önce withdrawals tablosuna yaz
-            const { error: wErr } = await supabaseClient.from('withdrawals').insert([{ 
-                telegram_id: user.id, wallet_address: p.wallet_address, amount: p.balance, status: 'pending' 
-            }]);
-
-            if(!wErr) {
-                // Kayıt başarılıysa bakiyeyi sıfırla
-                await supabaseClient.from('profiles').update({ balance: 0 }).eq('telegram_id', user.id);
-                tg.showAlert("Talep alındı!"); location.reload();
-            } else {
-                tg.showAlert("Hata: Talep iletilemedi.");
+            const userId = tgApp.initDataUnsafe?.user?.id || 1369398784;
+            // Bakiyeyi tekrar kontrol et
+            const { data: p } = await supabaseClient.from('profiles').select('balance, wallet_address').eq('telegram_id', userId).single();
+            
+            if(p.balance >= 2.0) {
+                const { error: wError } = await supabaseClient.from('withdrawals').insert([
+                    { telegram_id: userId, amount: p.balance, wallet_address: p.wallet_address, status: 'pending' }
+                ]);
+                
+                if(!wError) {
+                    await supabaseClient.from('profiles').update({ balance: 0 }).eq('telegram_id', userId);
+                    tgApp.showAlert("Çekim talebi gönderildi! Bakiyeniz sıfırlandı.");
+                    location.reload();
+                }
             }
         }
-        function openWallet() {
-            const addr = prompt("Cüzdan Adresiniz:");
-            if(addr) supabaseClient.from('profiles').update({ wallet_address: addr }).eq('telegram_id', tg.initDataUnsafe?.user?.id || APP_CONFIG.adminID).then(() => location.reload());
-        }
-        init();
+
+        document.addEventListener('DOMContentLoaded', loadDashboard);
     </script>
 </body>
 </html>
