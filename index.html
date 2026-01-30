@@ -11,8 +11,8 @@
 <body class="splash-body">
     <div class="splash-container">
         <div class="counter-card">
-            <span class="counter-label">TOPLAM BİLETLİ KATILIMCI</span>
-            <div id="big-counter" class="counter-value">...</div>
+            <span class="counter-label" style="opacity: 0.8; font-size: 0.8rem;">TOPLAM BİLETLİ KATILIMCI</span>
+            <div id="big-counter" class="counter-value">1388 + ...</div>
         </div>
 
         <div class="sponsor-grid">
@@ -22,7 +22,7 @@
             <div class="sponsor-box highlight">Bu Alana Reklam Verebilirsiniz</div>
         </div>
 
-        <div class="action-footer">
+        <div class="action-footer" style="margin-top: 20px;">
             <button id="entry-btn" class="btn-main pulse">GİRİŞ YAP</button>
         </div>
     </div>
@@ -34,9 +34,10 @@
         const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
         async function initApp() {
-            tg.ready(); tg.expand();
+            tg.ready();
+            tg.expand();
             
-            // Sayaç: 1388 + DB'deki biletliler
+            // Sayaç güncelleme
             const { count } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
             document.getElementById('big-counter').innerText = `1388 + ${count || 0}`;
 
@@ -45,10 +46,9 @@
                 if (user) {
                     await supabaseClient.from('profiles').upsert({
                         telegram_id: user.id,
-                        username: user.username || "Anonim",
+                        username: user.username || "isimsiz",
                     }, { onConflict: 'telegram_id' });
                 }
-                // Kayıt sonrası Dashboard'a yönlendir
                 window.location.href = "dashboard.html";
             };
         }
