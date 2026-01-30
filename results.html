@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duyurular</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <button onclick="window.history.back()" class="btn-back">⬅ Geri</button>
+        <h2>📢 Duyurular</h2>
+        <div id="announcement-list"></div>
+    </div>
+
+    <script>
+        const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
+        const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
+        const supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        async function loadAnnouncements() {
+            const { data } = await supabase
+                .from('announcements')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            const list = document.getElementById('announcement-list');
+            data?.forEach(item => {
+                const date = new Date(item.created_at).toLocaleDateString('tr-TR');
+                list.innerHTML += `
+                    <div class="ad-card" style="text-align:left; margin-bottom:10px;">
+                        <small>${date}</small>
+                        <p>${item.content}</p>
+                    </div>
+                `;
+            });
+        }
+        window.onload = loadAnnouncements;
+    </script>
+</body>
+</html>
