@@ -13,29 +13,27 @@
 
     <style>
         :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --yt: #ff0000; --success: #10b981; --error: #ef4444; --safe-top: env(safe-area-inset-top); }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin:0; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; text-align:center; min-height: 100vh; overflow-x: hidden; padding-top: var(--safe-top); }
         
-        .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; position: fixed; top:0; left:0; }
+        .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; position: fixed; top:0; left:0; right: 0; }
         .screen.active { display:flex; }
         
         .card { background:var(--card); padding:15px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 450px; }
         .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; text-decoration: none; }
         
-        /* Dinamik Alanlar */
-        .balance-box { font-size: 2.2rem; color: var(--gold); font-weight: 800; margin: 10px 0; }
-        #ton-connect-btn { display: flex; justify-content: center; margin: 15px 0; }
-        
-        /* Ödül Tablosu */
+        /* Cüzdan ve Bakiye Ortalama */
+        #ton-connect-btn { display: flex; justify-content: center; width: 100%; margin: 15px 0; }
+        .balance-box { font-size: 2.2rem; color: var(--gold); font-weight: 800; margin: 10px 0; width: 100%; text-align: center; }
+
         .prize-table { background: rgba(251, 191, 36, 0.05); border: 1px solid var(--gold); border-radius: 15px; padding: 15px; width: 100%; max-width: 450px; margin: 10px 0; }
-        .prize-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(251, 191, 36, 0.1); }
+        .prize-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(251, 191, 36, 0.1); }
         
-        /* Sponsorlar */
         .sponsor-box { background: #1e293b; height: 80px; border-radius: 12px; margin-bottom: 8px; border: 1px dashed #475569; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 450px; overflow: hidden; }
         
-        /* Admin Paneli */
-        .admin-btn { background: linear-gradient(45deg, #fbbf24, #f59e0b); color: #000; margin-top: 20px; }
-        .req-card { background: #0f172a; padding: 10px; border-radius: 10px; margin-top: 10px; text-align: left; border: 1px solid var(--primary); }
+        /* Admin Stilleri */
+        .admin-btn { background: linear-gradient(45deg, #fbbf24, #f59e0b); color: #000; border: 2px solid #fff; }
+        .admin-card { background: #0f172a; border: 1px solid var(--primary); margin-top: 10px; padding: 10px; border-radius: 10px; text-align: left; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -43,16 +41,15 @@
     <div id="sponsor-screen" class="screen active">
         <h2 style="color: var(--gold);">ARENA SPONSORLARI</h2>
         <div id="sponsor-list" style="width:100%; display: flex; flex-direction: column; align-items: center;"></div>
-        <div id="ticket-info" class="card" style="border-color: var(--gold); color: var(--gold); font-weight: bold;">🎫 Biletler kontrol ediliyor...</div>
         <button class="btn" style="background:var(--primary); color:#000" onclick="handleEntry()">GİRİŞ YAP 🚀</button>
     </div>
 
     <div id="main-screen" class="screen">
         <div class="card">
-            <h2 id="u-name" style="margin:0;">@Oyuncu</h2>
+            <h2 id="u-name">@Oyuncu</h2>
             <div id="ton-connect-btn"></div>
             <div class="balance-box"><span id="u-balance">0.00</span> <small style="font-size:0.9rem">TON</small></div>
-            <button id="withdraw-btn" class="btn" style="background:var(--gold); color:#000" disabled onclick="requestWithdraw()">KAZANÇ TALEP ET</button>
+            <button id="withdraw-btn" class="btn" style="background:var(--gold); color:#000" disabled onclick="requestWithdraw()">KAZANÇ TALEP ET (Min 2.0)</button>
         </div>
 
         <div id="action-area" style="width:100%; display: flex; flex-direction: column; align-items: center;"></div>
@@ -72,32 +69,26 @@
 
     <div id="announcement-screen" class="screen">
         <h2 style="color: var(--gold)">📢 DUYURULAR</h2>
-        <div class="card" id="ann-content" style="text-align: left; white-space: pre-wrap;"></div>
-        <button class="btn" style="background:var(--primary); color:#000" onclick="showScreen('main-screen')">ANLADIM ✅</button>
+        <div class="card" id="ann-text" style="text-align: left; white-space: pre-wrap;"></div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">ANLADIM ✅</button>
     </div>
 
     <div id="admin-screen" class="screen">
-        <h2 style="color: var(--gold)">🛡️ YÖNETİCİ</h2>
-        <div class="card">
-            <h3>Ödeme Talepleri</h3>
-            <div id="adm-req-list">Yükleniyor...</div>
+        <h2 style="color: var(--gold)">🛡️ ADMİN KONTROL</h2>
+        <div class="card" style="width:100%">
+            <h3>Bekleyen Talepler</h3>
+            <div id="adm-withdrawals"></div>
         </div>
-        <div class="card">
-            <h3>Hızlı Soru Ekle</h3>
-            <input id="adm-q" placeholder="Soru" style="width:100%; padding:10px; margin-bottom:5px;">
-            <input id="adm-o" placeholder="A,B,C,D" style="width:100%; padding:10px; margin-bottom:5px;">
-            <input id="adm-c" type="number" placeholder="Doğru İndeks (0-3)" style="width:100%; padding:10px; margin-bottom:5px;">
-            <button class="btn" style="background:var(--success)" onclick="adminAddQ()">EKLE</button>
-        </div>
-        <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">GERİ</button>
+        <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">KAPAT</button>
     </div>
 
     <script>
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
+        const MY_ID = 1369398784;
+        
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
-        const MY_ID = 8333089188;
 
         let userId = tg.initDataUnsafe?.user?.id || 123456, user = null;
 
@@ -109,68 +100,57 @@
         async function init() {
             tg.ready(); tg.expand();
             
-            // Sponsor ve Ödülleri Yükle (Config.js'den)
-            if(window.APP_CONFIG) {
+            // Sponsorları Yükle
+            if (window.APP_CONFIG) {
                 document.getElementById('sponsor-list').innerHTML = APP_CONFIG.sponsors.map(s => `<div class="sponsor-box">${s.text}</div>`).join("");
                 document.getElementById('p1').innerText = APP_CONFIG.prizes.p1;
                 document.getElementById('p2').innerText = APP_CONFIG.prizes.p2;
                 document.getElementById('p3').innerText = APP_CONFIG.prizes.p3;
             }
 
-            // Admin Kontrolü
-            if(userId === MY_ID) document.getElementById('admin-gate').style.display = 'block';
+            // Admin Butonunu Göster
+            if (userId === MY_ID) document.getElementById('admin-gate').style.display = 'block';
 
-            // Kullanıcı Kaydı
+            // Kullanıcı Kaydı/Kontrolü
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
-            if(data) user = data; else {
-                const { data: nUser } = await _supabase.from('users').insert([{telegram_id:userId, username:tg.initDataUnsafe?.user?.username || "Oyuncu"}]).select().single();
+            if (data) user = data; else {
+                const { data: nUser } = await _supabase.from('users').insert([{
+                    telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", balance: 0.00
+                }]).select().single();
                 user = nUser;
             }
 
-            setInterval(updateUIPanel, 1000);
+            setInterval(updateMainUI, 1000);
         }
 
-        function updateUIPanel() {
+        function updateMainUI() {
             if(!user) return;
-            document.getElementById('u-name').innerText = "@" + user.username;
             document.getElementById('u-balance').innerText = user.balance.toFixed(2);
             document.getElementById('withdraw-btn').disabled = user.balance < 2.0;
-            
-            // Yarışma Durumu (Config.js saatlerine göre)
-            const now = new Date();
-            const actionArea = document.getElementById('action-area');
-            actionArea.innerHTML = `<div class="card">Yarışma saati bekleniyor...</div>`;
+            // Aksiyon alanı (Yarışma Başlat/Bilet Al) renderMain mantığı burada...
         }
 
         function showAnnouncements() {
-            document.getElementById('ann-content').innerText = APP_CONFIG.announcement;
+            document.getElementById('ann-text').innerText = APP_CONFIG.announcement;
             showScreen('announcement-screen');
         }
 
-        async function requestWithdraw() {
-            const { error } = await _supabase.from('withdraw_requests').insert([{
-                user_id: user.id, telegram_id: userId, username: user.username,
-                wallet_address: tonConnectUI.account?.address || "Bağlı Değil",
-                amount: user.balance
-            }]);
-            if(!error) tg.showAlert("Talep alındı! Admin onayından sonra bakiye gönderilecektir.");
-        }
-
-        // --- ADMİN MANTIĞI ---
         async function loadAdminData() {
             const { data } = await _supabase.from('withdraw_requests').select('*').eq('status', 'Bekliyor');
-            document.getElementById('adm-req-list').innerHTML = data?.map(r => `
-                <div class="req-card">
-                    <b>@${r.username}</b>: ${r.amount} TON<br>
-                    <button onclick="confirmPay(${r.id}, ${r.user_id}, ${r.amount})" style="background:var(--success); border:none; color:white; padding:5px; border-radius:5px; margin-top:5px;">ÖDENDİ</button>
+            const cont = document.getElementById('adm-withdrawals');
+            cont.innerHTML = data?.length ? data.map(r => `
+                <div class="admin-card">
+                    <b>@${r.username}</b> - ${r.amount} TON<br>
+                    <small>${r.wallet_address}</small><br>
+                    <button onclick="approvePay(${r.id}, ${r.user_id}, ${r.amount})" style="margin-top:5px; background:var(--success); border:none; color:white; padding:5px; border-radius:5px;">ÖDENDİ</button>
                 </div>
-            `).join("") || "Talep yok.";
+            `).join("") : "Talep yok.";
         }
 
-        async function confirmPay(id, uid, amt) {
-            await _supabase.from('withdraw_requests').update({status:'Ödendi'}).eq('id', id);
-            await _supabase.from('users').update({balance: 0}).eq('id', uid);
-            alert("Onaylandı!"); loadAdminData();
+        async function approvePay(reqId, uId, amt) {
+            await _supabase.from('withdraw_requests').update({status:'Ödendi'}).eq('id', reqId);
+            await _supabase.from('users').update({balance: 0}).eq('id', uId); // Bakiyeyi sıfırla
+            alert("İşlem Onaylandı!"); loadAdminData();
         }
 
         function showScreen(id) {
