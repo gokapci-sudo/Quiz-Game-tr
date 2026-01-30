@@ -61,6 +61,15 @@
             </div>
         </div>
         <button class="btn" style="background:#475569; margin-top:10px" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
+        <button class="btn" style="background:#334155" onclick="showAnnouncements()">📢 DUYURULAR</button>
+    </div>
+
+    <div id="announcement-screen" class="screen">
+        <h2 style="color: var(--gold)">📢 DUYURULAR</h2>
+        <div class="card" id="announcement-text" style="line-height: 1.6; text-align: left; width: 100%;">
+            Henüz yeni bir duyuru bulunmuyor.
+        </div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">ANLADIM ✅</button>
     </div>
 
     <div id="task-screen" class="screen">
@@ -89,7 +98,7 @@
     </div>
 
     <div id="leader-screen" class="screen">
-        <h2 style="color: var(--gold)">🏆 KAZANANLAR</h2>
+        <h2 style="color: var(--gold)">🏆 SIRALAMA</h2>
         <div id="player-count-area" class="count-badge" style="display:none;">
             👥 Bugün yarışan kişi sayısı: <span id="p-count">0</span>
         </div>
@@ -103,7 +112,7 @@
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
 
-        const WAIT_TIME = 30000; // 5 Dk
+        const WAIT_TIME = 30000;
         const YT_VIDEOS = [
             { url: "https://www.youtube.com/watch?v=1" },
             { url: "https://www.youtube.com/watch?v=2" },
@@ -133,11 +142,10 @@
                 if(row.key === 'video_pw_1') dbPasswords[0] = row.value.toUpperCase();
                 if(row.key === 'video_pw_2') dbPasswords[1] = row.value.toUpperCase();
                 if(row.key === 'video_pw_3') dbPasswords[2] = row.value.toUpperCase();
+                if(row.key === 'announcement') document.getElementById('announcement-text').innerText = row.value;
             });
 
-            // Sponsor ekranı için bilet sayısını çek
             updateTicketCount();
-
             setInterval(renderMain, 1000);
             renderTasks();
         }
@@ -197,7 +205,7 @@
                 await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
                 user.has_ticket = true;
                 tg.showAlert("Doğru! Bilet alındı.");
-                updateTicketCount(); // Sayıyı güncelle
+                updateTicketCount();
                 showScreen('main-screen'); renderMain();
             } else {
                 tg.showAlert("Hatalı şifre!");
@@ -287,8 +295,6 @@
 
         async function fetchLeaderboard() {
             const today = getTRTime().toISOString().split('T')[0];
-            
-            // Yarışan sayısı ve skorları tek seferde çekiyoruz
             const { data, count } = await _supabase
                 .from('daily_scores')
                 .select('*', { count: 'exact' })
@@ -297,7 +303,6 @@
                 .order('completion_time', {ascending: true})
                 .limit(10);
 
-            // Oyuncu sayısını göster
             if (count !== null) {
                 document.getElementById('p-count').innerText = count;
                 document.getElementById('player-count-area').style.display = 'block';
@@ -311,6 +316,7 @@
             showScreen('leader-screen');
         }
 
+        function showAnnouncements() { showScreen('announcement-screen'); }
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
