@@ -2,41 +2,87 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duyurular</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sıralama - Quiz Arena</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="container">
-        <button onclick="window.history.back()" class="btn-back">⬅ Geri</button>
-        <h2>📢 Duyurular</h2>
-        <div id="announcement-list"></div>
+    <div class="dashboard-container">
+        <header style="display: flex; align-items: center; margin-bottom: 20px;">
+            <button onclick="location.href='dashboard.html'" class="btn-sub" style="width: auto; padding: 10px 15px; margin-bottom: 0;">⬅</button>
+            <h2 style="margin: 0 auto; font-size: 1.2rem;">GÜNÜN ŞAMPİYONLARI</h2>
+        </header>
+
+        <div class="card" style="text-align: center; border: 1px solid var(--yellow);">
+            <p style="margin: 0; font-size: 0.8rem; opacity: 0.8;">SIRADAKİ ÖDÜL DAĞITIMI</p>
+            <div class="yellow-text" style="font-size: 1.2rem;">BU GECE 00:00</div>
+        </div>
+
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead style="background: #242f3d;">
+                    <tr>
+                        <th style="padding: 12px; font-size: 0.8rem;">#</th>
+                        <th style="padding: 12px; font-size: 0.8rem;">YARIŞMACI</th>
+                        <th style="padding: 12px; font-size: 0.8rem; text-align: center;">PUAN</th>
+                        <th style="padding: 12px; font-size: 0.8rem; text-align: right;">SÜRE</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    </tbody>
+            </table>
+            <div id="loader" style="text-align: center; padding: 20px;">Yükleniyor...</div>
+        </div>
+
+        <div id="my-rank" class="card hidden" style="background: var(--accent); border: none;">
+            </div>
     </div>
 
     <script>
         const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
         const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
-        const supabase = supabase.createClient(SB_URL, SB_KEY);
+        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+        const tg = window.Telegram.WebApp;
 
-        async function loadAnnouncements() {
-            const { data } = await supabase
-                .from('announcements')
+        async function loadLeaderboard() {
+            // Puanı en yüksek olanı, puanlar eşitse süresi en az olanı getir
+            const { data, error } = await supabaseClient
+                .from('leaderboard')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('score', { ascending: false })
+                .order('completion_time_ms', { ascending: true })
+                .limit(20);
 
-            const list = document.getElementById('announcement-list');
-            data?.forEach(item => {
-                const date = new Date(item.created_at).toLocaleDateString('tr-TR');
-                list.innerHTML += `
-                    <div class="ad-card" style="text-align:left; margin-bottom:10px;">
-                        <small>${date}</small>
-                        <p>${item.content}</p>
-                    </div>
-                `;
-            });
+            const body = document.getElementById('leaderboard-body');
+            const loader = document.getElementById('loader');
+            
+            if (data) {
+                loader.classList.add('hidden');
+                body.innerHTML = "";
+                
+                data.forEach((row, index) => {
+                    const isTop3 = index < 3;
+                    const emoji = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1;
+                    const timeSec = (row.completion_time_ms / 1000).toFixed(2);
+                    
+                    body.innerHTML += `
+                        <tr style="border-bottom: 1px solid #242f3d; ${index === 0 ? 'background: rgba(254, 203, 46, 0.05);' : ''}">
+                            <td style="padding: 15px 12px; font-weight: bold;">${emoji}</td>
+                            <td style="padding: 15px 12px; font-size: 0.9rem;">${row.username}</td>
+                            <td style="padding: 15px 12px; text-align: center; font-weight: bold; color: var(--yellow);">${row.score}</td>
+                            <td style="padding: 15px 12px; text-align: right; font-size: 0.8rem; opacity: 0.7;">${timeSec}s</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                loader.innerText = "Henüz yarışma kaydı bulunmuyor.";
+            }
         }
-        window.onload = loadAnnouncements;
+
+        tg.ready();
+        loadLeaderboard();
     </script>
 </body>
 </html>
