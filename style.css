@@ -1,71 +1,25 @@
-:root {
-    --bg: #0e1621;
-    --card: #17212b;
-    --accent: #2481cc;
-    --yellow: #fecb2e;
-    --white: #ffffff;
-}
-
-body {
-    margin: 0; padding: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background-color: var(--bg);
-    color: var(--white);
-}
-
-/* Splash Sayfası Düzeni */
-.splash-container {
-    display: flex; flex-direction: column;
-    height: 100vh; padding: 20px;
-    box-sizing: border-box; justify-content: center;
-}
-
-.counter-card {
-    background: rgba(36, 129, 204, 0.1);
-    border: 2px solid var(--accent);
-    border-radius: 20px; padding: 20px;
-    text-align: center; margin-bottom: 25px;
-}
-
-.counter-value {
-    font-size: 2.2rem; font-weight: 800; color: var(--yellow);
-}
-
-.sponsor-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 12px; margin-bottom: 30px;
-}
-
-.sponsor-box {
-    background: var(--card);
-    border: 1px dashed #3b4754;
-    border-radius: 12px; padding: 15px 10px;
-    font-size: 0.75rem; text-align: center;
-    min-height: 70px; display: flex; align-items: center;
-}
-
-.sponsor-box.highlight {
-    border: 1px solid var(--accent);
-    color: var(--accent);
-}
-
-/* Genel Butonlar */
-.btn-main {
-    width: 100%; background: var(--accent);
-    color: white; border: none; padding: 16px;
-    border-radius: 15px; font-weight: bold;
-    font-size: 1.1rem; cursor: pointer;
-}
-
-.pulse {
-    animation: pulse-kf 2s infinite;
-}
-
-@keyframes pulse-kf {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.03); }
-    100% { transform: scale(1); }
-}
-
-/* Gizleme Sınıfı */
+:root { --bg: #0e1621; --card: #17212b; --accent: #2481cc; --yellow: #fecb2e; --white: #ffffff; }
+body { margin: 0; font-family: -apple-system, sans-serif; background: var(--bg); color: var(--white); padding: 15px; overflow-x: hidden; }
 .hidden { display: none !important; }
+
+/* Splash/Giriş Sayfası */
+.splash-container { display: flex; flex-direction: column; height: 90vh; justify-content: center; }
+.counter-card { text-align: center; padding: 25px; border: 2px solid var(--accent); border-radius: 20px; margin-bottom: 20px; }
+.counter-value { font-size: 28px; font-weight: bold; color: var(--yellow); }
+.sponsor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+.sponsor-box { background: var(--card); border: 1px dashed #444; height: 90px; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 10px; text-align: center; font-size: 11px; color: #aaa; }
+.sponsor-box.highlight { border-color: var(--accent); color: var(--accent); }
+
+/* Dashboard Sayfası */
+.card { background: var(--card); border-radius: 15px; padding: 15px; margin-bottom: 12px; }
+.btn-main { width: 100%; padding: 16px; background: var(--accent); border: none; color: white; border-radius: 12px; font-weight: bold; font-size: 16px; }
+.pulse { animation: pulse 2s infinite; }
+@keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
+.schedule-grid { display: flex; justify-content: space-around; margin: 10px 0; }
+.time-box { background: #242f3d; padding: 5px 15px; border-radius: 8px; color: var(--yellow); font-weight: bold; }
+.nav-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn-sub { background: #242f3d; color: white; border: none; padding: 12px; border-radius: 10px; }
+.btn-admin { grid-column: span 2; background: #e64d4d; color: white; border: none; padding: 12px; border-radius: 10px; margin-top: 5px; }
+.disabled { opacity: 0.5; cursor: not-allowed; }
+.ticket-status-ok { background: rgba(49, 181, 69, 0.1); color: #31b545; padding: 10px; border-radius: 10px; text-align: center; font-weight: bold; }
+.btn-buy-ticket { width: 100%; background: var(--yellow); border: none; padding: 12px; border-radius: 10px; font-weight: bold; }
