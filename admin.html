@@ -1,92 +1,173 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
+    <style>
+        .admin-section { margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05); }
+        .input-group { margin-bottom: 15px; }
+        .input-label { display: block; font-size: 11px; opacity: 0.6; margin-bottom: 5px; margin-left: 5px; }
+        .modern-input { width: 100%; background: #0e1621; border: 1px solid #242f3d; color: white; padding: 12px; border-radius: 12px; font-size: 14px; }
+        .modern-input:focus { border-color: var(--yellow); outline: none; }
+        .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .reward-card { background: linear-gradient(135deg, rgba(254, 203, 46, 0.1) 0%, rgba(14, 22, 33, 1) 100%); border: 1px solid var(--yellow); }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
         <header style="display:flex; align-items:center; margin-bottom:20px;">
             <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:0 15px;">⬅ Geri</button>
-            <h2 style="margin-left:15px;">ADMİN PANELİ</h2>
+            <h2 style="margin-left:15px; font-size: 18px;">YÖNETİM PANELİ</h2>
         </header>
 
-        <section class="card">
-            <h3 class="yellow-text">💸 BEKLEYEN ÇEKİMLER</h3>
-            <div id="w-list" style="margin-top:10px;"><p>Yükleniyor...</p></div>
-        </section>
-
-        <section class="card">
-            <h3 class="yellow-text">📢 DUYURU YAYINLA</h3>
-            <textarea id="ann-text" placeholder="Duyuru metni..." style="width:100%; height:80px; background:#0e1621; color:white; border:1px solid #242f3d; padding:10px; margin-top:10px; border-radius:10px;"></textarea>
-            <button onclick="sendAnn()" class="btn-sub" style="margin-top:10px; background:var(--accent);">PAYLAŞ</button>
-        </section>
-
-        <section class="card">
-            <h3 class="yellow-text">❓ SORU EKLE</h3>
-            <input type="text" id="qt" placeholder="Soru...">
-            <div class="grid-2">
-                <input type="text" id="o0" placeholder="A"> <input type="text" id="o1" placeholder="B">
-                <input type="text" id="o2" placeholder="C"> <input type="text" id="o3" placeholder="D">
+        <section class="card reward-card">
+            <h3 class="yellow-text" style="font-size: 14px; margin-bottom: 15px;">🏆 ÖDÜL HAVUZU & SAATLER</h3>
+            <div class="input-group">
+                <span class="input-label">Toplam Ödül (TON)</span>
+                <input type="number" id="total-prize-in" class="modern-input" placeholder="Örn: 100.00">
             </div>
-            <select id="co" style="width:100%; padding:10px;"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
-            <button onclick="saveQ()" class="btn-sub" style="margin-top:10px;">KAYDET</button>
+            <div class="input-group">
+                <span class="input-label">Yarışma Saatleri (Virgül ile ayır)</span>
+                <input type="text" id="race-times-in" class="modern-input" placeholder="10:00, 14:00, 20:00">
+            </div>
+            <button onclick="updateSettings()" class="btn-main" style="background: var(--yellow); color: black;">AYARLARI KAYDET</button>
+        </section>
+
+        <section class="card admin-section">
+            <h3 class="yellow-text" style="font-size: 14px;">💸 BEKLEYEN ÇEKİMLER</h3>
+            <div id="w-list" style="margin-top:10px;"><p style="opacity: 0.5; font-size: 12px;">Yükleniyor...</p></div>
+        </section>
+
+        <section class="card admin-section">
+            <h3 class="yellow-text" style="font-size: 14px; margin-bottom: 15px;">❓ YENİ SORU EKLE</h3>
+            <div class="input-group">
+                <span class="input-label">Soru Metni</span>
+                <input type="text" id="qt" class="modern-input" placeholder="Soruyu buraya yazın...">
+            </div>
+            <div class="option-grid">
+                <div class="input-group">
+                    <span class="input-label">A Şıkkı</span>
+                    <input type="text" id="o0" class="modern-input" placeholder="A">
+                </div>
+                <div class="input-group">
+                    <span class="input-label">B Şıkkı</span>
+                    <input type="text" id="o1" class="modern-input" placeholder="B">
+                </div>
+                <div class="input-group">
+                    <span class="input-label">C Şıkkı</span>
+                    <input type="text" id="o2" class="modern-input" placeholder="C">
+                </div>
+                <div class="input-group">
+                    <span class="input-label">D Şıkkı</span>
+                    <input type="text" id="o3" class="modern-input" placeholder="D">
+                </div>
+            </div>
+            <div class="input-group">
+                <span class="input-label">Doğru Cevap</span>
+                <select id="co" class="modern-input" style="appearance: none;">
+                    <option value="0">A Şıkkı Doğru</option>
+                    <option value="1">B Şıkkı Doğru</option>
+                    <option value="2">C Şıkkı Doğru</option>
+                    <option value="3">D Şıkkı Doğru</option>
+                </select>
+            </div>
+            <button onclick="saveQ()" class="btn-main" style="background: var(--accent);">SORUYU SİSTEME EKLE</button>
+        </section>
+
+        <section class="card admin-section">
+            <h3 class="yellow-text" style="font-size: 14px;">📢 DUYURU YAYINLA</h3>
+            <textarea id="ann-text" class="modern-input" style="height:80px; margin-top: 10px;" placeholder="Duyuru metni..."></textarea>
+            <button onclick="sendAnn()" class="btn-sub" style="margin-top:10px; background: #2481cc; color: white;">DUYURUYU PAYLAŞ</button>
         </section>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
 
+        async function loadInitialData() {
+            // Mevcut ayarları çekip kutucuklara doldur
+            const { data: settings } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+            if (settings) {
+                document.getElementById('total-prize-in').value = settings.total_prize;
+                document.getElementById('race-times-in').value = settings.race_times;
+            }
+            loadWithdrawals();
+        }
+
+        async function updateSettings() {
+            const prize = document.getElementById('total-prize-in').value;
+            const times = document.getElementById('race-times-in').value;
+            
+            const { error } = await supabaseClient.from('settings').update({
+                total_prize: prize,
+                race_times: times
+            }).eq('id', 1);
+
+            if (!error) {
+                tg.showAlert("Ayarlar başarıyla güncellendi!");
+            } else {
+                tg.showAlert("Hata: " + error.message);
+            }
+        }
+
         async function loadWithdrawals() {
             const { data, error } = await supabaseClient.from('withdrawals').select('*').ilike('status', 'pending');
             const cont = document.getElementById('w-list');
-            if(!data || data.length === 0) { cont.innerHTML = "Bekleyen talep yok."; return; }
+            if(!data || data.length === 0) { cont.innerHTML = "<p style='font-size:12px; opacity:0.5;'>Bekleyen talep yok.</p>"; return; }
             
             cont.innerHTML = data.map(w => `
-                <div class="card" style="background:#1c252f; border:1px solid #333;">
-                    <b>${w.amount} TON</b> - ID: ${w.telegram_id}<br>
-                    <small style="word-break:break-all;">${w.wallet_address}</small><br>
-                    <button onclick="approveWithdraw(${w.id}, ${w.telegram_id}, ${w.amount})" class="btn-sub" style="background:var(--green); height:30px; margin-top:10px;">ÖDEME YAPILDI & DÜŞ</button>
+                <div class="card" style="background:#1c252f; border:1px solid #333; padding: 12px; margin-bottom: 10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <b style="color:var(--yellow); font-size: 16px;">${w.amount} TON</b>
+                        <span style="font-size:10px; opacity:0.5;">ID: ${w.telegram_id}</span>
+                    </div>
+                    <code style="word-break:break-all; font-size:10px; display:block; margin: 8px 0; color: var(--accent);">${w.wallet_address}</code>
+                    <button onclick="approveWithdraw(${w.id}, ${w.telegram_id}, ${w.amount})" class="btn-sub" style="background:var(--green); height:32px; color: white; border: none; font-size: 12px;">ÖDENDİ & BAKİYE DÜŞ</button>
                 </div>
             `).join('');
         }
 
         async function approveWithdraw(id, telegram_id, amount) {
-            // 1. Kullanıcının güncel bakiyesini kontrol et
             const { data: profile } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', telegram_id).single();
-            
-            if (!profile) return alert("Kullanıcı bulunamadı!");
-            if (profile.balance < amount) return alert("Hata: Kullanıcı bakiyesi talep edilen tutardan az!");
+            if (!profile || profile.balance < amount) return alert("Hata: Yetersiz bakiye!");
 
-            // 2. Bakiyeyi düş
             const { error: upError } = await supabaseClient.from('profiles').update({ balance: profile.balance - amount }).eq('telegram_id', telegram_id);
-            
-            if (upError) return alert("Bakiye düşerken hata: " + upError.message);
+            if (upError) return alert("Hata: " + upError.message);
 
-            // 3. Talebi tamamlandı yap
             await supabaseClient.from('withdrawals').update({ status: 'completed' }).eq('id', id);
-            
-            tg.showAlert("İşlem Başarılı: Bakiye düşüldü ve onaylandı.");
+            tg.showAlert("İşlem Başarılı.");
             loadWithdrawals();
-        }
-
-        async function sendAnn() {
-            const val = document.getElementById('ann-text').value;
-            await supabaseClient.from('announcements').insert([{ content: val }]);
-            tg.showAlert("Duyuru yayınlandı."); document.getElementById('ann-text').value = "";
         }
 
         async function saveQ() {
             const q = document.getElementById('qt').value;
             const os = [document.getElementById('o0').value, document.getElementById('o1').value, document.getElementById('o2').value, document.getElementById('o3').value];
             const co = parseInt(document.getElementById('co').value);
-            await supabaseClient.from('questions').insert([{ question_text: q, options: os, correct_option: co }]);
-            tg.showAlert("Soru eklendi.");
+            
+            if(!q || os.some(o => !o)) return tg.showAlert("Lütfen tüm alanları doldurun!");
+
+            const { error } = await supabaseClient.from('questions').insert([{ question_text: q, options: os, correct_option: co }]);
+            if(!error) {
+                tg.showAlert("Soru sisteme eklendi!");
+                document.getElementById('qt').value = "";
+                os.forEach((_, i) => document.getElementById('o'+i).value = "");
+            }
         }
 
-        loadWithdrawals();
+        async function sendAnn() {
+            const val = document.getElementById('ann-text').value;
+            if(!val) return;
+            const { error } = await supabaseClient.from('announcements').insert([{ content: val }]);
+            if(!error) {
+                tg.showAlert("Duyuru yayınlandı.");
+                document.getElementById('ann-text').value = "";
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadInitialData);
     </script>
 </body>
 </html>
