@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Kontrol Paneli</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="admin-body">
+    <h2>🛠 Admin Yönetim Paneli</h2>
+
+    <section class="admin-section">
+        <h3>💰 Çekim Talepleri</h3>
+        <div id="withdrawal-list">Yükleniyor...</div>
+    </section>
+
+    <section class="admin-section">
+        <h3>📢 Duyuru Yayınla</h3>
+        <textarea id="announcement-text" placeholder="Duyuru metni..."></textarea>
+        <button onclick="postAnnouncement()" class="btn-main">Yayınla</button>
+    </section>
+
+    <section class="admin-section">
+        <h3>❓ Soru Ekle</h3>
+        <input type="text" id="q-text" placeholder="Soru nedir?">
+        <input type="text" id="q-options" placeholder="A,B,C,D (Virgülle ayır)">
+        <input type="number" id="q-correct" placeholder="Doğru Şık İndeksi (0-3)">
+        <button onclick="addQuestion()" class="btn-main">Soru Kaydet</button>
+    </section>
+
+    <script>
+        const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
+        const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
+        const supabaseAdmin = supabase.createClient(SB_URL, SB_KEY);
+
+        // Çekim Taleplerini Listele
+        async function fetchRequests() {
+            const { data } = await supabaseAdmin.from('withdrawals').select('*').eq('status', 'pending');
+            let html = "";
+            data?.forEach(req => {
+                html += `
+                    <div class="req-item">
+                        ID: ${req.telegram_id} | Miktar: ${req.amount} TON <br>
+                        Cüzdan: ${req.wallet_address} <br>
+                        <button onclick="approveWithdraw('${req.id}', ${req.telegram_id})" class="btn-approve">Ödendi Yap & Sıfırla</button>
+                    </div><hr>`;
+            });
+            document.getElementById('withdrawal-list').innerHTML = html || "Bekleyen talep yok.";
+        }
+
+        // Ödendi Yap ve Bakiyeyi Sıfırla
+        async function approveWithdraw(requestId, userId) {
+            // 1. Talebi güncelle
+            await supabaseAdmin.from('withdrawals').update({ status: 'paid' }).eq('id', requestId);
+            // 2. Kullanıcı bakiyesini sıfırla
+            await supabaseAdmin.from('profiles').update({ balance: 0.00 }).eq('telegram_id', userId);
+            
+            alert("İşlem başarılı! Bakiye sıfırlandı.");
+            fetchRequests();
+        }
+
+        // Duyuru Ekle
+        async function postAnnouncement() {
+            const content = document.getElementById('announcement-text').value;
+            await supabaseAdmin.from('announcements').insert([{ content }]);
+            alert("Duyuru yayınlandı!");
+        }
+
+        window.onload = fetchRequests;
+    </script>
+</body>
+</html>
