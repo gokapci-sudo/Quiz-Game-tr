@@ -1,29 +1,126 @@
-async function updateUI() {
-    const { data: user } = await supabaseClient.from('profiles').select('*').eq('telegram_id', tgUser.id).single();
-    const { data: sett } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
-    const status = getRaceStatus();
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="card" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span id="display-username" class="yellow-text">@yükleniyor</span>
+                <span id="admin-badge" class="hidden" style="font-size: 10px; background: var(--red); padding: 2px 5px; border-radius: 4px; margin-left: 5px;">ADMIN</span>
+            </div>
+            <button id="admin-panel-btn" onclick="location.href='admin.html'" class="btn-sub hidden" style="width: auto; height: 30px; padding: 0 10px;">Panel</button>
+        </header>
 
-    // 1. Bakiye & Çekim
-    document.getElementById('user-balance').innerText = user.balance.toFixed(2);
-    if(user.balance >= 2.0) document.getElementById('withdraw-btn').classList.remove('hidden');
+        <section class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <small style="opacity: 0.6;">Bakiyeniz</small>
+                    <div style="font-size: 24px; font-weight: bold;"><span id="user-balance">0.00</span> <small style="font-size: 14px;">TON</small></div>
+                </div>
+                <button id="withdraw-btn" onclick="requestWithdraw()" class="btn-sub hidden" style="width: auto; background: var(--green);">Çekim Yap</button>
+            </div>
+            
+            <div id="wallet-area">
+                <button id="connect-wallet-btn" onclick="openTelegramWallet()" class="btn-sub" style="margin-top: 10px;">💎 Cüzdan Bağla</button>
+                <div id="active-wallet" class="wallet-box hidden">
+                    <span id="wallet-addr-short">...</span>
+                    <button onclick="copyWallet()" class="btn-copy">📋</button>
+                </div>
+            </div>
+        </section>
 
-    // 2. Bilet & Yarışma Butonu
-    const btnArea = document.getElementById('ticket-area');
-    if (status.active && user.has_ticket) {
-        btnArea.innerHTML = `<button onclick="location.href='quiz.html'" class="btn-main" style="background:var(--green)">🏁 YARIŞMAYA GİR</button>`;
-    } else if (user.has_ticket) {
-        btnArea.innerHTML = `<div class="card" style="color:var(--green); text-align:center;">✅ Biletiniz Hazır (Saat: ${status.next})</div>`;
-    } else {
-        btnArea.innerHTML = `<button onclick="location.href='bilet.html'" class="btn-main" style="background:var(--yellow); color:black;">🎫 BİLET AL</button>`;
-    }
+        <section id="ticket-info-area" style="margin-bottom: 15px;"></section>
 
-    // 3. Ödül Havuzu Gösterimi
-    const pool = parseFloat(sett.total_prize);
-    document.getElementById('pool-display').innerHTML = `
+        <section class="card">
+            <h3 style="font-size: 14px; margin-bottom: 10px; opacity: 0.7;">🏆 ÖDÜL HAVUZU DAĞILIMI</h3>
+            <div id="pool-display" class="grid-2" style="font-size: 13px;">
+                </div>
+        </section>
+
         <div class="grid-2">
-            <div>🥇 %50: <b>${(pool*0.5).toFixed(2)}</b></div>
-            <div>🥈 %35: <b>${(pool*0.35).toFixed(2)}</b></div>
-            <div>🥉 %15: <b>${(pool*0.15).toFixed(2)}</b></div>
+            <button onclick="location.href='results.html'" class="btn-sub">📊 Sıralama</button>
+            <button onclick="location.href='announcements.html'" class="btn-sub">📢 Duyurular</button>
         </div>
-    `;
-}
+        
+        <div class="card" style="margin-top: 15px; text-align: center;">
+            <small style="opacity: 0.5;">YARIŞMA SAATLERİ: 10:00 - 14:00 - 20:00</small>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        let fullWallet = "";
+
+        async function init() {
+            const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID, username: "Admin" };
+            const { data: profile } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
+            const { data: sett } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+            
+            if (profile) {
+                document.getElementById('display-username').innerText = `@${profile.username}`;
+                document.getElementById('user-balance').innerText = profile.balance.toFixed(2);
+                if (profile.balance >= 2.0) document.getElementById('withdraw-btn').classList.remove('hidden');
+                if (user.id === APP_CONFIG.adminID || profile.is_admin) {
+                    document.getElementById('admin-badge').classList.remove('hidden');
+                    document.getElementById('admin-panel-btn').classList.remove('hidden');
+                }
+
+                if (profile.wallet_address) {
+                    fullWallet = profile.wallet_address;
+                    document.getElementById('connect-wallet-btn').classList.add('hidden');
+                    document.getElementById('active-wallet').classList.remove('hidden');
+                    document.getElementById('wallet-addr-short').innerText = fullWallet.substring(0,6) + "..." + fullWallet.slice(-4);
+                }
+
+                // Yarışma ve Bilet Mantığı
+                const status = getRaceStatus();
+                const ticketArea = document.getElementById('ticket-info-area');
+                
+                if (status.active && profile.has_ticket) {
+                    ticketArea.innerHTML = `<button onclick="location.href='quiz.html'" class="btn-main" style="background:var(--green)">🏁 YARIŞMAYA GİR</button>`;
+                } else if (profile.has_ticket) {
+                    ticketArea.innerHTML = `<div class="card" style="text-align:center; border:1px solid var(--green); color:var(--green);">✅ Biletiniz Hazır (Saat ${status.nextMatch})</div>`;
+                } else {
+                    ticketArea.innerHTML = `<button onclick="location.href='bilet.html'" class="btn-main" style="background:var(--yellow); color:black;">🎫 BİLET AL</button>`;
+                }
+            }
+
+            if (sett) {
+                const pool = parseFloat(sett.total_prize);
+                document.getElementById('pool-display').innerHTML = `
+                    <div>🥇 %50: <b class="yellow-text">${(pool*0.5).toFixed(2)}</b></div>
+                    <div>🥈 %35: <b class="yellow-text">${(pool*0.35).toFixed(2)}</b></div>
+                    <div>🥉 %15: <b class="yellow-text">${(pool*0.15).toFixed(2)}</b></div>
+                `;
+            }
+        }
+
+        function openTelegramWallet() {
+            tg.openTelegramLink("https://t.me/wallet");
+            setTimeout(async () => {
+                const addr = prompt("Cüzdan adresinizi yapıştırın:");
+                if (addr && addr.length > 20) {
+                    await supabaseClient.from('profiles').update({ wallet_address: addr }).eq('telegram_id', tg.initDataUnsafe?.user?.id || APP_CONFIG.adminID);
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        async function requestWithdraw() {
+            const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
+            const { data } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
+            await supabaseClient.from('withdrawals').insert([{ telegram_id: user.id, wallet_address: data.wallet_address, amount: data.balance }]);
+            tg.showAlert("Talebiniz alındı.");
+        }
+
+        init();
+    </script>
+</body>
+</html>
