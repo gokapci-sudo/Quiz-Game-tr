@@ -2,29 +2,123 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yarışma - Quiz Arena</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="card" style="text-align: center;">
-        <div class="grid-2">
-            <span>Soru: <b id="q-count">1</b>/10</span>
-            <span class="yellow-text" id="timer">0.00s</span>
+    <div id="quiz-container" class="container">
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+            <span id="question-number" style="font-weight: bold; color: var(--yellow);">Soru: 1/10</span>
+            <span id="timer" style="color: var(--red); font-weight: bold; font-family: monospace;">15s</span>
+        </div>
+
+        <div class="card">
+            <h2 id="question-text" style="font-size: 18px; margin-bottom: 20px; min-height: 60px;">Sorular yükleniyor...</h2>
+            <div id="options-container" style="display: grid; gap: 10px;">
+                </div>
         </div>
     </div>
 
-    <div class="card" id="quiz-box">
-        <h3 id="question-text">Yükleniyor...</h3>
-        <div id="options-container"></div>
-    </div>
-
     <script>
-        // JS Mantığı: Dashboard'daki Supabase bağlantısı ile aynı. 
-        // handleAnswer fonksiyonu sonunda bakiye ekleme veya liderlik tablosu güncelleme yapar.
-        // Stil olarak style.css kullandığı için index.html ile aynı görünür.
+        const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
+        const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
+        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+        const tg = window.Telegram.WebApp;
+
+        let questions = [];
+        let currentQIndex = 0;
+        let score = 0;
+        let timeLeft = 15;
+        let timerInterval;
+
+        async function startQuiz() {
+            // 1. Soruları çek
+            const { data, error } = await supabaseClient
+                .from('questions')
+                .select('*')
+                .limit(10); // Her yarışta 10 soru çek
+
+            if (error || !data || data.length === 0) {
+                tg.showAlert("Sorular alınamadı! Lütfen adminin soru eklediğinden emin olun.");
+                location.href = 'dashboard.html';
+                return;
+            }
+
+            questions = data;
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentQIndex >= questions.length) {
+                finishQuiz();
+                return;
+            }
+
+            const q = questions[currentQIndex];
+            document.getElementById('question-number').innerText = `Soru: ${currentQIndex + 1}/${questions.length}`;
+            document.getElementById('question-text').innerText = q.question_text;
+            
+            const optionsDiv = document.getElementById('options-container');
+            optionsDiv.innerHTML = '';
+            
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-sub';
+                btn.style.textAlign = 'left';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(index);
+                optionsDiv.appendChild(btn);
+            });
+
+            resetTimer();
+        }
+
+        function handleAnswer(selectedIndex) {
+            clearInterval(timerInterval);
+            const q = questions[currentQIndex];
+            
+            if (selectedIndex === q.correct_option) {
+                score += 10; // Her doğru cevap 10 puan
+            }
+
+            currentQIndex++;
+            showQuestion();
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timeLeft = 15;
+            document.getElementById('timer').innerText = timeLeft + "s";
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').innerText = timeLeft + "s";
+                if (timeLeft <= 0) {
+                    handleAnswer(-1); // Zaman biterse yanlış say
+                }
+            }, 1000);
+        }
+
+        async function finishQuiz() {
+            const user = tg.initDataUnsafe?.user || { id: 1369398784 };
+            
+            // Mevcut puanı çek ve üstüne ekle (Veya sadece bu yarışın puanını yaz)
+            const { data: profile } = await supabaseClient.from('profiles').select('score').eq('telegram_id', user.id).single();
+            const totalScore = (profile?.score || 0) + score;
+
+            await supabaseClient.from('profiles').update({ 
+                score: totalScore,
+                has_ticket: false // Bilet kullanıldı
+            }).eq('telegram_id', user.id);
+
+            tg.showAlert(`Yarışma bitti! Kazandığınız Puan: ${score}`);
+            location.href = 'dashboard.html';
+        }
+
+        tg.ready();
+        startQuiz();
     </script>
 </body>
 </html>
