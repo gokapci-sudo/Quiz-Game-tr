@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="config.js"></script>
 </head>
 <body>
@@ -15,29 +16,63 @@
         </div>
 
         <div class="sponsor-list">
-            <div class="sponsor-box highlight">🚀 TON Türkiye Resmi Sponsoru</div>
-            <div class="sponsor-box">Reklam Alanı</div>
-            <div class="sponsor-box highlight">🎬 5 Reklam İzle, Biletini Al!</div>
+            <div class="sponsor-box highlight">🚀 Quiz Arena'ya Hoş Geldiniz!</div>
+            <div class="sponsor-box">Sponsor Reklam Alanı</div>
+            <div class="sponsor-box highlight">Bu Alana Reklam Verebilirsiniz</div>
         </div>
 
-        <button id="entry-btn" class="btn-main">GİRİŞ YAP</button>
+        <button id="entry-btn" class="btn-main" style="margin-top: 20px;">GİRİŞ YAP</button>
     </div>
 
     <script>
-        async function init() {
-            const { count } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
-            document.getElementById('big-counter').innerText = (1388 + (count || 0)).toLocaleString();
+        const tg = window.Telegram.WebApp;
 
+        async function init() {
+            tg.ready();
+            tg.expand();
+
+            // 1. Biletli Sayısını Göster (1388 + DB)
+            try {
+                const { count } = await supabaseClient
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('has_ticket', true);
+                
+                document.getElementById('big-counter').innerText = (1388 + (count || 0)).toLocaleString();
+            } catch (e) {
+                document.getElementById('big-counter').innerText = "1,388";
+            }
+
+            // 2. Giriş ve Kayıt Fonksiyonu
             document.getElementById('entry-btn').onclick = async () => {
-                const tg = window.Telegram.WebApp;
-                const user = tg.initDataUnsafe?.user || { id: 1369398784, username: "admin" };
-                await supabaseClient.from('profiles').upsert({ 
-                    telegram_id: user.id, 
-                    username: user.username || "isimsiz" 
-                });
-                window.location.href = "dashboard.html";
+                const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID, username: "test_user" };
+                
+                // Butonu geçici olarak devre dışı bırak (Çift tıklamayı önlemek için)
+                const btn = document.getElementById('entry-btn');
+                btn.disabled = true;
+                btn.innerText = "GİRİŞ YAPILIYOR...";
+
+                // Veritabanına Kaydet (Upsert: Varsa güncelle, yoksa ekle)
+                const { error } = await supabaseClient
+                    .from('profiles')
+                    .upsert({ 
+                        telegram_id: user.id, 
+                        username: user.username || "isimsiz",
+                        // İlk girişte bakiye ve bilet değişmesin diye sadece id ve username gönderiyoruz
+                    }, { onConflict: 'telegram_id' });
+
+                if (error) {
+                    console.error("Kayıt Hatası:", error);
+                    tg.showAlert("Giriş yapılamadı, lütfen tekrar deneyin.");
+                    btn.disabled = false;
+                    btn.innerText = "GİRİŞ YAP";
+                } else {
+                    // Kayıt başarılıysa yönlendir
+                    window.location.href = "dashboard.html";
+                }
             };
         }
+
         init();
     </script>
 </body>
