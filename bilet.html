@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilet Al - TON Quiz</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button onclick="window.history.back()" class="btn-back">⬅ Geri</button>
+            <h2>Bilet Edinme Merkezi</h2>
+        </header>
+
+        <section class="ticket-options">
+            <div class="ad-card">
+                <h3>Ücretsiz Bilet</h3>
+                <p>Kısa bir reklam izleyerek günlük biletini alabilirsin.</p>
+                <button id="watch-ad-btn" class="btn-action">Reklam İzle & Bilet Al</button>
+            </div>
+
+            <hr>
+
+            <div class="pay-card">
+                <h3>TON ile Bilet Al</h3>
+                <p>Beklemeden hemen yarışmaya katıl.</p>
+                <p><strong>Ücret: 0.10 TON</strong></p>
+                <button id="buy-ticket-btn" class="btn-main">Şimdi Satın Al</button>
+            </div>
+        </section>
+
+        <div id="status-msg" class="status-message"></div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
+        const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
+        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+        async function giveTicket() {
+            const user = tg.initDataUnsafe?.user;
+            if (!user) return;
+
+            const { error } = await supabaseClient
+                .from('profiles')
+                .update({ has_ticket: true })
+                .eq('telegram_id', user.id);
+
+            if (!error) {
+                document.getElementById('status-msg').innerText = "✅ Biletiniz tanımlandı! Ana sayfaya dönün.";
+                tg.showAlert("Biletiniz başarıyla alındı!");
+            } else {
+                tg.showAlert("Bir hata oluştu, lütfen tekrar deneyin.");
+            }
+        }
+
+        // Reklam İzle Butonu (Monetag entegrasyonu buraya gelecek)
+        document.getElementById('watch-ad-btn').addEventListener('click', () => {
+            // Buraya Monetag interstitial veya reward video kodu gelecek
+            tg.showConfirm("Reklamı sonuna kadar izlediğinizde biletiniz tanımlanacaktır. Onaylıyor musunuz?", (ok) => {
+                if (ok) giveTicket();
+            });
+        });
+    </script>
+</body>
+</html>
