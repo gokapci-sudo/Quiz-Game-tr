@@ -1,25 +1,25 @@
 const APP_CONFIG = {
-    // REKLAM AYARLARI
-    ads: {
-        zoneId: '10527453', 
-        requiredToTicket: 5  // Bilet için 5 reklam
-    },
-    
-    // YARIŞMA ZAMANLARI (Türkiye Saati: 10:00, 14:00, 20:00)
-    matchTimes: [10, 14, 20], 
-    matchDurationMinutes: 3, // Yarışma kapısı 3 dakika açık kalır
-
-    // SPONSORLAR
-    sponsors: [
-        { text: "🚀 TON Türkiye Resmi Kanalı" },
-        { text: "💎 Arena Elmas Sponsoru" },
-        { text: "🎬 5 Reklam İzle, Yarışmaya Katıl!" }
-    ],
-
-    // ÖDÜLLER
-    prizes: {
-        p1: "5.0 TON",
-        p2: "2.5 TON",
-        p3: "1.0 TON"
-    }
+    matchTimes: ["10:00", "14:00", "20:00"],
+    entryWindow: 3, // Yarışma kapısı 3 dk açık
+    resultWindow: 4 // 4. dakikada sonuçlar kesinleşir
 };
+
+// Ortak Zaman Kontrolü
+function getRaceStatus() {
+    const now = new Date();
+    const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+    
+    let active = false;
+    let next = APP_CONFIG.matchTimes[0];
+
+    for (let time of APP_CONFIG.matchTimes) {
+        const [h, m] = time.split(':').map(Number);
+        const raceDate = new Date();
+        raceDate.setHours(h, m, 0);
+        const diff = (now - raceDate) / 60000;
+
+        if (diff >= 0 && diff < APP_CONFIG.entryWindow) active = true;
+        if (time > currentTime) { next = time; break; }
+    }
+    return { active, next };
+}
