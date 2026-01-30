@@ -50,7 +50,7 @@
         </div>
 
         <div id="sponsor-list" style="width:100%; display: flex; flex-direction: column; align-items: center;"></div>
-        <button class="btn btn-blue" onclick="showScreen('main-screen')">GİRİŞ YAP 🚀</button>
+        <button class="btn btn-blue" onclick="handleEntry()">GİRİŞ YAP 🚀</button>
     </div>
 
     <div id="main-screen" class="screen">
@@ -126,6 +126,19 @@
             buttonRootId: 'ton-connect-btn'
         });
 
+        // DEĞİŞİKLİK: Giriş yap butonuna basıldığında reklam tetikleyen fonksiyon
+        function handleEntry() {
+            if (typeof show_10527452 === 'function') {
+                show_10527452('pop').then(() => {
+                    showScreen('main-screen');
+                }).catch(() => {
+                    showScreen('main-screen');
+                });
+            } else {
+                showScreen('main-screen');
+            }
+        }
+
         function watchAd() {
             show_10527452('pop').then(() => {
                 adCount++;
@@ -142,9 +155,8 @@
 
         async function init() {
             tg.ready(); tg.expand();
-            if (typeof show_10527452 === 'function') {
-                show_10527452('pop').then(() => { showScreen('main-screen'); }).catch(() => { console.log("Otomatik reklam yüklenemedi."); });
-            }
+            // Otomatik reklam fonksiyonu buradan butona (handleEntry) taşındı.
+            
             if (typeof updatePrizesAndJackpot === "function") await updatePrizesAndJackpot();
             const sList = document.getElementById('sponsor-list');
             if (sList) {
@@ -155,7 +167,6 @@
             
             updateTicketCount();
             setInterval(renderMain, 1000);
-            // 1 MART GERİ SAYIMINI BAŞLAT
             setInterval(updateGrandCountdown, 1000);
             updateGrandCountdown();
         }
