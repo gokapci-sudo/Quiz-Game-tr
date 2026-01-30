@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Arena - Hoşgeldiniz</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body class="splash-body">
+    <div class="splash-container">
+        <div class="total-tickets">
+            <span class="label">TOPLAM KATILIMCI</span>
+            <div id="big-counter" class="counter-number">1388 + ...</div>
+        </div>
+
+        <div class="sponsor-grid">
+            <div class="sponsor-box">Sponsorlarımız Burada Görünecektir.</div>
+            <div class="sponsor-box">Sponsorlarımız Burada Görünecektir.</div>
+            <div class="sponsor-box highlight">Bu Alana Reklam Verebilirsiniz</div>
+            <div class="sponsor-box highlight">Bu Alana Reklam Verebilirsiniz</div>
+        </div>
+
+        <div class="action-area">
+            <button id="entry-btn" class="btn-main pulse">GİRİŞ YAP</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
+        const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
+        const supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        async function initSplash() {
+            tg.ready();
+            tg.expand();
+
+            // 1. Sayaç Güncelleme
+            const { count } = await supabase
+                .from('profiles')
+                .select('*', { count: 'exact', head: true })
+                .eq('has_ticket', true);
+            
+            document.getElementById('big-counter').innerText = `1388 + ${count || 0}`;
+
+            // 2. Giriş ve Kayıt İşlemi
+            document.getElementById('entry-btn').onclick = async () => {
+                const user = tg.initDataUnsafe?.user;
+                if (user) {
+                    // Kullanıcıyı veritabanına kaydet (Yoksa oluştur, varsa güncelle)
+                    await supabase.from('profiles').upsert({
+                        telegram_id: user.id,
+                        username: user.username || "isimsiz",
+                    }, { onConflict: 'telegram_id' });
+                }
+                // Ana sayfaya yönlendir
+                window.location.href = "index.html";
+            };
+        }
+        initSplash();
+    </script>
+</body>
+</html>
