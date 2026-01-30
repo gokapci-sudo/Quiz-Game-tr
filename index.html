@@ -31,13 +31,20 @@
         .winner { border: 1px solid var(--gold); background: rgba(251, 191, 36, 0.1); }
         #ton-connect-btn { display: flex; justify-content: center; width: 100%; margin: 10px 0; }
         .count-badge { background: rgba(56, 189, 248, 0.1); border: 1px solid var(--primary); padding: 10px; border-radius: 12px; margin-bottom: 10px; width: 100%; max-width: 450px; font-size: 0.9rem; font-weight: bold; }
+        .grand-timer { background: linear-gradient(45deg, #1e293b, #334155); border: 2px solid var(--gold); padding: 15px; border-radius: 15px; margin-bottom: 15px; width: 100%; max-width: 450px; }
     </style>
 </head>
 <body>
 
     <div id="sponsor-screen" class="screen active">
-        <h2 style="color: var(--gold)">ARENA SPONSORLARI</h2>
+        <h2 style="color: var(--gold); margin-bottom: 5px;">ARENA SPONSORLARI</h2>
         
+        <div class="grand-timer">
+            <p style="margin:0; font-size:0.7rem; color:var(--gold); font-weight:bold; letter-spacing:1px;">RESMİ YARIŞMANIN BAŞLAMASINA</p>
+            <div id="grand-countdown" style="font-size: 1.6rem; font-weight: bold; color: #fff; margin: 8px 0; font-family: monospace;">-- GÜN -- SAAT</div>
+            <p style="margin:0; font-size:0.65rem; color:#94a3b8;">1 MART 2026</p>
+        </div>
+
         <div id="ticket-count-area" class="count-badge" style="border-color: var(--gold); color: var(--gold); display:none;">
             🎫 Bugün <span id="t-count">0</span> kişi bilet aldı!
         </div>
@@ -123,51 +130,54 @@
             show_10527452('pop').then(() => {
                 adCount++;
                 document.getElementById('ad-btn').innerText = `🎬 REKLAM İZLE (${adCount}/4)`;
-                if (adCount >= 4) {
-                    completeAdTask();
-                } else {
-                    tg.showAlert(`Reklam izlendi! Kalan: ${4 - adCount}`);
-                }
+                if (adCount >= 4) { completeAdTask(); }
+                else { tg.showAlert(`Reklam izlendi! Kalan: ${4 - adCount}`); }
             }).catch(() => { tg.showAlert("Reklam şu an hazır değil."); });
         }
 
         async function completeAdTask() {
             const { error } = await _supabase.from('users').update({ has_ticket: true }).eq('telegram_id', userId);
-            if (!error) {
-                user.has_ticket = true; adCount = 0;
-                tg.showAlert("Tebrikler! Biletiniz tanımlandı. 🎫");
-                updateTicketCount();
-                showScreen('main-screen');
-            }
+            if (!error) { user.has_ticket = true; adCount = 0; tg.showAlert("Tebrikler! Biletiniz tanımlandı. 🎫"); updateTicketCount(); showScreen('main-screen'); }
         }
 
         async function init() {
             tg.ready(); tg.expand();
-            
             if (typeof show_10527452 === 'function') {
                 show_10527452('pop').then(() => { showScreen('main-screen'); }).catch(() => { console.log("Otomatik reklam yüklenemedi."); });
             }
-
             if (typeof updatePrizesAndJackpot === "function") await updatePrizesAndJackpot();
-
             const sList = document.getElementById('sponsor-list');
             if (sList) {
                 sList.innerHTML = APP_CONFIG.sponsors.map(s => `<div class="sponsor-box">${s.img ? `<img src="${s.img}" style="width:100%; height:100%; object-fit: cover;">` : s.text}</div>`).join("");
             }
-
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
             user = data || (await _supabase.from('users').insert([{ telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", has_ticket: false }]).select().single()).data;
             
             updateTicketCount();
             setInterval(renderMain, 1000);
+            // 1 MART GERİ SAYIMINI BAŞLAT
+            setInterval(updateGrandCountdown, 1000);
+            updateGrandCountdown();
+        }
+
+        function updateGrandCountdown() {
+            const target = new Date("March 1, 2026 00:00:00").getTime();
+            const now = new Date().getTime();
+            const diff = target - now;
+            if (diff <= 0) {
+                document.getElementById("grand-countdown").innerText = "YARIŞMA BAŞLADI!";
+                return;
+            }
+            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+            document.getElementById("grand-countdown").innerText = `${d}G ${h}S ${m}D ${s}S`;
         }
 
         async function updateTicketCount() {
             const { count } = await _supabase.from('users').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
-            if (count !== null) {
-                document.getElementById('t-count').innerText = count;
-                document.getElementById('ticket-count-area').style.display = 'block';
-            }
+            if (count !== null) { document.getElementById('t-count').innerText = count; document.getElementById('ticket-count-area').style.display = 'block'; }
         }
 
         function getTRTime() { return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Istanbul"})); }
@@ -179,17 +189,11 @@
             const isMatchTime = (now.getHours() === hour && now.getMinutes() >= minute && now.getMinutes() < minute + durationMinutes);
             const actionArea = document.getElementById('action-area');
             document.getElementById('u-name').innerText = `@${user.username}`;
-            
             let target = getTRTime(); target.setHours(hour, minute, 0, 0);
             if (now >= target && !isMatchTime) target.setDate(target.getDate() + 1);
             let diff = target - now; if (diff < 0) diff = 0; 
-            
-            let dh = Math.floor(diff/3600000).toString().padStart(2,'0'), 
-                dm = Math.floor((diff%3600000)/60000).toString().padStart(2,'0'), 
-                ds = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-            
+            let dh = Math.floor(diff/3600000).toString().padStart(2,'0'), dm = Math.floor((diff%3600000)/60000).toString().padStart(2,'0'), ds = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
             const countdownHTML = `<p style="margin-bottom:0; font-size:0.8rem; color:#94a3b8;">Sıradaki yarışma:</p><div class="countdown-timer">${dh}:${dm}:${ds}</div>`;
-            
             if (user.last_played_date === now.toISOString().split('T')[0]) {
                 actionArea.innerHTML = `<div class="card"><p style="color:var(--primary); font-weight:bold; margin-top:0;">Yarın tekrar gel!</p>${countdownHTML}</div>`;
             } else if (isMatchTime) {
