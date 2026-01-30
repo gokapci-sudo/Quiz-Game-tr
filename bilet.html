@@ -82,11 +82,11 @@
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
             const { data: p, error } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', user.id).single();
 
-            if (p && p.balance >= 1.0) {
-                const { error: upErr } = await supabaseClient.from('profiles').update({ balance: p.balance - 1.0 }).eq('telegram_id', user.id);
+            if (p && p.balance >= 0.10) {
+                const { error: upErr } = await supabaseClient.from('profiles').update({ balance: p.balance - 0.10 }).eq('telegram_id', user.id);
                 if (!upErr) grantTicket("Bilet satın alındı!");
             } else {
-                tg.showAlert("Bakiyeniz yetersiz (Min: 1.00 TON).");
+                tg.showAlert("Bakiyeniz yetersiz (Min: 0.10 TON).");
             }
         }
 
