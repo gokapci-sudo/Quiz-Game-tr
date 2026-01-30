@@ -6,36 +6,120 @@
     <title>Admin - Quiz Arena</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <header style="margin-bottom: 20px;">
+    <header style="margin-bottom: 20px; padding: 10px;">
         <button onclick="window.location.href='dashboard.html'" class="btn-sub" style="width: auto; display: inline-block;">⬅ Geri</button>
         <h2 style="display: inline-block; margin-left: 10px;">Yönetim Paneli</h2>
     </header>
 
-    <section class="card">
-        <h3>💰 Çekim Talepleri</h3>
-        <div id="withdrawal-list"><p>Yükleniyor...</p></div>
-    </section>
+    <div class="container">
+        <section class="card">
+            <h3 class="yellow-text">🏆 Yarışma & Ödül Ayarları</h3>
+            <div style="margin-top: 10px;">
+                <label style="font-size: 12px; opacity: 0.7;">Toplam Ödül Havuzu (TON):</label>
+                <input type="number" id="admin-prize-input" class="card" style="width:100%; background:#0e1621; color:white; margin-top:5px;" placeholder="Örn: 100">
+            </div>
+            <div style="margin-top: 10px;">
+                <label style="font-size: 12px; opacity: 0.7;">Yarışma Saatleri (Virgülle ayır):</label>
+                <input type="text" id="admin-times-input" class="card" style="width:100%; background:#0e1621; color:white; margin-top:5px;" placeholder="12:00, 18:00, 21:00">
+            </div>
+            <button onclick="updateSettings()" class="btn-main" style="margin-top: 10px; background:var(--accent);">AYARLARI KAYDET</button>
+        </section>
 
-    <section class="card">
-        <h3>📢 Yeni Duyuru</h3>
-        <textarea id="ann-content" class="card" style="width:100%; height:80px; background:#0e1621; border-color:#3b4754; color:white;"></textarea>
-        <button onclick="addAnn()" class="btn-main">Yayınla</button>
-    </section>
+        <section class="card" style="border: 2px solid var(--red);">
+            <h3 style="color:var(--red);">🏁 Yarışmayı Sonlandır</h3>
+            <p style="font-size: 11px; opacity:0.8; margin-bottom:10px;">Bu buton sıralamadaki ilk 3 kişiye ödüllerini otomatik dağıtır ve biletleri sıfırlar.</p>
+            <button onclick="endRaceAndPay()" class="btn-main" style="background:var(--red);">YARIŞI BİTİR & ÖDE</button>
+        </section>
 
-    <section class="card">
-        <h3>❓ Soru Ekle</h3>
-        <input type="text" id="q-text" placeholder="Soru Metni" class="card" style="width:100%; margin-bottom:5px;">
-        <input type="text" id="q-opts" placeholder="A,B,C,D (Virgülle ayır)" class="card" style="width:100%; margin-bottom:5px;">
-        <input type="number" id="q-correct" placeholder="Doğru İndeks (0-3)" class="card" style="width:100%; margin-bottom:10px;">
-        <button onclick="addQuest()" class="btn-main">Soruyu Kaydet</button>
-    </section>
+        <section class="card">
+            <h3>💰 Çekim Talepleri</h3>
+            <div id="withdrawal-list"><p>Yükleniyor...</p></div>
+        </section>
+
+        <section class="card">
+            <h3>📢 Yeni Duyuru</h3>
+            <textarea id="ann-content" class="card" style="width:100%; height:80px; background:#0e1621; border-color:#3b4754; color:white;"></textarea>
+            <button onclick="addAnn()" class="btn-main">Yayınla</button>
+        </section>
+
+        <section class="card">
+            <h3>❓ Soru Ekle</h3>
+            <input type="text" id="q-text" placeholder="Soru Metni" class="card" style="width:100%; margin-bottom:5px;">
+            <input type="text" id="q-opts" placeholder="A,B,C,D (Virgülle ayır)" class="card" style="width:100%; margin-bottom:5px;">
+            <input type="number" id="q-correct" placeholder="Doğru İndeks (0-3)" class="card" style="width:100%; margin-bottom:10px;">
+            <button onclick="addQuest()" class="btn-main">Soruyu Kaydet</button>
+        </section>
+    </div>
 
     <script>
         const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
         const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
         const supabaseAdmin = supabase.createClient(SB_URL, SB_KEY);
+        const tg = window.Telegram.WebApp;
+
+        // --- AYARLAR VE ÖDÜL YÖNETİMİ ---
+
+        async function fetchSettings() {
+            const { data } = await supabaseAdmin.from('settings').select('*').eq('id', 1).single();
+            if (data) {
+                document.getElementById('admin-prize-input').value = data.total_prize;
+                document.getElementById('admin-times-input').value = data.race_times;
+            }
+        }
+
+        async function updateSettings() {
+            const prize = document.getElementById('admin-prize-input').value;
+            const times = document.getElementById('admin-times-input').value;
+            
+            const { error } = await supabaseAdmin.from('settings').update({
+                total_prize: prize,
+                race_times: times
+            }).eq('id', 1);
+            
+            if(!error) alert("Ayarlar güncellendi!");
+            else alert("Hata: " + error.message);
+        }
+
+        async function endRaceAndPay() {
+            if(!confirm("Yarışı bitirip ilk 3 kişiye ödül dağıtmak istediğinize emin misiniz?")) return;
+
+            // 1. Ayarlardan toplam ödülü al
+            const { data: sett } = await supabaseAdmin.from('settings').select('*').eq('id', 1).single();
+            const totalPrize = parseFloat(sett.total_prize);
+            const shares = [0.50, 0.30, 0.20]; // %50, %30, %20
+
+            // 2. Liderlik tablosundaki ilk 3'ü getir
+            const { data: winners } = await supabaseAdmin
+                .from('profiles')
+                .select('*')
+                .order('score', { ascending: false })
+                .limit(3);
+
+            if (!winners || winners.length === 0) {
+                alert("Kazanan bulunamadı!");
+                return;
+            }
+
+            // 3. Ödülleri dağıt ve biletleri/skorları sıfırla (Biletleri sıfırlamak yeni yarış için gereklidir)
+            for (let i = 0; i < winners.length; i++) {
+                const reward = totalPrize * shares[i];
+                const newBalance = parseFloat(winners[i].balance || 0) + reward;
+                
+                await supabaseAdmin.from('profiles')
+                    .update({ balance: newBalance })
+                    .eq('telegram_id', winners[i].telegram_id);
+            }
+
+            // 4. Tüm kullanıcıların skorlarını ve biletlerini yeni yarış için temizle
+            await supabaseAdmin.from('profiles').update({ score: 0, has_ticket: false }).neq('telegram_id', 0);
+
+            alert("Yarış bitti! İlk 3'e toplam " + totalPrize + " TON dağıtıldı. Tüm skorlar ve biletler sıfırlandı.");
+        }
+
+        // --- MEVCUT FONKSİYONLAR ---
 
         async function loadRequests() {
             const { data } = await supabaseAdmin.from('withdrawals').select('*').eq('status', 'pending');
@@ -43,7 +127,7 @@
             list.innerHTML = data?.length ? "" : "Bekleyen talep yok.";
             data?.forEach(req => {
                 list.innerHTML += `
-                    <div class="req-item" style="border: 1px solid #333; padding: 10px; margin-bottom: 10px;">
+                    <div class="req-item" style="border: 1px solid #333; padding: 10px; margin-bottom: 10px; border-radius:8px;">
                         ID: ${req.telegram_id} <br> Miktar: <span class="yellow-text">${req.amount} TON</span> <br>
                         <button onclick="approve('${req.id}', ${req.telegram_id})" class="btn-main" style="padding:5px; margin-top:5px; font-size:12px; background:#31b545;">ÖDENDİ YAP & SIFIRLA</button>
                     </div>`;
@@ -61,16 +145,26 @@
             const content = document.getElementById('ann-content').value;
             await supabaseAdmin.from('announcements').insert([{ content }]);
             alert("Duyuru yayınlandı.");
+            document.getElementById('ann-content').value = "";
         }
 
         async function addQuest() {
             const text = document.getElementById('q-text').value;
             const opts = document.getElementById('q-opts').value.split(',');
             const correct = document.getElementById('q-correct').value;
-            await supabaseAdmin.from('questions').insert([{ question_text: text, options: opts, correct_option: parseInt(correct) }]);
+            await supabaseAdmin.from('questions').insert([{ 
+                question_text: text, 
+                options: opts, 
+                correct_option: parseInt(correct) 
+            }]);
             alert("Soru eklendi.");
+            document.getElementById('q-text').value = "";
+            document.getElementById('q-opts').value = "";
+            document.getElementById('q-correct').value = "";
         }
 
+        // Başlangıç
+        fetchSettings();
         loadRequests();
     </script>
 </body>
