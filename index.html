@@ -3,28 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quiz Arena - Hoşgeldiniz</title>
+    <title>Quiz Arena</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body class="splash-body">
+<body>
     <div class="splash-container">
         <div class="counter-card">
-            <span class="counter-label" style="opacity: 0.8; font-size: 0.8rem;">TOPLAM BİLETLİ KATILIMCI</span>
+            <small style="opacity:0.7">TOPLAM BİLETLİ KATILIMCI</small>
             <div id="big-counter" class="counter-value">1388 + ...</div>
         </div>
 
         <div class="sponsor-grid">
-            <div class="sponsor-box">Sponsorlarımız Burada Görünecektir.</div>
-            <div class="sponsor-box">Sponsorlarımız Burada Görünecektir.</div>
-            <div class="sponsor-box highlight">Bu Alana Reklam Verebilirsiniz</div>
-            <div class="sponsor-box highlight">Bu Alana Reklam Verebilirsiniz</div>
+            <div class="sponsor-box">2x Sponsorlarımız Burada Görünecektir.</div>
+            <div class="sponsor-box">2x Sponsorlarımız Burada Görünecektir.</div>
+            <div class="sponsor-box highlight">2x Bu Alana Reklam Verebilirsiniz</div>
+            <div class="sponsor-box highlight">2x Bu Alana Reklam Verebilirsiniz</div>
         </div>
 
-        <div class="action-footer" style="margin-top: 20px;">
-            <button id="entry-btn" class="btn-main pulse">GİRİŞ YAP</button>
-        </div>
+        <button id="entry-btn" class="btn-main" style="margin-top: 20px;">GİRİŞ YAP</button>
     </div>
 
     <script>
@@ -33,26 +31,20 @@
         const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
         const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
 
-        async function initApp() {
-            tg.ready();
-            tg.expand();
-            
-            // Sayaç güncelleme
+        async function init() {
+            tg.ready(); tg.expand();
             const { count } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
             document.getElementById('big-counter').innerText = `1388 + ${count || 0}`;
-
+            
             document.getElementById('entry-btn').onclick = async () => {
                 const user = tg.initDataUnsafe?.user;
                 if (user) {
-                    await supabaseClient.from('profiles').upsert({
-                        telegram_id: user.id,
-                        username: user.username || "isimsiz",
-                    }, { onConflict: 'telegram_id' });
+                    await supabaseClient.from('profiles').upsert({ telegram_id: user.id, username: user.username || "isimsiz" });
                 }
                 window.location.href = "dashboard.html";
             };
         }
-        initApp();
+        init();
     </script>
 </body>
 </html>
