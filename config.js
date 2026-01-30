@@ -1,148 +1,23 @@
-// Cüzdan bakiyesini blockchainden çeken ve ödülleri hesaplayan fonksiyon
-async function updatePrizesAndJackpot() {
-    const adminWallet = "UQAhiYJQNPQmh1J_Jvnlw3kdL8Q6rK0_2LbjXY_CLfMQGVb5";
-    try {
-        const response = await fetch(`https://tonapi.io/v2/accounts/${adminWallet}`);
-        const data = await response.json();
-        const totalBalance = data.balance / 1000000000; // TON cinsinden net bakiye
-
-        // 1. Toplam Havuzu Göster (Ana Bakiye)
-        const jpElement = document.getElementById('jackpot-amount');
-        if(jpElement) jpElement.innerText = totalBalance.toFixed(2) + " TON";
-
-        // 2. Dağıtılacak Tutarı Hesapla (Bakiye - %40 Komisyon)
-        const distributableAmount = totalBalance * 0.60;
-
-        // 3. Rekabetçi Paylaşım (%50, %30, %20)
-        const firstPrize = (distributableAmount * 0.50).toFixed(2);
-        const secondPrize = (distributableAmount * 0.30).toFixed(2);
-        const thirdPrize = (distributableAmount * 0.20).toFixed(2);
-
-        // 4. Ekrana Yazdır
-        if(document.getElementById('p1')) document.getElementById('p1').innerText = firstPrize + " TON";
-        if(document.getElementById('p2')) document.getElementById('p2').innerText = secondPrize + " TON";
-        if(document.getElementById('p3')) document.getElementById('p3').innerText = thirdPrize + " TON";
-
-    } catch (e) {
-        console.error("Ödül verileri güncellenemedi:", e);
-    }
-}
-
 const APP_CONFIG = {
-    announcement: "🚀 Türkiye Genel Kültür Maratonu Başladı! \n\n1️⃣ Her gün saat 13:00'da sorular aktif olur. \n2️⃣ Toplam 10 soruda en yüksek puanı alan ve en hızlı olan kazanır. \n3️⃣ Ödüllü yarışma 1 Mart tarihinde başlayacaktır. Biz talep toplama ve ödül havuzunu  büyütürken takipte kal. \n4️⃣ Herşey hazır olduğunda seni bekliyor olacağız. \n5️⃣ Ödüller yarışma bitiminden hemen sonra cüzdanlara aktarılır. Ton cüzdanını bağlamayı ihmal etme. Başarılar!",
-    // Alt kısımdaki statik prizes artık sadece yedek olarak duruyor, sistem yukardakini kullanacak.
-    prizes: { first: "Hesaplanıyor...", second: "Hesaplanıyor...", third: "Hesaplanıyor..." },
-    matchTime: { hour: 13, minute: 00, durationMinutes: 5 },
+    // Yarışma Saatleri (Türkiye Saati)
+    matchTime: {
+        hours: [10, 13, 15], // 10:00, 13:00 ve 15:00
+        durationMinutes: 3,  // Yarışma kaç dakika açık kalacak?
+    },
+    
+    // Uygulama Duyuruları
+    announcement: "📢 Yeni Bakiye Sistemi Aktif! \n\nArtık yarışmalarda kazandığınız TON'lar bakiyenize eklenir. 2.00 TON limitine ulaştığınızda ödeme talebi oluşturabilirsiniz. Başarılar Arena Savaşçısı!",
+    
+    // Sponsorlar (Giriş ekranında görünecekler)
     sponsors: [
-        { name: "Sponsor 1", text: "", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRj-GjvYIphnwj4Kyp2tgz9eg8j7Eru5FlEKTbRJbUhBTJKjr57ZXWur5I&s" },
-        { name: "Sponsor 2", text: "", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRj-GjvYIphnwj4Kyp2tgz9eg8j7Eru5FlEKTbRJbUhBTJKjr57ZXWur5I&s" },
-        { name: "Sponsor 3", text: "Sponsor alındığında burada görünecektir.", img: "" },
-        { name: "Sponsor 4", text: "Sponsor alındığında burada görünecektir.", img: "" }
+        { text: "🚀 TON Arena Official", img: "" },
+        { text: "💎 Premium Sponsor", img: "" }
     ],
-    videoTasks: [
-        { url: "https://www.youtube.com/watch?v=video1", password: "TX" },
-        { url: "https://www.youtube.com/watch?v=video2", password: "K9" },
-        { url: "https://www.youtube.com/watch?v=video3", password: "M4" }
-    ],
-    questions: [
-        { question: "Cumhuriyet ilan edildiğinde ilk Meclis Başkanı kim olmuştur?", options: ["İsmet İnönü", "Fethi Okyar", "Kazım Karabekir", "Fevzi Çakmak"], correct_option: 1 },
-        { question: "Mimar Sinan'ın 'Çıraklık Eserim' dediği yapı hangisidir?", options: ["Sultanahmet", "Süleymaniye", "Şehzade Camii", "Selimiye"], correct_option: 2 },
-        { question: "Türkiye'nin UNESCO Listesi'ne giren ilk varlığı hangisidir?", options: ["Göbeklitepe", "Safranbolu", "Efes", "Divriği Ulu Camii"], correct_option: 3 },
-        { question: "Gökçeada'nın 1970 yılına kadar kullanılan resmi adı nedir?", options: ["İmroz", "Tenedos", "Limni", "Meis"], correct_option: 0 },
-        { question: "İstiklal Marşı hangi yıl anayasaya girmiştir?", options: ["1921", "1924", "1961", "1982"], correct_option: 3 },
-        { question: "Türkiye'nin en yüksek barajı hangisidir? (Gövde yüksekliği bakımından)", options: ["Atatürk", "Yusufeli", "Keban", "Deriner"], correct_option: 1 },
-        { question: "Lozan Antlaşması'na Türkiye adına Başmurahhas olarak kim katılmıştır?", options: ["Rauf Orbay", "İsmet İnönü", "Fethi Okyar", "Celal Bayar"], correct_option: 1 },
-        { question: "Erzurum Kongresi hangi tarihler arasında gerçekleşmiştir?", options: ["19 Mayıs-22 Haziran", "23 Temmuz-7 Ağustos", "4-11 Eylül", "20-22 Ekim"], correct_option: 1 },
-        { question: "Nutuk, hangi yılları kapsayan bir tarihsel süreci anlatır?", options: ["1919-1923", "1919-1927", "1923-1938", "1914-1923"], correct_option: 1 },
-        { question: "Hangi ilimizde 'Karstik Topografya' en yaygın şekilde görülür?", options: ["Antalya", "Konya", "Trabzon", "Şanlıurfa"], correct_option: 0 },
-        { question: "Türkiye'nin ilk yerli otomobili 'Devrim' nerede üretilmiştir?", options: ["Kocaeli", "Bursa", "Eskişehir", "Ankara"], correct_option: 2 },
-        { question: "Saffet Arıkan tarafından ismi verilen Türk kurumu hangisidir?", options: ["TSE", "TDK", "TTK", "TÜBİTAK"], correct_option: 1 },
-        { question: "Halide Edip Adıvar'ın Milli Mücadele'yi anlatan ünlü eseri?", options: ["Yaban", "Vurun Kahpeye", "Ateşten Gömlek", "Sinekli Bakkal"], correct_option: 2 },
-        { question: "Türkiye'nin ilk kadın Bakanı (Sağlık Bakanı) kimdir?", options: ["Türkan Akyol", "Tansu Çiller", "Işılay Saygın", "Meral Akşener"], correct_option: 0 },
-        { question: "Lületaşı madeninin dünyadaki en zengin rezervi hangi ilimizdedir?", options: ["Eskişehir", "Kütahya", "Denizli", "Muğla"], correct_option: 0 },
-        { question: "Dünyanın en eski tapınağı Göbeklitepe, kaçıncı bin yıla tarihlenir?", options: ["M.Ö 5.000", "M.Ö 8.000", "M.Ö 10.000", "M.Ö 12.000"], correct_option: 3 },
-        { question: "Hangi padişah döneminde Türk parası ilk kez kağıt olarak (Kaime) basıldı?", options: ["II. Mahmut", "Abdülmecid", "II. Abdülhamid", "Vahdettin"], correct_option: 1 },
-        { question: "Ulubey Kanyonu'ndan sonra dünyanın en büyük ikinci kanyonu neresidir?", options: ["Ihlara", "Valla", "Karanlık", "Grand Canyon"], correct_option: 3 },
-        { question: "Türk lirasının simgesi ₺, hangi tarihte tanıtılmıştır?", options: ["2005", "2009", "2012", "2015"], correct_option: 2 },
-        { question: "Dünyanın en derin kanyonlarından biri olan Valla Kanyonu nerededir?", options: ["Kastamonu", "Sinop", "Artvin", "Mersin"], correct_option: 0 },
-        { question: "İstiklal Marşı'nın ilk bestecisi kimdir?", options: ["Zeki Üngör", "Ali Rıfat Çağatay", "Osman Zeki", "Hamdullah Suphi"], correct_option: 1 },
-        { question: "Türkiye'nin en büyük delta ovası hangisidir?", options: ["Bafra", "Çarşamba", "Çukurova", "Gediz"], correct_option: 2 },
-        { question: "İlk Türk kadın opera sanatçısı kimdir?", options: ["Leyla Gencer", "Semiha Berksoy", "Safiye Ayla", "Müzeyyen Senar"], correct_option: 1 },
-        { question: "Mustafa Kemal'e 'Atatürk' soyadını hangi kurum vermiştir?", options: ["TDK", "TTK", "TBMM", "Cumhurbaşkanlığı"], correct_option: 2 },
-        { question: "Hangi ilimizde 'Peri Bacaları' benzeri oluşumlar olan 'Narman' kanyonu vardır?", options: ["Nevşehir", "Erzurum", "Niğde", "Kayseri"], correct_option: 1 },
-        { question: "Türkiye'nin ilk Milli Parkı olan Yozgat Çamlığı kaç yılında ilan edilmiştir?", options: ["1923", "1958", "1970", "1984"], correct_option: 1 },
-        { question: "Türkiye'nin tek volkanik dağı olan Ağrı Dağı'nın yüksekliği nedir?", options: ["5137m", "3917m", "4058m", "5165m"], correct_option: 0 },
-        { question: "Çay üretimi Türkiye'de ilk kez nerede deneme amaçlı yapılmıştır?", options: ["Rize", "Artvin", "Bursa", "Zonguldak"], correct_option: 2 },
-        { question: "Anadolu Hisarı (Güzelce Hisar) hangi padişah tarafından yaptırılmıştır?", options: ["Fatih Sultan Mehmet", "Yıldırım Bayezid", "II. Murat", "Kanuni"], correct_option: 1 },
-        { question: "Cumhuriyet tarihinin ilk muhalefet partisi hangisidir?", options: ["Terakkiperver Cumhuriyet Fırkası", "Serbest Cumhuriyet Fırkası", "Demokrat Parti", "Millet Partisi"], correct_option: 0 },
-        { question: "Mudanya Mütarekesi hangi savaşı sona erdirmiştir?", options: ["Birinci Dünya", "İkinci İnönü", "Kurtuluş Savaşı", "Trablusgarp"], correct_option: 2 },
-        { question: "Hatay, hangi yılda Türkiye Cumhuriyeti topraklarına katılmıştır?", options: ["1923", "1932", "1938", "1939"], correct_option: 3 },
-        { question: "Türkiye'de rüzgar enerjisinden elektrik üreten ilk santral nerededir?", options: ["İzmir (Alaçatı)", "Balıkesir", "Çanakkale", "Hatay"], correct_option: 0 },
-        { question: "Hangi ilimiz 'Üç Şerefeli Cami'ye ev sahipliği yapmaktadır?", options: ["Bursa", "İstanbul", "Edirne", "Konya"], correct_option: 2 },
-        { question: "Türkiye'nin en uzun sınır komşusu hangisidir?", options: ["Irak", "İran", "Yunanistan", "Suriye"], correct_option: 3 },
-        { question: "Sultanahmet Camii'nin mimarı kimdir?", options: ["Mimar Sinan", "Sedefkar Mehmet Ağa", "Mimar Hayrettin", "Mimar Kemalettin"], correct_option: 1 },
-        { question: "Kızkalesi (Deniz Kalesi) hangi ilimizdedir?", options: ["Antalya", "Muğla", "Mersin", "Hatay"], correct_option: 2 },
-        { question: "Atatürk'ün şahsi kütüphanesinde kaç kitap olduğu tahmin edilmektedir?", options: ["~1000", "~2500", "~4000", "~7000"], correct_option: 2 },
-        { question: "Türkiye'nin 'Mavi Bayraklı' plaj sayısı bakımından dünyadaki sırası?", options: ["1.", "2.", "3.", "5."], correct_option: 2 },
-        { question: "Türklerin tarihte bilinen ilk başkenti neresidir?", options: ["Ötüken", "Semerkant", "Buhara", "Saray"], correct_option: 0 },
-        { question: "UNESCO Dünya Mirası olan 'Nemrut Dağı' heykelleri hangi krallığa aittir?", options: ["Hitit", "Lidya", "Kommagene", "Frigya"], correct_option: 2 },
-        { question: "Türkiye'nin ilk şeker fabrikası Alpullu nerede kurulmuştur?", options: ["Uşak", "Kırklareli", "Eskişehir", "Tekirdağ"], correct_option: 1 },
-        { question: "Amasya Genelgesi'ni kaleme alan kişi kimdir?", options: ["Cevat Abbas Gürer", "Refet Bele", "Ali Fuat Cebesoy", "Rauf Orbay"], correct_option: 0 },
-        { question: "Türkiye'nin en büyük krater gölü hangisidir?", options: ["Nemrut Gölü", "Acıgöl", "Meke Gölü", "Tuz Gölü"], correct_option: 0 },
-        { question: "Tarihin sıfır noktası olarak adlandırılan Göbeklitepe hangi şehirdedir?", options: ["Mardin", "Gaziantep", "Şanlıurfa", "Adıyaman"], correct_option: 2 },
-        { question: "Lale Devri hangi padişah döneminde yaşanmıştır?", options: ["III. Selim", "III. Ahmet", "I. Mahmut", "II. Mahmut"], correct_option: 1 },
-        { question: "Türkiye'nin ilk betonarme köprüsü hangisidir?", options: ["Boğaziçi", "Galata", "Menderes (Cizre)", "Atatürk"], correct_option: 2 },
-        { question: "Anıtkabir'in mimarları kimlerdir?", options: ["Emin Onat-Orhan Arda", "Vedat Tek-Kemalettin Bey", "Sinan Genim-Can Çinici", "Sedad Hakkı Eldem"], correct_option: 0 },
-        { question: "Atatürk'ün naaşı Etnografya Müzesi'nden Anıtkabir'e hangi yıl taşınmıştır?", options: ["1938", "1945", "1953", "1960"], correct_option: 2 },
-        { question: "Piri Reis'in ünlü dünya haritası hangi yıl çizilmiştir?", options: ["1453", "1492", "1513", "1521"], correct_option: 2 },
-        { question: "Türkiye'de ilk nüfus sayımı hangi yıl yapılmıştır?", options: ["1923", "1927", "1935", "1940"], correct_option: 1 },
-        { question: "Karain Mağarası hangi ilimiz sınırları içerisindedir?", options: ["Muğla", "Antalya", "Burdur", "Isparta"], correct_option: 1 },
-        { question: "Türkiye'nin en kuzey ucu olan İnceburun hangi ilimizdedir?", options: ["Kırklareli", "Bartın", "Sinop", "Kastamonu"], correct_option: 2 },
-        { question: "Cumhuriyet tarihinin ilk barajı hangisidir?", options: ["Keban", "Çubuk-1", "Sarıyar", "Hirfanlı"], correct_option: 1 },
-        { question: "Hangi ilimiz 'Bozkırın Tezenesi' Neşet Ertaş'ın memleketidir?", options: ["Yozgat", "Kırıkkale", "Kırşehir", "Nevşehir"], correct_option: 2 },
-        { question: "Divan-ı Lügati't-Türk'ün yazarı kimdir?", options: ["Kaşgarlı Mahmut", "Yusuf Has Hacib", "Edip Ahmet", "Ahmet Yesevi"], correct_option: 0 },
-        { question: "Türkiye'nin en büyük adası hangisidir?", options: ["Bozcaada", "Gökçeada", "Büyükada", "Marmara Adası"], correct_option: 1 },
-        { question: "Kızılırmak nehrinin döküldüğü deniz hangisidir?", options: ["Akdeniz", "Marmara", "Ege", "Karadeniz"], correct_option: 3 },
-        { question: "Türkiye'nin en sığ gölü olarak bilinen yer?", options: ["Sapanca", "Manyas", "Eğirdir", "Tuz Gölü"], correct_option: 3 },
-        { question: "Hangi ilimiz 'Çinileri' ile dünyaca ünlüdür?", options: ["Kütahya", "İznik", "Bursa", "Eskişehir"], correct_option: 0 },
-        { question: "Çanakkale Şehitleri Anıtı'nın mimarı kimdir?", options: ["Doğan Erginbaş", "Emin Onat", "Zühtü Müridoğlu", "Feridun Kip"], correct_option: 0 },
-        { question: "Kurtuluş Savaşı'nda 'Şerife Bacı' hangi cephede mücadele etmiştir?", options: ["Güney", "Batı", "Doğu", "İnebolu-Ankara Hattı"], correct_option: 3 },
-        { question: "Türk parasından 6 sıfır hangi yıl atılmıştır?", options: ["2000", "2002", "2005", "2008"], correct_option: 2 },
-        { question: "Dünyanın en eski kütüphanelerinden olan Celsus Kütüphanesi nerededir?", options: ["Muğla", "İzmir (Efes)", "Aydın", "Manisa"], correct_option: 1 },
-        { question: "Türkiye'nin ilk astronotu Alper Gezeravcı uzaya hangi yıl gitmiştir?", options: ["2022", "2023", "2024", "2025"], correct_option: 2 },
-        { question: "Milli Mücadele'de ilk kurşunu İzmir'de Hasan Tahsin kime sıkmıştır?", options: ["İngilizlere", "İtalyanlara", "Yunanlılara", "Fransızlara"], correct_option: 2 },
-        { question: "Sümela Manastırı hangi dağın yamacındadır?", options: ["Kaçkar", "Zigana", "Karadağ", "Kop"], correct_option: 2 },
-        { question: "Türkiye'nin en doğu ucu hangi nehirle belirlenir?", options: ["Aras", "Dicle", "Fırat", "Arpaçay"], correct_option: 3 },
-        { question: "İlk Türkçe sözlük olan 'Kamûs-ı Türkî' yazarı kimdir?", options: ["Şemsettin Sami", "Ziya Gökalp", "Namık Kemal", "Ömer Seyfettin"], correct_option: 0 },
-        { question: "Hangi ilimiz 'İshak Paşa Sarayı'na ev sahipliği yapar?", options: ["Kars", "Erzurum", "Ağrı", "Van"], correct_option: 2 },
-        { question: "Türkiye'nin Maldivleri olarak anılan Salda Gölü hangi ilimizdedir?", options: ["Denizli", "Burdur", "Isparta", "Antalya"], correct_option: 1 },
-        { question: "Atatürk'ün naaşı Anıtkabir'e taşınırken tabutun içindeki toprağın özelliği?", options: ["Sadece Ankara toprağı", "Tüm illerden toprak", "Selanik toprağı", "Hepsi Karışık"], correct_option: 3 },
-        { question: "Eski adı 'Nikaia' olan tarihi kentimiz hangisidir?", options: ["Bursa", "İzmit", "İznik", "Bergama"], correct_option: 2 },
-        { question: "Saffet Arıkan Milli Eğitim Bakanlığı döneminde hangi önemli sistemi kurmuştur?", options: ["Köy Enstitüleri", "Enderun", "Halkevleri", "Millet Mektepleri"], correct_option: 0 },
-        { question: "Türkiye'nin tek asma köprüsü olan '1915 Çanakkale'nin kule yüksekliği?", options: ["318m", "325m", "333m", "350m"], correct_option: 0 },
-        { question: "İlk kağıt fabrikası (SEKA) hangi ilimizde kurulmuştur?", options: ["Zonguldak", "Kocaeli", "Giresun", "İzmir"], correct_option: 1 },
-        { question: "Nemrut Dağı heykelleri hangi ilçemizdedir?", options: ["Tatvan", "Kâhta", "Pütürge", "Siverek"], correct_option: 1 },
-        { question: "Mevlana Müzesi'ndeki yeşil türbenin adı nedir?", options: ["Kubbe-i Hadra", "Kubbe-i Sahra", "Yeşil Kubbe", "Altın Kubbe"], correct_option: 0 },
-        { question: "Türkiye'nin ilk yerli savaş uçağının adı nedir?", options: ["Hürkuş", "Kaan", "Gökbey", "Hürjet"], correct_option: 1 },
-        { question: "İstiklal Yolu hangi limanımızdan başlar?", options: ["Zonguldak", "İnebolu", "Samsun", "Trabzon"], correct_option: 1 },
-        { question: "Dünyanın en uzun tüneli olan Ovit Tüneli hangi illeri bağlar?", options: ["Rize-Erzurum", "Trabzon-Gümüşhane", "Artvin-Erzurum", "Bolu-İstanbul"], correct_option: 0 },
-        { question: "Hangi ilimiz 'Evliyalar Şehri' olarak anılır?", options: ["Konya", "Bursa", "Kastamonu", "Kayseri"], correct_option: 2 },
-        { question: "Tortum Şelalesi hangi ilimizdedir?", options: ["Erzurum", "Erzincan", "Artvin", "Rize"], correct_option: 0 },
-        { question: "Türkiye'nin en kuzeyindeki deniz feneri hangisidir?", options: ["Şile", "Sinop İnceburun", "Ahırkapı", "Fener"], correct_option: 1 },
-        { question: "Mimar Sinan's İstanbul dışındaki tek büyük eseri olan Selimiye nerededir?", options: ["Bursa", "Edirne", "Konya", "Tekirdağ"], correct_option: 1 },
-        { question: "Türkiye'nin en derin gölü hangisidir?", options: ["Van Gölü", "Eğirdir Gölü", "Salda Gölü", "Manyas Gölü"], correct_option: 2 },
-        { question: "Hangi ilimiz 'Taşköprü' sarımsağı ile ünlüdür?", options: ["Sinop", "Kastamonu", "Bolu", "Çankırı"], correct_option: 1 },
-        { question: "Milli Mücadele'de Batı Cephesi'ni kapatan antlaşma?", options: ["Lozan", "Mudanya", "Ankara", "Gümrü"], correct_option: 1 },
-        { question: "Kız Kulesi hangi Bizans imparatoru döneminde inşa edilmiştir?", options: ["Jüstinyen", "Konstantin", "Manuel Komnenos", "Teodosyus"], correct_option: 2 },
-        { question: "Türkiye'nin ilk hidroelektrik santrali nerede kurulmuştur?", options: ["Tarsus", "Sakarya", "Ankara", "İstanbul"], correct_option: 0 },
-        { question: "Hangi dağımız 'Anadolu'nun Yüce Dağı' olarak anılır?", options: ["Erciyes", "Ilgaz", "Uludağ", "Palandöken"], correct_option: 1 },
-        { question: "Türkiye'nin tek petrol bölgesi Batman'da petrol ne zaman bulundu?", options: ["1923", "1940", "1955", "1960"], correct_option: 1 },
-        { question: "İlk yerli helikopterimizin adı nedir?", options: ["Gökbey", "Atak", "Hürkuş", "Bayraktar"], correct_option: 0 },
-        { question: "Türkiye'nin en geniş yüzeyli gölü?", options: ["Van", "Tuz", "Beyşehir", "Eğirdir"], correct_option: 0 },
-        { question: "Mimar Sinan'ın doğum yeri olan Ağırnas köyü nerededir?", options: ["Kayseri", "Nevşehir", "Sivas", "Yozgat"], correct_option: 0 },
-        { question: "Türkiye'nin en güney ucu hangi ilimizdedir?", options: ["Mersin", "Hatay", "Antalya", "Adana"], correct_option: 1 },
-        { question: "Mustafa Kemal'in 'Ordular, ilk hedefiniz Akdeniz'dir. İleri!' emrini verdiği savaş?", options: ["I. İnönü", "Sakarya Meydan", "Başkomutanlık Meydan", "II. İnönü"], correct_option: 2 },
-        { question: "Hangi ilimizde 'Kapadokya'ya rakip görülen 'Kuladokya' vardır?", options: ["Denizli", "Uşak", "Manisa", "Kütahya"], correct_option: 2 },
-        { question: "Türkiye'nin ilk milli sondaj gemisinin adı?", options: ["Fatih", "Yavuz", "Kanuni", "Abdülhamid Han"], correct_option: 0 }
-    ]
+
+    // Ödül Havuzu Gösterimi (Manuel bilgi amaçlı)
+    prizes: {
+        p1: "2.50 TON",
+        p2: "1.50 TON",
+        p3: "1.00 TON"
+    }
 };
