@@ -1,22 +1,22 @@
 const APP_CONFIG = {
     // REKLAM AYARLARI
     ads: {
-        zoneId: '10527453', // Rewarded Popup ID
-        requiredToTicket: 5  // Bilet için gereken izleme sayısı
+        zoneId: '10527453', 
+        requiredToTicket: 5  // Bilet için 5 reklam
     },
     
-    // YARIŞMA ZAMANLARI (Türkiye Saati)
+    // YARIŞMA ZAMANLARI (Türkiye Saati: 10:00, 14:00, 20:00)
     matchTimes: [10, 14, 20], 
-    matchDurationMinutes: 3, // Yarışma süresi (Dakika)
+    matchDurationMinutes: 3, // Yarışma kapısı 3 dakika açık kalır
 
-    // SPONSORLAR (Giriş ekranında görünür)
+    // SPONSORLAR
     sponsors: [
-        { text: "🚀 TON Türkiye Resmi Topluluğu" },
-        { text: "💎 Arena Premium Sponsoru" },
+        { text: "🚀 TON Türkiye Resmi Kanalı" },
+        { text: "💎 Arena Elmas Sponsoru" },
         { text: "🎬 5 Reklam İzle, Yarışmaya Katıl!" }
     ],
 
-    // ÖDÜLLER (Bilgi amaçlı görünür)
+    // ÖDÜLLER
     prizes: {
         p1: "5.0 TON",
         p2: "2.5 TON",
