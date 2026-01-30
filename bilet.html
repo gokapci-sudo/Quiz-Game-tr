@@ -1,48 +1,113 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src='//libtl.com/sdk.js' data-zone='10527452' data-sdk='show_10527452'></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="config.js"></script>
 </head>
 <body>
     <div class="container">
-        <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:10px;">⬅ Geri</button>
-        <div class="card" style="text-align:center; margin-top:20px;">
-            <h2 class="yellow-text">BİLET AL</h2>
+        <header style="padding: 10px 0;">
+            <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:10px 20px;">⬅ Geri Dön</button>
+        </header>
+
+        <div class="card" style="text-align:center;">
+            <div style="font-size:50px; margin-bottom:10px;">Interstital</div>
+            <h2 class="yellow-text">BİLET MERKEZİ</h2>
+            <p style="opacity:0.7; font-size:13px;">5 Reklam izleyerek veya 1.00 TON karşılığında bilet alabilirsiniz.</p>
         </div>
-        <button onclick="watchAd()" class="btn-main">📺 REKLAM İZLE (<span id="count">0</span>/5)</button>
-        <button onclick="buy()" class="btn-main" style="background:var(--accent); margin-top:10px;">💰 1.00 TON İLE AL</button>
+        
+        <div class="card" style="border: 2px dashed var(--accent);">
+            <h3 style="margin-bottom:10px;">📺 Ücretsiz Bilet</h3>
+            <p id="status-text" style="margin-bottom:15px;">İzlenen Reklam: <b id="count" class="yellow-text">0</b> / 5</p>
+            <button id="ad-btn" onclick="watchAd()" class="btn-main">REKLAM İZLE</button>
+        </div>
+
+        <div class="card">
+            <h3>💰 Bakiye İle Al</h3>
+            <p style="opacity:0.7; font-size:12px; margin-bottom:10px;">Bakiyenizden 1.00 TON düşülür.</p>
+            <button onclick="buyTicket()" class="btn-main" style="background:var(--accent);">1.00 TON İLE SATIN AL</button>
+        </div>
     </div>
+
     <script>
         const tg = window.Telegram.WebApp;
-        let c = parseInt(localStorage.getItem('ads')) || 0;
-        document.getElementById('count').innerText = c;
+        // Reklam sayısını localStorage'dan güvenli çek
+        let adCount = parseInt(localStorage.getItem('quiz_ads_watched')) || 0;
+        
+        // Sayfa açıldığında sayacı güncelle
+        document.getElementById('count').innerText = adCount;
 
         function watchAd() {
-            if(typeof show_10527452 !== 'function') return;
+            // Reklamın ayrı tarayıcıda açılması ve SDK kontrolü
+            if (typeof show_10527452 !== 'function') {
+                tg.showAlert("Reklam henüz hazır değil, lütfen birkaç saniye bekleyin.");
+                return;
+            }
+
+            // Butonu geçici olarak kilitle
+            const btn = document.getElementById('ad-btn');
+            btn.disabled = true;
+            btn.innerText = "YÜKLENİYOR...";
+
+            // Reklamı Göster
             show_10527452('pop').then(() => {
-                c++; localStorage.setItem('ads', c);
-                document.getElementById('count').innerText = c;
-                if(c >= 5) grant();
+                // Reklam başarıyla kapandığında çalışır
+                adCount++;
+                localStorage.setItem('quiz_ads_watched', adCount);
+                document.getElementById('count').innerText = adCount;
+                
+                btn.disabled = false;
+                btn.innerText = "REKLAM İZLE";
+
+                if (adCount >= 5) {
+                    grantTicket("Reklam izleme tamamlandı!");
+                } else {
+                    tg.showConfirm(`Reklam başarıyla sayıldı! Kalan: ${5 - adCount}. Devam etmek ister misiniz?`);
+                }
+            }).catch((err) => {
+                btn.disabled = false;
+                btn.innerText = "REKLAM İZLE";
+                console.error("Reklam Hatası:", err);
+                // Bazı durumlarda reklam dış tarayıcıya yönlendirme yaparsa openLink kullan:
+                tg.openLink("https://libtl.com/your-ad-link"); // Buraya kendi reklam linkini de koyabilirsin
             });
         }
-        async function buy() {
+
+        async function buyTicket() {
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
-            const { data: p } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', user.id).single();
-            if(p.balance >= 1.0) {
-                await supabaseClient.from('profiles').update({ balance: p.balance - 1 }).eq('telegram_id', user.id);
-                grant();
-            } else tg.showAlert("Yetersiz Bakiye!");
+            const { data: p, error } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', user.id).single();
+
+            if (p && p.balance >= 1.0) {
+                const { error: upErr } = await supabaseClient.from('profiles').update({ balance: p.balance - 1.0 }).eq('telegram_id', user.id);
+                if (!upErr) grantTicket("Bilet satın alındı!");
+            } else {
+                tg.showAlert("Bakiyeniz yetersiz (Min: 1.00 TON).");
+            }
         }
-        async function grant() {
+
+        async function grantTicket(msg) {
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
-            await supabaseClient.from('profiles').update({ has_ticket: true }).eq('telegram_id', user.id);
-            localStorage.setItem('ads', 0);
-            tg.showAlert("Bilet Alındı!"); location.href="dashboard.html";
+            const { error } = await supabaseClient.from('profiles').update({ has_ticket: true }).eq('telegram_id', user.id);
+            
+            if (!error) {
+                localStorage.setItem('quiz_ads_watched', 0); // Sayacı sıfırla
+                tg.showAlert(msg);
+                location.href = "dashboard.html";
+            }
         }
+
+        // Telegram linklerini dışarıda açmak için genel kural
+        document.addEventListener('click', function (e) {
+            if (e.target.tagName === 'A' && e.target.href.startsWith('http')) {
+                e.preventDefault();
+                tg.openLink(e.target.href);
+            }
+        });
     </script>
 </body>
 </html>
