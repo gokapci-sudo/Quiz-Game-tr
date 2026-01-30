@@ -3,94 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Quiz Arena V3.0 - Final</title>
+    <title>Quiz Arena V1.0</title>
     
     <script src='//libtl.com/sdk.js' data-zone='10527452' data-sdk='show_10527452'></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <script src="config.js"></script>
-
     <style>
-        :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --yt: #ff0000; --success: #10b981; --error: #ef4444; --safe-top: env(safe-area-inset-top); }
+        :root { --primary: #38bdf8; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --gold: #fbbf24; --yt: #ff0000; --success: #10b981; --error: #ef4444; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin:0; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; text-align:center; min-height: 100vh; overflow-x: hidden; padding-top: var(--safe-top); }
-        
+        body { margin:0; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; text-align:center; min-height: 100vh; overflow-x: hidden; }
         .screen { display:none; padding: 20px; flex-direction: column; align-items: center; width: 100%; height: 100vh; overflow-y: auto; position: fixed; top:0; left:0; right: 0; }
         .screen.active { display:flex; }
-        
         .card { background:var(--card); padding:15px; border-radius:15px; margin:10px 0; border:1px solid #334155; width: 100%; max-width: 450px; }
         .btn { display:block; width: 100%; max-width: 450px; padding:16px; border-radius:12px; border:none; font-weight:bold; cursor:pointer; margin-bottom:10px; font-size: 1rem; color: #fff; text-decoration: none; }
-        
-        /* Cüzdan ve Bakiye Ortalama */
-        #ton-connect-btn { display: flex; justify-content: center; width: 100%; margin: 15px 0; }
-        .balance-box { font-size: 2.2rem; color: var(--gold); font-weight: 800; margin: 10px 0; width: 100%; text-align: center; }
-
-        .prize-table { background: rgba(251, 191, 36, 0.05); border: 1px solid var(--gold); border-radius: 15px; padding: 15px; width: 100%; max-width: 450px; margin: 10px 0; }
-        .prize-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(251, 191, 36, 0.1); }
-        
-        .sponsor-box { background: #1e293b; height: 80px; border-radius: 12px; margin-bottom: 8px; border: 1px dashed #475569; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 450px; overflow: hidden; }
-        
-        /* Admin Stilleri */
-        .admin-btn { background: linear-gradient(45deg, #fbbf24, #f59e0b); color: #000; border: 2px solid #fff; }
-        .admin-card { background: #0f172a; border: 1px solid var(--primary); margin-top: 10px; padding: 10px; border-radius: 10px; text-align: left; font-size: 0.8rem; }
+        .btn-blue { background:var(--primary); color:#000; }
+        .btn-yt { background: var(--yt); color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
+        .btn-option { background: #ffffff; color: #000; margin-bottom: 12px; text-align: left; padding: 14px; width: 100%; }
+        .btn-success { background: var(--success) !important; color: #fff !important; }
+        .btn-error { background: var(--error) !important; color: #fff !important; }
+        .countdown-timer { font-size: 1.5rem; font-weight: bold; color: var(--gold); margin: 5px 0; font-family: monospace; }
+        .sponsor-box { background: #1e293b; height: 80px; border-radius: 12px; margin-bottom: 8px; border: 1px dashed #475569; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #94a3b8; width: 100%; max-width: 450px; overflow: hidden; }
+        .leader-row { display:flex; justify-content:space-between; padding:12px; background: rgba(30, 41, 59, 0.5); margin-bottom: 4px; border-radius: 8px; font-size: 0.85rem; }
+        #ton-connect-btn { display: flex; justify-content: center; width: 100%; margin: 10px 0; }
     </style>
 </head>
 <body>
 
     <div id="sponsor-screen" class="screen active">
-        <h2 style="color: var(--gold);">ARENA SPONSORLARI</h2>
+        <h2 style="color: var(--gold); margin-bottom: 5px;">ARENA SPONSORLARI</h2>
         <div id="sponsor-list" style="width:100%; display: flex; flex-direction: column; align-items: center;"></div>
-        <button class="btn" style="background:var(--primary); color:#000" onclick="handleEntry()">GİRİŞ YAP 🚀</button>
+        <button class="btn btn-blue" onclick="handleEntry()">GİRİŞ YAP 🚀</button>
     </div>
 
     <div id="main-screen" class="screen">
-        <div class="card">
-            <h2 id="u-name">@Oyuncu</h2>
-            <div id="ton-connect-btn"></div>
-            <div class="balance-box"><span id="u-balance">0.00</span> <small style="font-size:0.9rem">TON</small></div>
-            <button id="withdraw-btn" class="btn" style="background:var(--gold); color:#000" disabled onclick="requestWithdraw()">KAZANÇ TALEP ET (Min 2.0)</button>
-        </div>
-
-        <div id="action-area" style="width:100%; display: flex; flex-direction: column; align-items: center;"></div>
-
-        <div class="prize-table">
-            <div style="font-weight: bold; color: var(--gold); margin-bottom: 10px;">🏆 GÜNLÜK ÖDÜLLER</div>
-            <div class="prize-row"><span>🥇 1. Oyuncu</span> <b id="p1">...</b></div>
-            <div class="prize-row"><span>🥈 2. Oyuncu</span> <b id="p2">...</b></div>
-            <div class="prize-row"><span>🥉 3. Oyuncu</span> <b id="p3">...</b></div>
+        <div class="card"><h2 id="u-name">@Oyuncu</h2><div id="ton-connect-btn"></div></div>
+        <div id="action-area" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
+        
+        <div class="card" style="border: 1px solid var(--primary);">
+            <p style="margin:0; font-size:0.7rem; color:var(--primary);">BAKİYE</p>
+            <h2 id="u-balance" style="margin:5px 0; color:var(--gold);">0.00 TON</h2>
+            <button id="withdraw-btn" class="btn" style="background:var(--gold); color:#000; font-size:0.8rem; padding:10px;" onclick="requestWithdraw()" disabled>KAZANÇ ÇEK</button>
         </div>
 
         <button class="btn" style="background:#475569" onclick="fetchLeaderboard()">🏆 SIRALAMA</button>
         <button class="btn" style="background:#334155" onclick="showAnnouncements()">📢 DUYURULAR</button>
-        
-        <button id="admin-gate" class="btn admin-btn" style="display:none" onclick="showScreen('admin-screen'); loadAdminData();">🛡️ YÖNETİCİ PANELİ</button>
+        <button id="admin-gate" class="btn" style="background:var(--gold); color:#000; display:none;" onclick="showAdmin()">🛡️ ADMİN</button>
     </div>
 
     <div id="announcement-screen" class="screen">
         <h2 style="color: var(--gold)">📢 DUYURULAR</h2>
-        <div class="card" id="ann-text" style="text-align: left; white-space: pre-wrap;"></div>
-        <button class="btn btn-blue" onclick="showScreen('main-screen')">ANLADIM ✅</button>
+        <div class="card" id="announcement-text" style="text-align: left;"></div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">GERİ</button>
+    </div>
+
+    <div id="task-screen" class="screen">
+        <h2 style="color: var(--gold)">BİLET AL</h2>
+        <div class="card">
+            <button class="btn btn-blue" onclick="buyTicketWithTON()">0.1 TON İLE SATIN AL</button>
+            <div style="margin:10px 0;">— VEYA —</div>
+            <button id="ad-btn" class="btn btn-yt" style="background: var(--success);" onclick="watchAd()">🎬 REKLAM İZLE (0/4)</button>
+        </div>
+        <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">GERİ</button>
+    </div>
+
+    <div id="quiz-screen" class="screen">
+        <div id="quiz-timer" style="font-size:2.5rem; color:var(--gold); font-weight:800; margin:15px 0;">15</div>
+        <div class="card"><h3 id="question-text">...</h3></div>
+        <div id="options-container" style="width:100%"></div>
+    </div>
+
+    <div id="leader-screen" class="screen">
+        <h2 style="color: var(--gold)">🏆 SIRALAMA</h2>
+        <div id="leader-list" style="width:100%"></div>
+        <button class="btn btn-blue" onclick="showScreen('main-screen')">GERİ</button>
     </div>
 
     <div id="admin-screen" class="screen">
-        <h2 style="color: var(--gold)">🛡️ ADMİN KONTROL</h2>
-        <div class="card" style="width:100%">
-            <h3>Bekleyen Talepler</h3>
-            <div id="adm-withdrawals"></div>
-        </div>
-        <button class="btn" style="background:#475569" onclick="showScreen('main-screen')">KAPAT</button>
+        <h2 style="color: var(--gold)">🛡️ ÖDEME TALEPLERİ</h2>
+        <div id="admin-list" style="width:100%"></div>
+        <button class="btn" style="background:#475569; margin-top:20px;" onclick="showScreen('main-screen')">KAPAT</button>
     </div>
 
     <script>
         const SB_URL = 'https://arumdxephyjteoypjaxh.supabase.co';
         const SB_KEY = 'sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1';
-        const MY_ID = 1369398784;
-        
         const _supabase = window.supabase.createClient(SB_URL, SB_KEY);
         const tg = window.Telegram.WebApp;
+        const ADMIN_ID = 1369398784;
 
-        let userId = tg.initDataUnsafe?.user?.id || 123456, user = null;
+        let userId = tg.initDataUnsafe?.user?.id || 123456, user = null, adCount = 0;
+        let dailyQuestions = [], currentIdx = 0, score = 0, timer, timeLeft = 15;
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://gokapci-sudo.github.io/Quiz-Game-tr/tonconnect-manifest.json',
@@ -101,65 +105,95 @@
             tg.ready(); tg.expand();
             
             // Sponsorları Yükle
-            if (window.APP_CONFIG) {
-                document.getElementById('sponsor-list').innerHTML = APP_CONFIG.sponsors.map(s => `<div class="sponsor-box">${s.text}</div>`).join("");
-                document.getElementById('p1').innerText = APP_CONFIG.prizes.p1;
-                document.getElementById('p2').innerText = APP_CONFIG.prizes.p2;
-                document.getElementById('p3').innerText = APP_CONFIG.prizes.p3;
+            const sList = document.getElementById('sponsor-list');
+            if(window.APP_CONFIG) {
+                sList.innerHTML = APP_CONFIG.sponsors.map(s => `<div class="sponsor-box">${s.text}</div>`).join("");
             }
 
-            // Admin Butonunu Göster
-            if (userId === MY_ID) document.getElementById('admin-gate').style.display = 'block';
-
-            // Kullanıcı Kaydı/Kontrolü
+            // Kullanıcı Kaydı
             const { data } = await _supabase.from('users').select('*').eq('telegram_id', userId).maybeSingle();
-            if (data) user = data; else {
-                const { data: nUser } = await _supabase.from('users').insert([{
-                    telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu", balance: 0.00
-                }]).select().single();
-                user = nUser;
-            }
+            user = data || (await _supabase.from('users').insert([{ telegram_id: userId, username: tg.initDataUnsafe?.user?.username || "Oyuncu" }]).select().single()).data;
+            
+            if(userId === ADMIN_ID) document.getElementById('admin-gate').style.display = 'block';
 
-            setInterval(updateMainUI, 1000);
+            setInterval(renderMain, 1000);
         }
 
-        function updateMainUI() {
+        function getTRTime() { return new Date(new Date().toLocaleString("en-US", {timeZone: "Europe/Istanbul"})); }
+
+        function renderMain() {
             if(!user) return;
-            document.getElementById('u-balance').innerText = user.balance.toFixed(2);
-            document.getElementById('withdraw-btn').disabled = user.balance < 2.0;
-            // Aksiyon alanı (Yarışma Başlat/Bilet Al) renderMain mantığı burada...
+            document.getElementById('u-name').innerText = "@" + user.username;
+            document.getElementById('u-balance').innerText = (user.balance || 0).toFixed(2) + " TON";
+            document.getElementById('withdraw-btn').disabled = (user.balance < 2.0);
+
+            const now = getTRTime();
+            const { hour, minute, durationMinutes } = APP_CONFIG.matchTime;
+            const isMatchTime = (now.getHours() === hour && now.getMinutes() >= minute && now.getMinutes() < minute + durationMinutes);
+            
+            const area = document.getElementById('action-area');
+            if(user.last_played_date === now.toISOString().split('T')[0]) {
+                area.innerHTML = `<div class="card">Bugün yarışma hakkınız bitti.</div>`;
+            } else if(isMatchTime) {
+                area.innerHTML = user.has_ticket ? `<button class="btn btn-blue" onclick="startQuiz()">YARIŞMAYI BAŞLAT</button>` : `<button class="btn btn-yt" onclick="showScreen('task-screen')">🎫 BİLET AL</button>`;
+            } else {
+                area.innerHTML = `<div class="card">Sıradaki yarışma ${hour}:${minute.toString().padStart(2,'0')}</div>`;
+            }
         }
 
-        function showAnnouncements() {
-            document.getElementById('ann-text').innerText = APP_CONFIG.announcement;
-            showScreen('announcement-screen');
+        // --- BUTON FONKSİYONLARI ---
+        function showAnnouncements() { 
+            document.getElementById('announcement-text').innerText = APP_CONFIG.announcement; 
+            showScreen('announcement-screen'); 
         }
 
-        async function loadAdminData() {
+        async function fetchLeaderboard() {
+            const today = getTRTime().toISOString().split('T')[0];
+            const { data } = await _supabase.from('daily_scores').select('*').eq('play_date', today).order('score', {ascending: false});
+            document.getElementById('leader-list').innerHTML = data?.map((r, i) => `<div class="leader-row"><span>#${i+1} @${r.username}</span><span>${r.score} P</span></div>`).join("") || "Katılım yok.";
+            showScreen('leader-screen');
+        }
+
+        async function requestWithdraw() {
+            const wallet = tonConnectUI.account?.address;
+            if(!wallet) return tg.showAlert("Lütfen önce cüzdanınızı bağlayın!");
+            await _supabase.from('withdraw_requests').insert([{ user_id: user.id, username: user.username, wallet_address: wallet, amount: user.balance }]);
+            tg.showAlert("Talebiniz iletildi!");
+        }
+
+        async function showAdmin() {
             const { data } = await _supabase.from('withdraw_requests').select('*').eq('status', 'Bekliyor');
-            const cont = document.getElementById('adm-withdrawals');
-            cont.innerHTML = data?.length ? data.map(r => `
-                <div class="admin-card">
-                    <b>@${r.username}</b> - ${r.amount} TON<br>
-                    <small>${r.wallet_address}</small><br>
-                    <button onclick="approvePay(${r.id}, ${r.user_id}, ${r.amount})" style="margin-top:5px; background:var(--success); border:none; color:white; padding:5px; border-radius:5px;">ÖDENDİ</button>
+            document.getElementById('admin-list').innerHTML = data?.map(r => `
+                <div class="card" style="text-align:left; font-size:0.8rem;">
+                    @${r.username}: ${r.amount} TON<br>${r.wallet_address}<br>
+                    <button class="btn-blue" onclick="approvePay(${r.id}, ${r.user_id})">ÖDENDİ</button>
                 </div>
-            `).join("") : "Talep yok.";
+            `).join("") || "Talep yok.";
+            showScreen('admin-screen');
         }
 
-        async function approvePay(reqId, uId, amt) {
-            await _supabase.from('withdraw_requests').update({status:'Ödendi'}).eq('id', reqId);
-            await _supabase.from('users').update({balance: 0}).eq('id', uId); // Bakiyeyi sıfırla
-            alert("İşlem Onaylandı!"); loadAdminData();
+        async function approvePay(rid, uid) {
+            await _supabase.from('withdraw_requests').update({status:'Ödendi'}).eq('id', rid);
+            await _supabase.from('users').update({balance: 0}).eq('id', uid);
+            alert("Onaylandı!"); showAdmin();
         }
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+        function watchAd() {
+            show_10527452('pop').then(() => {
+                adCount++;
+                document.getElementById('ad-btn').innerText = `🎬 REKLAM İZLE (${adCount}/4)`;
+                if(adCount >= 4) {
+                    _supabase.from('users').update({has_ticket:true}).eq('telegram_id', userId).then(() => {
+                        user.has_ticket = true;
+                        showScreen('main-screen');
+                    });
+                }
+            });
         }
 
+        // Quiz Başlatma ve Diğerleri
+        function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
         function handleEntry() { showScreen('main-screen'); }
-
         window.onload = init;
     </script>
 </body>
