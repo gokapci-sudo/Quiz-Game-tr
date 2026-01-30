@@ -11,45 +11,50 @@
 <body>
     <div class="dashboard-container">
         <section class="card profile-card">
-            <div class="user-row">
-                <span id="display-username" class="username">@Yükleniyor...</span>
-                <span id="admin-badge" class="badge hidden">Admin</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span id="display-username" class="username" style="font-size: 1.1rem; font-weight: bold;">@Yükleniyor...</span>
+                <span id="admin-badge" class="badge hidden">ADMIN</span>
             </div>
+            
             <div id="wallet-area">
-                <button id="connect-wallet-btn" class="btn-wallet" onclick="connectWallet()">Cüzdan Bağla</button>
-                <div id="active-wallet" class="wallet-box hidden">
-                    <span id="wallet-addr-short"></span>
-                    <button onclick="copyWallet()" class="btn-copy">📋</button>
+                <button id="connect-wallet-btn" class="btn-main" style="padding: 10px; font-size: 14px;" onclick="connectWallet()">Cüzdan Bağla</button>
+                <div id="active-wallet" class="card hidden" style="margin: 0; padding: 10px; background: #0e1621; display: flex; justify-content: space-between; align-items: center;">
+                    <code id="wallet-addr-short" style="color: var(--accent);"></code>
+                    <span onclick="copyWallet()" style="cursor: pointer;">📋</span>
                 </div>
             </div>
-            <div class="balance-row">
-                <div class="balance-info">
-                    <small>Bakiyeniz</small>
-                    <div><strong id="user-balance">0.00</strong> <span class="unit">TON</span></div>
+
+            <div class="balance-row" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #242f3d; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <small style="display: block; opacity: 0.6;">Mevcut Bakiye</small>
+                    <span style="font-size: 1.4rem; font-weight: 800;"><span id="user-balance">0.00</span> <small style="font-size: 0.8rem; color: var(--accent);">TON</small></span>
                 </div>
-                <button id="withdraw-btn" class="btn-action hidden" onclick="requestWithdraw()">Çekim Yap</button>
+                <button id="withdraw-btn" class="btn-main hidden" style="width: auto; padding: 8px 15px; background: var(--green); font-size: 12px;" onclick="requestWithdraw()">ÇEKİM YAP</button>
             </div>
         </section>
 
-        <section class="card quiz-card">
-            <div id="ticket-info-area"></div>
-            <div class="schedule-area">
-                <p class="section-title">Yarışma Saatleri (TSİ)</p>
-                <div class="schedule-grid">
-                    <div class="time-box">10:00</div>
-                    <div class="time-box">15:00</div>
-                    <div class="time-box">20:00</div>
+        <section class="card">
+            <div id="ticket-info-area" style="margin-bottom: 15px;"></div>
+            
+            <div class="schedule-area" style="text-align: center;">
+                <p style="font-size: 0.85rem; margin-bottom: 10px; opacity: 0.8;">Yarışma Saatleri (TSİ)</p>
+                <div class="grid-2" style="margin-bottom: 15px;">
+                    <div class="card" style="margin: 0; padding: 8px; background: #0e1621; color: var(--yellow);">10:00</div>
+                    <div class="card" style="margin: 0; padding: 8px; background: #0e1621; color: var(--yellow);">15:00</div>
+                    <div class="card" style="margin: 0; padding: 8px; background: #0e1621; color: var(--yellow); grid-column: span 2;">20:00</div>
                 </div>
             </div>
-            <button id="start-quiz-btn" class="btn-main disabled" disabled>YARIŞMAYA BAŞLA</button>
+
+            <button id="start-quiz-btn" class="btn-main disabled" style="background: var(--green);" disabled>YARIŞMA SAATİNİ BEKLE</button>
         </section>
 
-        <footer class="nav-grid">
-            <button onclick="window.location.href='results.html'" class="btn-sub">🏆 Sonuçlar</button>
+        <footer class="grid-2">
+            <button onclick="window.location.href='results.html'" class="btn-sub">🏆 Sıralama</button>
             <button onclick="window.location.href='announcements.html'" class="btn-sub">📢 Duyurular</button>
-            <button id="admin-panel-btn" class="btn-admin hidden" onclick="window.location.href='admin.html'">⚙️ Admin Paneli</button>
+            <button id="admin-panel-btn" class="btn-admin hidden" style="grid-column: span 2;" onclick="window.location.href='admin.html'">⚙️ ADMİN PANELİ</button>
         </footer>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
