@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src='//libtl.com/sdk.js' data-zone='10527452' data-sdk='show_10527452'></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -10,105 +9,48 @@
 </head>
 <body>
     <div class="container">
-        <header style="margin-bottom: 20px;">
-            <button onclick="location.href='dashboard.html'" class="btn-sub" style="width: auto; padding: 10px 20px;">⬅ Geri Dön</button>
-        </header>
-
-        <div class="card" style="text-align: center; border: 1px solid var(--yellow);">
-            <div style="font-size: 40px;">🎫</div>
-            <h2 class="yellow-text">BİLET MERKEZİ</h2>
-            <p style="font-size: 13px; opacity: 0.8; margin-top: 5px;">Yarışmaya katılmak için biletinizi aktif edin.</p>
+        <header><button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:10px 20px;">⬅ Geri</button></header>
+        <div class="card" style="text-align:center;"><div style="font-size:40px;">🎫</div><h2 class="yellow-text">BİLET MERKEZİ</h2></div>
+        
+        <div class="card" style="border:1px dashed var(--accent);">
+            <h3>📺 Reklam İzle (Kalan: <span id="ad-count">5</span>)</h3>
+            <button id="ad-btn" onclick="watchAd()" class="btn-main" style="margin-top:10px;">REKLAM İZLE</button>
         </div>
 
-        <div class="card" style="border: 1px dashed var(--accent);">
-            <h3 style="font-size: 16px; margin-bottom: 10px;">📺 Ücretsiz Bilet</h3>
-            <div id="ad-progress-container" style="margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
-                    <span>İlerleyiş</span>
-                    <span id="ad-count-text">0 / 5</span>
-                </div>
-                <div style="width: 100%; height: 10px; background: #0e1621; border-radius: 5px; overflow: hidden; border: 1px solid #242f3d;">
-                    <div id="ad-bar" style="width: 0%; height: 100%; background: var(--accent); transition: 0.5s ease-in-out;"></div>
-                </div>
-            </div>
-            <button id="ad-btn" class="btn-main" onclick="watchAd()">REKLAM İZLE (+1)</button>
-        </div>
-
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 14px;">Veya bakiye ile al:</span>
-                <button onclick="buyTicket()" style="background: var(--yellow); color: black; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold;">1.00 TON</button>
-            </div>
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Bakiyenle Al (1.00 TON):</span>
+            <button onclick="buyTicket()" style="background:var(--yellow); color:black; border:none; padding:10px 15px; border-radius:8px; font-weight:bold;">SATIN AL</button>
         </div>
     </div>
-
     <script>
         const tg = window.Telegram.WebApp;
-        let watchedAds = parseInt(localStorage.getItem('ad_progress')) || 0;
-
-        function updateAdUI() {
-            const percent = (watchedAds / 5) * 100;
-            document.getElementById('ad-bar').style.width = percent + "%";
-            document.getElementById('ad-count-text').innerText = `${watchedAds} / 5`;
-            localStorage.setItem('ad_progress', watchedAds);
-        }
+        let ads = parseInt(localStorage.getItem('ads_done')) || 0;
+        document.getElementById('ad-count').innerText = 5 - ads;
 
         function watchAd() {
-            const btn = document.getElementById('ad-btn');
-            if (typeof show_10527452 !== 'function') {
-                tg.showAlert("Reklam yükleniyor...");
-                return;
-            }
-            btn.disabled = true;
-            btn.innerText = "⏳ Reklam Açılıyor...";
-
+            if(typeof show_10527452 !== 'function') return tg.showAlert("Reklam hazır değil.");
             show_10527452('pop').then(() => {
-                watchedAds++;
-                updateAdUI();
-                if (watchedAds >= 5) {
-                    grantTicket("FREE");
-                } else {
-                    tg.showAlert(`Reklam tamamlandı! Kalan: ${5 - watchedAds}`);
-                    resetBtn();
-                }
-            }).catch(() => {
-                tg.showAlert("Reklam yüklenemedi.");
-                resetBtn();
+                ads++; localStorage.setItem('ads_done', ads);
+                document.getElementById('ad-count').innerText = 5 - ads;
+                if(ads >= 5) grant();
             });
-        }
-
-        function resetBtn() {
-            const btn = document.getElementById('ad-btn');
-            btn.disabled = false;
-            btn.innerText = "REKLAM İZLE (+1)";
-        }
-
-        async function grantTicket(type) {
-            const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
-            const { error } = await supabaseClient
-                .from('profiles')
-                .update({ has_ticket: true })
-                .eq('telegram_id', user.id);
-
-            if (!error) {
-                localStorage.removeItem('ad_progress');
-                tg.showAlert(type === "FREE" ? "Biletiniz aktif edildi!" : "Bakiye ile bilet alındı!");
-                window.location.href = "dashboard.html";
-            }
         }
 
         async function buyTicket() {
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
             const { data } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', user.id).single();
-            
-            if (data && data.balance >= 1.00) {
+            if(data && data.balance >= 1.0) {
                 await supabaseClient.from('profiles').update({ balance: data.balance - 1 }).eq('telegram_id', user.id);
-                grantTicket("PAID");
-            } else {
-                tg.showAlert("Bakiyeniz yetersiz (Min: 1.00 TON)");
-            }
+                grant();
+            } else tg.showAlert("Bakiye Yetersiz!");
         }
-        updateAdUI();
+
+        async function grant() {
+            const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
+            await supabaseClient.from('profiles').update({ has_ticket: true }).eq('telegram_id', user.id);
+            localStorage.removeItem('ads_done');
+            tg.showAlert("Bilet Tanımlandı!"); location.href="dashboard.html";
+        }
     </script>
 </body>
 </html>
