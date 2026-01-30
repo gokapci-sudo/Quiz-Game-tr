@@ -24,31 +24,49 @@
                         <th>SÜRE</th>
                     </tr>
                 </thead>
-                <tbody id="leaderboard-body"></tbody>
+                <tbody id="leaderboard-body">
+                    </tbody>
             </table>
         </div>
     </div>
 
     <script>
         async function load() {
-            const { data } = await supabaseClient
-                .from('profiles')
-                .select('username, score, completion_time')
-                .gt('score', 0)
-                .order('score', { ascending: false })
-                .order('completion_time', { ascending: true })
-                .limit(50);
+            try {
+                // results tablosundan verileri çekiyoruz
+                // Önce puana göre (Azalan), sonra süreye göre (Artan) sıralıyoruz
+                const { data, error } = await supabaseClient
+                    .from('results') 
+                    .select('username, score, duration')
+                    .order('score', { ascending: false })
+                    .order('duration', { ascending: true })
+                    .limit(50);
 
-            const body = document.getElementById('leaderboard-body');
-            body.innerHTML = data.map((u, i) => `
-                <tr>
-                    <td>${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i+1}</td>
-                    <td>${u.username}</td>
-                    <td class="yellow-text">${u.score}</td>
-                    <td>${u.completion_time}s</td>
-                </tr>
-            `).join('');
+                if (error) throw error;
+
+                const body = document.getElementById('leaderboard-body');
+                
+                if (!data || data.length === 0) {
+                    body.innerHTML = `<tr><td colspan="4" style="padding:20px; opacity:0.5;">Henüz kayıtlı skor yok.</td></tr>`;
+                    return;
+                }
+
+                body.innerHTML = data.map((u, i) => `
+                    <tr>
+                        <td>${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
+                        <td style="text-align: left; padding-left: 15px;">${u.username || 'Oyuncu'}</td>
+                        <td class="yellow-text" style="font-weight: bold;">${u.score}</td>
+                        <td style="font-size: 13px; opacity: 0.8;">${u.duration}s</td>
+                    </tr>
+                `).join('');
+
+            } catch (err) {
+                console.error("Liderlik tablosu yüklenirken hata:", err);
+                document.getElementById('leaderboard-body').innerHTML = `<tr><td colspan="4" style="color:red;">Yükleme hatası!</td></tr>`;
+            }
         }
+        
+        // Sayfa açıldığında yükle
         load();
     </script>
 </body>
