@@ -10,22 +10,18 @@
 <body>
     <div class="container">
         <div class="counter-card">
-            <small>TOPLAM AKTİF KATILIMCI</small>
+            <small>AKTİF KATILIMCI</small>
             <div id="big-counter" class="counter-value">...</div>
         </div>
-        <div class="sponsor-list">
-            <div class="sponsor-box highlight">🚀 Quiz Arena: Bilginle TON Kazan!</div>
-            <div class="sponsor-box">Reklam & Sponsor Alanı</div>
-        </div>
-        <button id="entry-btn" class="btn-main">GİRİŞ YAP</button>
+        <button id="entry-btn" class="btn-main" style="margin-top:20px;">GİRİŞ YAP</button>
     </div>
     <script>
         async function init() {
             const { count } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
             document.getElementById('big-counter').innerText = (1388 + (count || 0)).toLocaleString();
             document.getElementById('entry-btn').onclick = async () => {
-                const user = window.Telegram.WebApp.initDataUnsafe?.user || { id: APP_CONFIG.adminID, username: "test_user" };
-                await supabaseClient.from('profiles').upsert({ telegram_id: user.id, username: user.username || "anonim" }, { onConflict: 'telegram_id' });
+                const user = window.Telegram.WebApp.initDataUnsafe?.user || { id: APP_CONFIG.adminID, username: "admin" };
+                await supabaseClient.from('profiles').upsert({ telegram_id: user.id, username: user.username || "isimsiz" }, { onConflict: 'telegram_id' });
                 location.href = "dashboard.html";
             };
         }
