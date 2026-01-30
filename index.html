@@ -2,67 +2,57 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Arena - Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Quiz Arena - Hoşgeldiniz</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
-<body>
-    <div class="dashboard-container">
-        <section class="card profile-card">
-            <div class="user-row">
-                <span id="display-username" class="username">@Yükleniyor...</span>
-                <span id="admin-badge" class="badge hidden">Admin</span>
-            </div>
-            
-            <div id="wallet-area">
-                <button id="connect-wallet-btn" class="btn-wallet">Cüzdan Bağla</button>
-                <div id="active-wallet" class="wallet-box hidden">
-                    <span id="wallet-addr-short"></span>
-                    <button onclick="copyWallet()" class="btn-copy">📋</button>
-                </div>
-            </div>
+<body class="splash-body">
+    <div class="splash-container">
+        <div class="counter-card">
+            <span class="counter-label">TOPLAM BİLETLİ KATILIMCI</span>
+            <div id="big-counter" class="counter-value">1388 + ...</div>
+        </div>
 
-            <div class="balance-row">
-                <div class="balance-info">
-                    <small>Bakiyeniz</small>
-                    <div><strong id="user-balance">0.00</strong> <span class="unit">TON</span></div>
-                </div>
-                <button id="withdraw-btn" class="btn-action hidden" onclick="requestWithdraw()">Çekim Yap</button>
-            </div>
-        </section>
+        <div class="sponsor-grid">
+            <div class="sponsor-box">2x Sponsorlarımız Burada Görünecektir.</div>
+            <div class="sponsor-box">2x Sponsorlarımız Burada Görünecektir.</div>
+            <div class="sponsor-box highlight">2x Bu Alana Reklam Verebilirsiniz</div>
+            <div class="sponsor-box highlight">2x Bu Alana Reklam Verebilirsiniz</div>
+        </div>
 
-        <section class="card quiz-card">
-            <div id="ticket-info-area">
-                </div>
-
-            <div class="schedule-area">
-                <p class="section-title">Yarışma Saatleri (TSİ)</p>
-                <div class="schedule-grid">
-                    <div class="time-box">10:00</div>
-                    <div class="time-box">15:00</div>
-                    <div class="time-box">20:00</div>
-                </div>
-            </div>
-
-            <div class="prize-pool">
-                <p>Toplam Ödül: <span id="pool-amount">1.00</span> TON</p>
-                <div class="medals">
-                    🥇 %50 | 🥈 %30 | 🥉 %20
-                </div>
-            </div>
-
-            <button id="start-quiz-btn" class="btn-main disabled" disabled>YARIŞMAYA BAŞLA</button>
-        </section>
-
-        <footer class="nav-grid">
-            <button onclick="window.location.href='results.html'" class="btn-sub">🏆 Sonuçlar</button>
-            <button onclick="window.location.href='announcements.html'" class="btn-sub">📢 Duyurular</button>
-            <button id="admin-panel-btn" class="btn-admin hidden" onclick="window.location.href='admin.html'">⚙️ Admin Paneli</button>
-        </footer>
+        <div class="action-footer">
+            <button id="entry-btn" class="btn-main pulse">GİRİŞ YAP</button>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        const tg = window.Telegram.WebApp;
+        const SB_URL = "https://arumdxephyjteoypjaxh.supabase.co";
+        const SB_KEY = "sb_publishable_qEEOLIXhKlkLM_poqDDkhw_OkNS_yo1";
+        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+        async function initApp() {
+            tg.ready(); tg.expand();
+            
+            // Sayaç: 1388 + DB'deki biletliler
+            const { count } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
+            document.getElementById('big-counter').innerText = `1388 + ${count || 0}`;
+
+            document.getElementById('entry-btn').onclick = async () => {
+                const user = tg.initDataUnsafe?.user;
+                if (user) {
+                    await supabaseClient.from('profiles').upsert({
+                        telegram_id: user.id,
+                        username: user.username || "Anonim",
+                    }, { onConflict: 'telegram_id' });
+                }
+                // Kayıt sonrası Dashboard'a yönlendir
+                window.location.href = "dashboard.html";
+            };
+        }
+        initApp();
+    </script>
 </body>
 </html>
