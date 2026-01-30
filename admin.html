@@ -12,28 +12,42 @@
     <div class="dashboard-container">
         <header style="display: flex; align-items: center; margin-bottom: 20px;">
             <button onclick="location.href='dashboard.html'" class="btn-sub" style="width: auto; padding: 0 15px;">⬅</button>
-            <h2 style="margin-left: 15px;">KUMANDA MERKEZİ</h2>
+            <h2 style="margin-left: 15px;">ADMIN PANEL</h2>
         </header>
 
         <section class="card" style="border: 1px solid var(--yellow);">
             <h3 class="yellow-text" style="font-size: 14px; margin-bottom: 10px;">🏆 ÖDÜL HAVUZU & RESET</h3>
             <input type="number" id="prize-input" placeholder="Toplam Havuz (Örn: 10.5)" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #242f3d; background: var(--bg); color: white; margin-bottom: 10px;">
-            <button onclick="updatePrize()" class="btn-main" style="height: 40px; font-size: 14px; margin-bottom: 10px;">HAVUZU GÜNCELLE</button>
-            <button onclick="distributeAndReset()" class="btn-main" style="height: 40px; font-size: 14px; background: var(--red);">🏆 ÖDÜLLERİ DAĞIT VE SIFIRLA</button>
-            <p style="font-size: 10px; opacity: 0.6; margin-top: 5px;">* Sıfırla butonu; ilk 3'e bakiyelerini ekler ve tüm skorları temizler.</p>
+            <button onclick="updatePrize()" class="btn-main" style="height: 45px; font-size: 14px; margin-bottom: 10px;">HAVUZU GÜNCELLE</button>
+            <button onclick="distributeAndReset()" class="btn-main" style="height: 45px; font-size: 14px; background: var(--red);">🏆 ÖDÜLLERİ DAĞIT VE SIFIRLA</button>
         </section>
 
         <section class="card">
-            <h3 style="font-size: 14px; margin-bottom: 10px;">💸 ÇEKİM TALEPLERİ</h3>
-            <div id="withdraw-list" style="font-size: 12px;">
-                <div style="text-align: center; opacity: 0.5;">Talep bekleniyor...</div>
+            <h3 style="font-size: 14px; margin-bottom: 10px;">💸 BEKLEYEN ÇEKİMLER</h3>
+            <div id="withdraw-list" style="max-height: 300px; overflow-y: auto;">
+                <div style="text-align: center; opacity: 0.5; padding: 20px;">Yükleniyor...</div>
             </div>
         </section>
 
         <section class="card">
-            <h3 style="font-size: 14px; margin-bottom: 10px;">❓ SORU EKLE (JSON)</h3>
-            <textarea id="question-json" placeholder='{"question_text": "Soru?", "options": ["A","B","C","D"], "correct_option": 0}' style="width: 100%; height: 80px; background: var(--bg); color: white; border-radius: 10px; padding: 10px; font-size: 12px;"></textarea>
-            <button onclick="addQuestion()" class="btn-sub" style="margin-top: 10px; background: var(--accent);">SORU KAYDET</button>
+            <h3 style="font-size: 14px; margin-bottom: 10px;">❓ YENİ SORU EKLE</h3>
+            <input type="text" id="q-text" placeholder="Soru metni..." style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #242f3d; background: var(--bg); color: white; margin-bottom: 8px;">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <input type="text" id="opt-0" placeholder="A Şıkkı" style="padding: 10px; background: var(--bg); color: white; border: 1px solid #242f3d; border-radius: 8px; font-size: 12px;">
+                <input type="text" id="opt-1" placeholder="B Şıkkı" style="padding: 10px; background: var(--bg); color: white; border: 1px solid #242f3d; border-radius: 8px; font-size: 12px;">
+                <input type="text" id="opt-2" placeholder="C Şıkkı" style="padding: 10px; background: var(--bg); color: white; border: 1px solid #242f3d; border-radius: 8px; font-size: 12px;">
+                <input type="text" id="opt-3" placeholder="D Şıkkı" style="padding: 10px; background: var(--bg); color: white; border: 1px solid #242f3d; border-radius: 8px; font-size: 12px;">
+            </div>
+
+            <select id="correct-opt" style="width: 100%; padding: 12px; background: var(--bg); color: var(--yellow); border: 1px solid #242f3d; border-radius: 10px; margin-bottom: 10px;">
+                <option value="0">Doğru Cevap: A</option>
+                <option value="1">Doğru Cevap: B</option>
+                <option value="2">Doğru Cevap: C</option>
+                <option value="3">Doğru Cevap: D</option>
+            </select>
+
+            <button onclick="saveQuestion()" class="btn-sub" style="background: var(--accent);">SORUYU KAYDET</button>
         </section>
 
         <section class="card">
@@ -46,7 +60,6 @@
     <script>
         const tg = window.Telegram.WebApp;
 
-        // --- YETKİ KONTROLÜ ---
         async function checkAdmin() {
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
             if (user.id !== APP_CONFIG.adminID) {
@@ -56,22 +69,21 @@
             loadWithdrawals();
         }
 
-        // --- 1. ÖDÜL GÜNCELLEME ---
+        // Ödül Havuzu Güncelleme
         async function updatePrize() {
             const val = document.getElementById('prize-input').value;
+            if(!val) return;
             const { error } = await supabaseClient.from('settings').update({ total_prize: val }).eq('id', 1);
-            if (!error) tg.showAlert("Ödül havuzu güncellendi!");
+            if (!error) tg.showAlert("Ödül havuzu " + val + " TON olarak güncellendi!");
         }
 
-        // --- 2. ÖDÜL DAĞITIMI VE SIFIRLAMA (KRİTİK) ---
+        // Ödül Dağıtım ve Sıfırlama
         async function distributeAndReset() {
-            if (!confirm("Dikkat! İlk 3'e ödülleri yatırılacak ve tüm skorlar silinecek. Onaylıyor musunuz?")) return;
+            if (!confirm("İlk 3 kişiye ödülleri yatırılacak ve tüm skorlar silinecek. Emin misiniz?")) return;
 
-            // Havuzu Al
             const { data: sett } = await supabaseClient.from('settings').select('total_prize').eq('id', 1).single();
             const pool = parseFloat(sett.total_prize);
 
-            // İlk 3'ü Getir
             const { data: winners } = await supabaseClient
                 .from('profiles')
                 .select('*')
@@ -81,60 +93,92 @@
                 .limit(3);
 
             if (winners && winners.length > 0) {
-                // Ödül Oranları: %50, %35, %15
                 const rates = [0.50, 0.35, 0.15];
                 for (let i = 0; i < winners.length; i++) {
-                    const prizeAmount = pool * rates[i];
-                    const newBalance = (winners[i].balance || 0) + prizeAmount;
-                    await supabaseClient.from('profiles').update({ balance: newBalance }).eq('telegram_id', winners[i].telegram_id);
+                    const prize = pool * rates[i];
+                    await supabaseClient.from('profiles').update({ balance: (winners[i].balance || 0) + prize }).eq('telegram_id', winners[i].telegram_id);
                 }
             }
 
-            // TÜM SKORLARI SIFIRLA
-            const { error } = await supabaseClient.from('profiles').update({ score: 0, completion_time: 0 }).neq('telegram_id', 0);
-            
-            if (!error) tg.showAlert("Ödüller dağıtıldı ve sistem sıfırlandı!");
+            // Skorları ve Süreleri Sıfırla (neq: 0 ile tüm tabloyu hedefler)
+            await supabaseClient.from('profiles').update({ score: 0, completion_time: 0 }).neq('telegram_id', 0);
+            tg.showAlert("Ödüller dağıtıldı ve sistem sıfırlandı!");
         }
 
-        // --- 3. ÇEKİM TALEPLERİNİ YÖNET ---
+        // Çekim Taleplerini Yükle
         async function loadWithdrawals() {
-            const { data } = await supabaseClient.from('withdrawals').select('*').eq('status', 'pending');
             const list = document.getElementById('withdraw-list');
-            if (data && data.length > 0) {
-                list.innerHTML = data.map(w => `
-                    <div class="card" style="background: rgba(255,255,255,0.05); margin-bottom: 5px; padding: 10px;">
-                        ID: ${w.telegram_id} <br>
-                        Miktar: <b>${w.amount} TON</b> <br>
-                        Adres: <small>${w.wallet_address}</small> <br>
-                        <button onclick="approveWithdraw(${w.id}, ${w.telegram_id}, ${w.amount})" class="btn-sub" style="height: 30px; margin-top: 5px; background: var(--green);">ÖDENDİ İŞARETLE</button>
-                    </div>
-                `).join('');
+            const { data, error } = await supabaseClient
+                .from('withdrawals')
+                .select('*')
+                .eq('status', 'pending')
+                .order('id', { ascending: false });
+
+            if (error) {
+                list.innerHTML = "Hata: " + error.message;
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                list.innerHTML = '<div style="text-align: center; opacity: 0.5; padding: 20px;">Bekleyen talep yok.</div>';
+                return;
+            }
+
+            list.innerHTML = data.map(w => `
+                <div class="card" style="background: #242f3d; margin-bottom: 8px; font-size: 12px;">
+                    <div style="margin-bottom:5px;">👤 ID: <b>${w.telegram_id}</b></div>
+                    <div style="margin-bottom:5px;">💰 Tutar: <b class="yellow-text">${w.amount} TON</b></div>
+                    <div style="margin-bottom:8px; word-break: break-all; opacity:0.7;">💎 ${w.wallet_address}</div>
+                    <button onclick="approveWithdraw(${w.id})" class="btn-sub" style="height: 30px; background: var(--green); font-size:11px;">ÖDENDİ OLARAK İŞARETLE</button>
+                </div>
+            `).join('');
+        }
+
+        async function approveWithdraw(id) {
+            const { error } = await supabaseClient.from('withdrawals').update({ status: 'completed' }).eq('id', id);
+            if (!error) {
+                tg.showAlert("İşlem onaylandı.");
+                loadWithdrawals();
             }
         }
 
-        async function approveWithdraw(id, userId, amount) {
-            // Bakiyeden düş (Çekim talep edildiğinde düşmediysek burada düşüyoruz)
-            const { data: user } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', userId).single();
-            await supabaseClient.from('profiles').update({ balance: user.balance - amount }).eq('telegram_id', userId);
-            
-            // Talebi güncelle
-            await supabaseClient.from('withdrawals').update({ status: 'completed' }).eq('id', id);
-            tg.showAlert("İşlem tamamlandı.");
-            loadWithdrawals();
-        }
+        // Soru Kaydetme (Mobil Uyumlu)
+        async function saveQuestion() {
+            const qText = document.getElementById('q-text').value;
+            const opts = [
+                document.getElementById('opt-0').value,
+                document.getElementById('opt-1').value,
+                document.getElementById('opt-2').value,
+                document.getElementById('opt-3').value
+            ];
+            const correct = parseInt(document.getElementById('correct-opt').value);
 
-        // --- 4. SORU VE DUYURU ---
-        async function addQuestion() {
-            const raw = document.getElementById('question-json').value;
-            const q = JSON.parse(raw);
-            await supabaseClient.from('questions').insert([q]);
-            tg.showAlert("Soru eklendi.");
+            if(!qText || opts.some(o => !o)) {
+                tg.showAlert("Lütfen tüm alanları doldurun!");
+                return;
+            }
+
+            const { error } = await supabaseClient.from('questions').insert([{
+                question_text: qText,
+                options: opts,
+                correct_option: correct
+            }]);
+
+            if(!error) {
+                tg.showAlert("Soru başarıyla eklendi!");
+                document.getElementById('q-text').value = "";
+                for(let i=0; i<4; i++) document.getElementById('opt-'+i).value = "";
+            }
         }
 
         async function addAnnouncement() {
             const txt = document.getElementById('ann-input').value;
-            await supabaseClient.from('announcements').insert([{ content: txt }]);
-            tg.showAlert("Duyuru yayınlandı.");
+            if(!txt) return;
+            const { error } = await supabaseClient.from('announcements').insert([{ content: txt }]);
+            if(!error) {
+                tg.showAlert("Duyuru yayınlandı!");
+                document.getElementById('ann-input').value = "";
+            }
         }
 
         checkAdmin();
