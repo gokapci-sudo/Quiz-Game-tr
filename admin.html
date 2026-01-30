@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
@@ -14,34 +13,26 @@
             <h2 style="margin-left:15px;">ADMİN PANELİ</h2>
         </header>
 
-        <section class="card" style="border: 1px solid var(--accent);">
+        <section class="card">
             <h3 class="yellow-text">💸 BEKLEYEN ÇEKİMLER</h3>
-            <div id="w-list" style="margin-top:10px; min-height: 50px;">
-                <p style="opacity: 0.5;">Talepler taranıyor...</p>
-            </div>
-            <button onclick="loadWithdrawals()" class="btn-sub" style="font-size: 10px; margin-top: 10px;">YENİLE 🔄</button>
+            <div id="w-list" style="margin-top:10px;"><p>Yükleniyor...</p></div>
         </section>
 
         <section class="card">
             <h3 class="yellow-text">📢 DUYURU YAYINLA</h3>
             <textarea id="ann-text" placeholder="Duyuru metni..." style="width:100%; height:80px; background:#0e1621; color:white; border:1px solid #242f3d; padding:10px; margin-top:10px; border-radius:10px;"></textarea>
-            <button onclick="sendAnnouncement()" class="btn-sub" style="margin-top:10px; background:var(--accent);">DUYURUYU PAYLAŞ</button>
+            <button onclick="sendAnn()" class="btn-sub" style="margin-top:10px; background:var(--accent);">PAYLAŞ</button>
         </section>
 
         <section class="card">
             <h3 class="yellow-text">❓ SORU EKLE</h3>
-            <input type="text" id="qt" placeholder="Soru metni..." style="width:100%; padding:10px; margin:5px 0;">
+            <input type="text" id="qt" placeholder="Soru...">
             <div class="grid-2">
-                <input type="text" id="o0" placeholder="A şıkkı"> <input type="text" id="o1" placeholder="B şıkkı">
-                <input type="text" id="o2" placeholder="C şıkkı"> <input type="text" id="o3" placeholder="D şıkkı">
+                <input type="text" id="o0" placeholder="A"> <input type="text" id="o1" placeholder="B">
+                <input type="text" id="o2" placeholder="C"> <input type="text" id="o3" placeholder="D">
             </div>
-            <select id="co" style="width:100%; padding:10px; margin-top:5px;">
-                <option value="0">Doğru Cevap: A</option>
-                <option value="1">Doğru Cevap: B</option>
-                <option value="2">Doğru Cevap: C</option>
-                <option value="3">Doğru Cevap: D</option>
-            </select>
-            <button onclick="saveQuestion()" class="btn-sub" style="margin-top:10px;">SORUYU KAYDET</button>
+            <select id="co" style="width:100%; padding:10px;"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
+            <button onclick="saveQ()" class="btn-sub" style="margin-top:10px;">KAYDET</button>
         </section>
     </div>
 
@@ -49,81 +40,52 @@
         const tg = window.Telegram.WebApp;
 
         async function loadWithdrawals() {
+            const { data, error } = await supabaseClient.from('withdrawals').select('*').ilike('status', 'pending');
             const cont = document.getElementById('w-list');
+            if(!data || data.length === 0) { cont.innerHTML = "Bekleyen talep yok."; return; }
             
-            // Hata ayıklama için filtreyi biraz genişletiyoruz
-            const { data, error } = await supabaseClient
-                .from('withdrawals')
-                .select('*')
-                .ilike('status', 'pending'); // 'ilike' büyük/küçük harf duyarlılığını kaldırır
-
-            if (error) {
-                cont.innerHTML = `<p style="color:red;">Hata: ${error.message}</p>`;
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                cont.innerHTML = '<p style="text-align:center; opacity:0.5;">Bekleyen çekim talebi bulunamadı.</p>';
-                return;
-            }
-
             cont.innerHTML = data.map(w => `
-                <div class="card" style="background:#1c252f; border:1px solid #333; margin-bottom:10px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                        <b style="color:var(--yellow);">${w.amount} TON</b>
-                        <span style="font-size:10px; opacity:0.6;">ID: ${w.telegram_id}</span>
-                    </div>
-                    <code style="font-size:10px; word-break:break-all; display:block; background:#000; padding:5px; border-radius:5px;">${w.wallet_address}</code>
-                    <button onclick="approveWithdraw(${w.id})" class="btn-sub" style="background:var(--green); height:30px; margin-top:10px; font-size:11px;">ÖDEME YAPILDI</button>
+                <div class="card" style="background:#1c252f; border:1px solid #333;">
+                    <b>${w.amount} TON</b> - ID: ${w.telegram_id}<br>
+                    <small style="word-break:break-all;">${w.wallet_address}</small><br>
+                    <button onclick="approveWithdraw(${w.id}, ${w.telegram_id}, ${w.amount})" class="btn-sub" style="background:var(--green); height:30px; margin-top:10px;">ÖDEME YAPILDI & DÜŞ</button>
                 </div>
             `).join('');
         }
 
-        async function approveWithdraw(id) {
-            const { error } = await supabaseClient
-                .from('withdrawals')
-                .update({ status: 'completed' })
-                .eq('id', id);
+        async function approveWithdraw(id, telegram_id, amount) {
+            // 1. Kullanıcının güncel bakiyesini kontrol et
+            const { data: profile } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', telegram_id).single();
+            
+            if (!profile) return alert("Kullanıcı bulunamadı!");
+            if (profile.balance < amount) return alert("Hata: Kullanıcı bakiyesi talep edilen tutardan az!");
 
-            if (!error) {
-                tg.showAlert("İşlem başarıyla tamamlandı.");
-                loadWithdrawals();
-            } else {
-                tg.showAlert("Güncelleme hatası: " + error.message);
-            }
+            // 2. Bakiyeyi düş
+            const { error: upError } = await supabaseClient.from('profiles').update({ balance: profile.balance - amount }).eq('telegram_id', telegram_id);
+            
+            if (upError) return alert("Bakiye düşerken hata: " + upError.message);
+
+            // 3. Talebi tamamlandı yap
+            await supabaseClient.from('withdrawals').update({ status: 'completed' }).eq('id', id);
+            
+            tg.showAlert("İşlem Başarılı: Bakiye düşüldü ve onaylandı.");
+            loadWithdrawals();
         }
 
-        async function sendAnnouncement() {
-            const text = document.getElementById('ann-text').value;
-            if(!text) return;
-            const { error } = await supabaseClient.from('announcements').insert([{ content: text }]);
-            if(!error) {
-                tg.showAlert("Duyuru yayınlandı!");
-                document.getElementById('ann-text').value = "";
-            }
+        async function sendAnn() {
+            const val = document.getElementById('ann-text').value;
+            await supabaseClient.from('announcements').insert([{ content: val }]);
+            tg.showAlert("Duyuru yayınlandı."); document.getElementById('ann-text').value = "";
         }
 
-        async function saveQuestion() {
+        async function saveQ() {
             const q = document.getElementById('qt').value;
-            const opts = [
-                document.getElementById('o0').value,
-                document.getElementById('o1').value,
-                document.getElementById('o2').value,
-                document.getElementById('o3').value
-            ];
-            const correct = parseInt(document.getElementById('co').value);
-
-            const { error } = await supabaseClient.from('questions').insert([
-                { question_text: q, options: opts, correct_option: correct }
-            ]);
-
-            if(!error) {
-                tg.showAlert("Soru eklendi!");
-                document.getElementById('qt').value = "";
-            }
+            const os = [document.getElementById('o0').value, document.getElementById('o1').value, document.getElementById('o2').value, document.getElementById('o3').value];
+            const co = parseInt(document.getElementById('co').value);
+            await supabaseClient.from('questions').insert([{ question_text: q, options: os, correct_option: co }]);
+            tg.showAlert("Soru eklendi.");
         }
 
-        // Sayfa açıldığında yükle
         loadWithdrawals();
     </script>
 </body>
