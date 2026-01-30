@@ -10,130 +10,59 @@
     <div class="dashboard-container">
         <header style="display:flex; align-items:center; margin-bottom:20px;">
             <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:0 15px;">⬅</button>
-            <h2 style="margin-left:15px;">ADMIN PANEL</h2>
+            <h2 style="margin-left:15px;">ADMİN</h2>
         </header>
-
-        <section class="card" style="border:1px solid var(--yellow);">
-            <h3 class="yellow-text">🏆 HAVUZ VE SIFIRLAMA</h3>
-            <input type="number" id="prize" placeholder="Havuz (TON)" style="width:100%; padding:10px; margin:10px 0; background:var(--bg); color:white; border:1px solid #242f3d;">
-            <button onclick="updateP()" class="btn-main" style="height:45px; margin-bottom:10px;">GÜNCELLE</button>
-            <button onclick="resetAll()" class="btn-main" style="height:45px; background:var(--red);">ÖDÜL DAĞIT VE SIFIRLA</button>
-        </section>
 
         <section class="card">
             <h3 class="yellow-text">📢 DUYURU YAYINLA</h3>
-            <textarea id="ann-input" placeholder="Duyuru metnini yazın..." style="width:100%; height:80px; padding:10px; margin-top:10px; background:var(--bg); color:white; border:1px solid #242f3d; border-radius:10px;"></textarea>
-            <button onclick="addAnnouncement()" class="btn-sub" style="margin-top:10px; background:var(--accent);">DUYURUYU PAYLAŞ</button>
+            <textarea id="ann-in" placeholder="Duyuru metni..." style="width:100%; height:60px; background:var(--bg); color:white; border-radius:10px; padding:10px;"></textarea>
+            <button onclick="addAnn()" class="btn-sub" style="margin-top:10px; background:var(--accent);">PAYLAŞ</button>
         </section>
 
         <section class="card">
             <h3 class="yellow-text">💸 BEKLEYEN ÇEKİMLER</h3>
-            <div id="w-list" style="margin-top:10px;">
-                <p style="text-align:center; opacity:0.5;">Yükleniyor...</p>
-            </div>
+            <div id="w-list"></div>
         </section>
 
         <section class="card">
-            <h3 class="yellow-text">❓ SORU EKLE</h3>
-            <input type="text" id="qt" placeholder="Soru..." style="width:100%; padding:10px; margin:5px 0; background:var(--bg); color:white;">
-            <div class="grid-2">
-                <input type="text" id="o0" placeholder="A"> <input type="text" id="o1" placeholder="B">
-                <input type="text" id="o2" placeholder="C"> <input type="text" id="o3" placeholder="D">
-            </div>
-            <select id="co" style="width:100%; padding:10px; margin-top:5px;"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select>
-            <button onclick="addQ()" class="btn-sub" style="margin-top:10px;">KAYDET</button>
+            <h3 class="yellow-text">🏆 ÖDÜL & SIFIRLA</h3>
+            <input type="number" id="pz" placeholder="Toplam Havuz" style="width:100%; padding:10px; margin-bottom:5px;">
+            <button onclick="resetAll()" class="btn-main" style="background:var(--red);">DAĞIT VE SIFIRLA</button>
         </section>
     </div>
-
     <script>
         const tg = window.Telegram.WebApp;
-
-        // --- ÇEKİM TALEPLERİNİ ÇEKME ---
-        async function loadWithdrawals() {
-            const list = document.getElementById('w-list');
-            // 'pending' durumundaki tüm talepleri çekiyoruz
-            const { data, error } = await supabaseClient
-                .from('withdrawals')
-                .select('*')
-                .eq('status', 'pending')
-                .order('id', { ascending: false });
-
-            if (error) {
-                list.innerHTML = "Hata: " + error.message;
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                list.innerHTML = '<p style="text-align:center; opacity:0.5;">Bekleyen talep yok.</p>';
-                return;
-            }
-
-            list.innerHTML = data.map(w => `
-                <div class="card" style="background:#242f3d; margin-bottom:10px; border:1px solid #333;">
-                    <div style="font-size:12px;">👤 ID: ${w.telegram_id}</div>
-                    <div style="font-size:14px; font-weight:bold; color:var(--yellow); margin:5px 0;">💰 ${w.amount} TON</div>
-                    <div style="font-size:10px; word-break:break-all; opacity:0.7;">💎 ${w.wallet_address}</div>
-                    <button onclick="approveWithdraw(${w.id})" class="btn-sub" style="margin-top:10px; background:var(--green); height:30px; font-size:11px;">ÖDENDİ İŞARETLE</button>
+        async function loadW() {
+            const { data } = await supabaseClient.from('withdrawals').select('*').eq('status', 'pending');
+            const cont = document.getElementById('w-list');
+            if(!data || data.length === 0) cont.innerHTML = "Talep yok.";
+            else cont.innerHTML = data.map(w => `
+                <div class="card" style="font-size:12px; border:1px solid #333;">
+                    ID: ${w.telegram_id} | <b>${w.amount} TON</b><br>
+                    <small>${w.wallet_address}</small><br>
+                    <button onclick="done(${w.id})" class="btn-sub" style="background:var(--green); height:25px; margin-top:5px;">ÖDENDİ</button>
                 </div>
             `).join('');
         }
-
-        async function approveWithdraw(id) {
-            const { error } = await supabaseClient.from('withdrawals').update({ status: 'completed' }).eq('id', id);
-            if (!error) {
-                tg.showAlert("İşlem tamamlandı, listeden kaldırıldı.");
-                loadWithdrawals();
-            }
+        async function done(id) {
+            await supabaseClient.from('withdrawals').update({ status: 'completed' }).eq('id', id);
+            tg.showAlert("Onaylandı."); loadW();
         }
-
-        // --- DUYURU EKLEME ---
-        async function addAnnouncement() {
-            const content = document.getElementById('ann-input').value;
-            if (!content) return;
-
-            const { error } = await supabaseClient.from('announcements').insert([{ content: content }]);
-            if (!error) {
-                tg.showAlert("Duyuru başarıyla yayınlandı!");
-                document.getElementById('ann-input').value = "";
-            } else {
-                tg.showAlert("Hata: " + error.message);
-            }
+        async function addAnn() {
+            const val = document.getElementById('ann-in').value;
+            await supabaseClient.from('announcements').insert([{ content: val }]);
+            tg.showAlert("Duyuru Yayında!"); document.getElementById('ann-in').value = "";
         }
-
-        // --- DİĞER FONKSİYONLAR ---
-        async function updateP() {
-            const v = document.getElementById('prize').value;
-            await supabaseClient.from('settings').update({ total_prize: v }).eq('id', 1);
-            tg.showAlert("Havuz güncellendi!");
-        }
-
-        async function addQ() {
-            const q = document.getElementById('qt').value;
-            const os = [document.getElementById('o0').value, document.getElementById('o1').value, document.getElementById('o2').value, document.getElementById('o3').value];
-            const co = parseInt(document.getElementById('co').value);
-            await supabaseClient.from('questions').insert([{ question_text: q, options: os, correct_option: co }]);
-            tg.showAlert("Soru eklendi!");
-            document.getElementById('qt').value = "";
-        }
-
         async function resetAll() {
-            if(!confirm("Ödülleri dağıtıp skorları sıfırlamak istiyor musunuz?")) return;
-            const { data: sett } = await supabaseClient.from('settings').select('*').single();
-            const { data: winners } = await supabaseClient.from('profiles').select('*').gt('score',0).order('score',{ascending:false}).order('completion_time',{ascending:true}).limit(3);
-            
-            if(winners) {
-                const rates = [0.5, 0.35, 0.15];
-                for(let i=0; i<winners.length; i++) {
-                    await supabaseClient.from('profiles').update({ balance: winners[i].balance + (sett.total_prize * rates[i]) }).eq('telegram_id', winners[i].telegram_id);
-                }
-            }
+            if(!confirm("Emin misiniz?")) return;
+            const pz = document.getElementById('pz').value;
+            const { data: ws } = await supabaseClient.from('profiles').select('*').gt('score', 0).order('score',{ascending:false}).limit(3);
+            const r = [0.5, 0.35, 0.15];
+            if(ws) for(let i=0; i<ws.length; i++) await supabaseClient.from('profiles').update({ balance: ws[i].balance + (pz * r[i]) }).eq('telegram_id', ws[i].telegram_id);
             await supabaseClient.from('profiles').update({ score: 0, completion_time: 0 }).neq('telegram_id', 0);
-            tg.showAlert("Ödüller dağıtıldı ve sistem sıfırlandı!");
-            loadWithdrawals();
+            tg.showAlert("Sıfırlandı!");
         }
-
-        // Başlangıçta çekimleri yükle
-        loadWithdrawals();
+        loadW();
     </script>
 </body>
 </html>
