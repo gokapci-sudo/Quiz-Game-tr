@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TON Quiz Game</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header class="ad-container">
+            <div id="sponsor-area">SPONSOR / REKLAM ALANI</div>
+            <div class="ticket-counter">
+                Aktif Katılımcı: <span id="counter">1388 + ...</span>
+            </div>
+        </header>
+
+        <section class="user-panel">
+            <h2 id="user-name">Yükleniyor...</h2>
+            <div id="wallet-section">
+                <button id="connect-wallet" class="btn-wallet">Cüzdan Bağla</button>
+                <div id="wallet-address-container" class="hidden">
+                    <span id="wallet-address"></span>
+                    <button id="copy-wallet" class="btn-icon">📋</button>
+                </div>
+            </div>
+            
+            <div class="balance-container">
+                <p>Bakiyeniz: <span id="balance">0.00</span> TON</p>
+                <button id="withdraw-btn" class="btn-action hidden">Çekim Yap</button>
+            </div>
+
+            <div id="ticket-status">
+                </div>
+        </section>
+
+        <section class="quiz-schedule">
+            <h3>Yarışma Çizelgesi (TSİ)</h3>
+            <div class="times">
+                <span class="time-slot">10:00</span>
+                <span class="time-slot">15:00</span>
+                <span class="time-slot">20:00</span>
+            </div>
+            
+            <div class="reward-info">
+                <h4>Sıradaki Ödül: <span id="next-reward">...</span> TON</h4>
+                <p>🥇 %50 | 🥈 %30 | 🥉 %20</p>
+            </div>
+
+            <button id="start-quiz" class="btn-main disabled" disabled>YARIŞMAYA BAŞLA</button>
+        </section>
+
+        <footer class="bottom-menu">
+            <button onclick="showLeaderboard()" class="btn-sub">Yarışma Sonuçları</button>
+            <button onclick="showAnnouncements()" class="btn-sub">Duyurular</button>
+            <button id="admin-btn" class="btn-admin hidden">ADMIN PANELİ</button>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
