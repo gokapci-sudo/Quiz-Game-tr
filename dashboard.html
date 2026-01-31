@@ -77,7 +77,7 @@
         let userWallet = "";
 
         async function initDashboard() {
-            const user = tgApp.initDataUnsafe?.user || { id: 1369398784 };
+            const user = tgApp.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
             
             const { data: profile } = await supabaseClient.from('profiles').select('*').eq('telegram_id', user.id).single();
             
@@ -101,6 +101,9 @@
                 if (profile.balance >= 2.0) {
                     document.getElementById('withdraw-btn').classList.remove('hidden');
                 }
+
+                // --- REFERANS KONTROLÜ (Yeni Eklendi) ---
+                checkReferral(profile, user.id);
             }
 
             const { data: settings } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
@@ -114,9 +117,27 @@
                 document.getElementById('p2-reward').innerText = (total * 0.3).toFixed(2);
                 document.getElementById('p3-reward').innerText = (total * 0.2).toFixed(2);
 
-                // Kontrolü başlat
                 checkRaceTime(settings.race_times);
                 setInterval(() => checkRaceTime(settings.race_times), 10000);
+            }
+        }
+
+        // REFERANS İŞLEME FONKSİYONU
+        async function checkReferral(profile, userId) {
+            const startParam = tgApp.initDataUnsafe?.start_param; 
+
+            // Eğer linkte ID varsa, bu kullanıcı yeni davet edilmişse ve kendi linkine tıklamamışsa
+            if (startParam && !profile.referred_by && startParam != userId) {
+                const inviterId = parseInt(startParam);
+                
+                // 1. Davet edenin sayısını artır (RPC fonksiyonu ile)
+                const { error: rpcError } = await supabaseClient.rpc('increment_referral', { target_id: inviterId });
+
+                if (!rpcError) {
+                    // 2. Bu kullanıcının profilini "davet edildi" olarak güncelle
+                    await supabaseClient.from('profiles').update({ referred_by: inviterId }).eq('telegram_id', userId);
+                    console.log("Davet başarıyla işlendi!");
+                }
             }
         }
 
@@ -146,9 +167,7 @@
                 }
             });
 
-            // GÜNCELLENEN MANTIK:
             if (isRaceWindow) {
-                // Yarışma Penceresindeyiz (0-4 dk arası)
                 if (isJoinable && hasTicket) {
                     infoArea.innerHTML = '<span style="color:var(--green)">✅ BİLETİNİZ AKTİF</span>';
                     startBtn.disabled = false;
@@ -166,7 +185,6 @@
                     startBtn.onclick = () => location.href = 'bilet.html';
                 }
             } else {
-                // Yarışma Saati Dışındayız
                 if (hasTicket) {
                     infoArea.innerHTML = '<span style="color:var(--green)">🎫 1 ADET BİLETİNİZ VAR</span>';
                     startBtn.disabled = true;
