@@ -5,205 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="config.js"></script>
-    <style>
-        .admin-section { margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05); }
-        .input-group { margin-bottom: 15px; }
-        .input-label { display: block; font-size: 11px; opacity: 0.6; margin-bottom: 5px; margin-left: 5px; }
-        .modern-input { width: 100%; background: #0e1621; border: 1px solid #242f3d; color: white; padding: 12px; border-radius: 12px; font-size: 14px; }
-        .modern-input:focus { border-color: var(--yellow); outline: none; }
-        .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .reward-card { background: linear-gradient(135deg, rgba(254, 203, 46, 0.1) 0%, rgba(14, 22, 33, 1) 100%); border: 1px solid var(--yellow); }
-        .admin-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-left: 15px; }
-    </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <header style="display:flex; align-items:center; margin-bottom:20px;">
-            <button onclick="location.href='dashboard.html'" class="btn-sub" style="width:auto; padding:0 15px;">⬅ Geri</button>
-            <div class="admin-header">
-                <h2 style="font-size: 18px; margin: 0;">YÖNETİM PANELİ</h2>
-                <span id="total-users" style="font-size: 22px; color: var(--yellow); font-weight: bold; text-shadow: 0 0 10px rgba(254, 203, 46, 0.3);">0</span>
-            </div>
+    <div class="container">
+        <header style="margin-bottom:20px;">
+            <button onclick="location.href='admin.html'" class="btn-sub" style="width:auto; padding:0 15px;">⬅ Geri</button>
+            <h2 style="color:var(--yellow); margin-top:15px;">🔥 REKABET YÖNETİMİ</h2>
         </header>
 
-        <section class="card reward-card">
-            <h3 class="yellow-text" style="font-size: 14px; margin-bottom: 15px;">🏆 ÖDÜL HAVUZU & SAATLER</h3>
-            <div class="input-group">
-                <span class="input-label">Toplam Ödül (TON)</span>
-                <input type="number" id="total-prize-in" class="modern-input" placeholder="Örn: 100.00">
-            </div>
-            <div class="input-group">
-                <span class="input-label">Yarışma Saatleri (Virgül ile ayır)</span>
-                <input type="text" id="race-times-in" class="modern-input" placeholder="10:00, 14:00, 20:00">
-            </div>
-            <button onclick="updateSettings()" class="btn-main" style="background: var(--yellow); color: black;">AYARLARI KAYDET</button>
-        </section>
-
-        <section class="card admin-section">
-            <h3 class="yellow-text" style="font-size: 14px;">💸 BEKLEYEN ÇEKİMLER</h3>
-            <div id="w-list" style="margin-top:10px;"><p style="opacity: 0.5; font-size: 12px;">Yükleniyor...</p></div>
-        </section>
-
-        <section class="card admin-section">
-            <h3 class="yellow-text" style="font-size: 14px; margin-bottom: 15px;">❓ YENİ SORU EKLE</h3>
-            <div class="input-group">
-                <span class="input-label">Soru Metni</span>
-                <input type="text" id="qt" class="modern-input" placeholder="Soruyu buraya yazın...">
-            </div>
-            <div class="option-grid">
-                <div class="input-group">
-                    <span class="input-label">A Şıkkı</span>
-                    <input type="text" id="o0" class="modern-input" placeholder="A">
-                </div>
-                <div class="input-group">
-                    <span class="input-label">B Şıkkı</span>
-                    <input type="text" id="o1" class="modern-input" placeholder="B">
-                </div>
-                <div class="input-group">
-                    <span class="input-label">C Şıkkı</span>
-                    <input type="text" id="o2" class="modern-input" placeholder="C">
-                </div>
-                <div class="input-group">
-                    <span class="input-label">D Şıkkı</span>
-                    <input type="text" id="o3" class="modern-input" placeholder="D">
-                </div>
-            </div>
-            <div class="input-group">
-                <span class="input-label">Doğru Cevap</span>
-                <select id="co" class="modern-input" style="appearance: none;">
-                    <option value="0">A Şıkkı Doğru</option>
-                    <option value="1">B Şıkkı Doğru</option>
-                    <option value="2">C Şıkkı Doğru</option>
-                    <option value="3">D Şıkkı Doğru</option>
-                </select>
-            </div>
-            <button onclick="saveQ()" class="btn-main" style="background: var(--accent);">SORUYU SİSTEME EKLE</button>
-        </section>
-
-        <section class="card admin-section" style="margin-bottom: 15px;">
-            <h3 class="yellow-text" style="font-size: 14px;">📢 DUYURU YAYINLA</h3>
-            <textarea id="ann-text" class="modern-input" style="height:80px; margin-top: 10px;" placeholder="Duyuru metni..."></textarea>
-            <button onclick="sendAnn()" class="btn-sub" style="margin-top:10px; background: #2481cc; color: white;">DUYURUYU PAYLAŞ</button>
-        </section>
-
-        <button onclick="location.href='kullanici.html'" class="btn-main" style="background: #ffffff; color: #000000; font-weight: bold; margin-bottom: 15px;">👥 KULLANICILARI YÖNET</button>
-
-        <button onclick="location.href='rekabet.html'" class="btn-main" style="background: var(--blue); color: #ffffff; font-weight: bold; margin-bottom: 25px; border: none;">🔥 REKABET YÖNETİMİ</button>
+        <div class="card" style="border: 1px dashed var(--yellow); padding:20px; text-align:center;">
+            <p style="font-size:14px; opacity:0.8; margin-bottom:20px;">Aşağıdaki butonları kullanarak sıralama listesini yönetebilirsiniz.</p>
+            
+            <button onclick="addBots(86)" class="btn-main" style="background:var(--blue); margin-bottom:15px;">🚀 86 RASTGELE KİŞİ EKLE</button>
+            
+            <button onclick="clearRankings()" class="btn-main" style="background:#ff4444;">🗑️ SIRALAMAYI TEMİZLE</button>
+        </div>
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-
-        async function loadInitialData() {
-            const { data: settings } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
-            if (settings) {
-                document.getElementById('total-prize-in').value = settings.total_prize;
-                document.getElementById('race-times-in').value = settings.race_times;
-            }
-            loadWithdrawals();
-            getUserCount();
-        }
-
-        async function getUserCount() {
-            const { count, error } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true });
-            if (!error) {
-                document.getElementById('total-users').innerText = count;
-            }
-        }
-
-        async function updateSettings() {
-            const prize = document.getElementById('total-prize-in').value;
-            const times = document.getElementById('race-times-in').value;
+        // Rastgele Kullanıcı Ekleme
+        async function addBots(count) {
+            if(!confirm(count + " kişi eklensin mi?")) return;
+            const { error } = await supabaseClient.rpc('generate_fake_results', { count_to_add: count });
             
-            const { error } = await supabaseClient.from('settings').update({
-                total_prize: prize,
-                race_times: times
-            }).eq('id', 1);
-
-            if (!error) {
-                tg.showAlert("Ayarlar başarıyla güncellendi!");
+            if(error) {
+                alert("Hata: " + error.message);
+                console.error(error);
             } else {
-                tg.showAlert("Hata: " + error.message);
+                alert("Başarıyla " + count + " kişi eklendi!");
             }
         }
 
-        async function loadWithdrawals() {
-            const { data, error } = await supabaseClient
-                .from('withdrawals')
-                .select('*')
-                .eq('status', 'pending');
+        // Sıralamayı Tamamen Sıfırlama
+        async function clearRankings() {
+            if(!confirm("Tüm sıralama listesi silinecek! Emin misin?")) return;
+            const { error } = await supabaseClient.rpc('clear_all_results');
 
-            const cont = document.getElementById('w-list');
-            
-            if (error) {
-                cont.innerHTML = `<p style='color:red; font-size:12px;'>Hata: ${error.message}</p>`;
-                return;
-            }
-
-            if(!data || data.length === 0) { 
-                cont.innerHTML = "<p style='font-size:12px; opacity:0.5;'>Bekleyen talep yok.</p>"; 
-                return; 
-            }
-            
-            cont.innerHTML = data.map(w => `
-                <div class="card" style="background:#1c252f; border:1px solid #333; padding: 12px; margin-bottom: 10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <b style="color:var(--yellow); font-size: 16px;">${w.amount} TON</b>
-                        <span style="font-size:10px; opacity:0.5;">ID: ${w.telegram_id}</span>
-                    </div>
-                    <code style="word-break:break-all; font-size:10px; display:block; margin: 8px 0; color: var(--accent);">${w.wallet_address}</code>
-                    <button onclick="approveWithdraw(${w.id}, ${w.telegram_id}, ${w.amount})" class="btn-sub" style="background:var(--green); height:32px; color: white; border: none; font-size: 12px;">ÖDENDİ & BAKİYE DÜŞ</button>
-                </div>
-            `).join('');
-        }
-
-        async function approveWithdraw(id, telegram_id, amount) {
-            const { data: profile } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', telegram_id).single();
-            if (!profile || profile.balance < amount) return alert("Hata: Yetersiz bakiye!");
-
-            const { error: upError } = await supabaseClient.from('profiles').update({ balance: profile.balance - amount }).eq('telegram_id', telegram_id);
-            if (upError) return alert("Hata: " + upError.message);
-
-            await supabaseClient.from('withdrawals').update({ status: 'completed' }).eq('id', id);
-            tg.showAlert("İşlem Başarılı.");
-            loadWithdrawals();
-        }
-
-        async function saveQ() {
-            const q = document.getElementById('qt').value;
-            const os = [document.getElementById('o0').value, document.getElementById('o1').value, document.getElementById('o2').value, document.getElementById('o3').value];
-            const co = parseInt(document.getElementById('co').value);
-            
-            if(!q || os some(o => !o)) return tg.showAlert("Lütfen tüm alanları doldurun!");
-
-            const { error } = await supabaseClient.from('questions').insert([{ 
-                question_text: q, 
-                options: os, 
-                correct_option: co 
-            }]);
-
-            if(!error) {
-                tg.showAlert("Soru sisteme eklendi!");
-                document.getElementById('qt').value = "";
-                for(let i=0; i<4; i++) document.getElementById('o'+i).value = "";
+            if(error) {
+                alert("Hata: " + error.message);
+                console.error(error);
             } else {
-                tg.showAlert("Hata: " + error.message);
+                alert("Sıralama başarıyla temizlendi!");
             }
         }
-
-        async function sendAnn() {
-            const val = document.getElementById('ann-text').value;
-            if(!val) return;
-            const { error } = await supabaseClient.from('announcements').insert([{ content: val }]);
-            if(!error) {
-                tg.showAlert("Duyuru yayınlandı.");
-                document.getElementById('ann-text').value = "";
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', loadInitialData);
     </script>
 </body>
 </html>
