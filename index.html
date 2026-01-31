@@ -13,6 +13,12 @@
             <small>TOPLAM AKTİF KATILIMCI</small>
             <div id="big-counter" class="counter-value">...</div>
         </div>
+
+        <div style="margin-top: -10px; margin-bottom: 20px; text-align: center; background: rgba(0, 152, 234, 0.1); border-radius: 15px; padding: 10px; border: 1px solid rgba(0, 152, 234, 0.2);">
+            <small style="font-size: 9px; opacity: 0.6; letter-spacing: 1px; display: block; margin-bottom: 3px;">CANLI TONCOIN FİYATI</small>
+            <div id="ton-price" style="font-size: 16px; font-weight: bold; color: var(--yellow);">₺0.00</div>
+        </div>
+
         <div class="sponsor-list">
             <div class="sponsor-box highlight">Sponsor Olduğunuzda Burada Görünecektir.</div>
             <div class="sponsor-box">Reklam Verdiğinizde Burada Görünecektir.</div>
@@ -23,8 +29,21 @@
     </div>
     <script>
         async function init() {
+            // Katılımcı Sayısı
             const { count } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
             document.getElementById('big-counter').innerText = (1388 + (count || 0)).toLocaleString();
+
+            // Canlı TON Fiyatı Çekme
+            try {
+                const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=try');
+                const data = await res.json();
+                const price = data['the-open-network'].try;
+                document.getElementById('ton-price').innerText = "1 TON = ₺" + price.toLocaleString('tr-TR');
+            } catch (e) {
+                document.getElementById('ton-price').innerText = "Fiyat yüklenemedi";
+            }
+
+            // Giriş İşlemi
             document.getElementById('entry-btn').onclick = async () => {
                 const user = window.Telegram.WebApp.initDataUnsafe?.user || { id: APP_CONFIG.adminID, username: "admin" };
                 await supabaseClient.from('profiles').upsert({ telegram_id: user.id, username: user.username || "anonim" }, { onConflict: 'telegram_id' });
