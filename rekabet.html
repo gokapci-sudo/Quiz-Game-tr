@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Paneli</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h2>Yönetim Paneli</h2>
+
+        <div class="card" style="margin-bottom: 20px; border: 1px dashed var(--yellow); padding: 15px; border-radius: 15px;">
+            <h3 style="color: var(--yellow); margin-top: 0;">🔥 Rekabet Yönetimi</h3>
+            <p style="font-size: 12px; opacity: 0.8; margin-bottom: 15px;">Sıralamayı gerçekçi kullanıcılarla doldurarak heyecanı artırın.</p>
+            <button onclick="addFakeUsers(86)" class="btn-main" style="background: var(--blue); margin-bottom: 10px;">86 GERÇEKÇİ KATILIMCI EKLE</button>
+            <button onclick="clearResultsManual()" class="btn-main" style="background: #ff4444; font-size: 12px; padding: 8px;">Sıralamayı Sıfırla</button>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+            <h3>Ödül Havuzu Ayarla</h3>
+            <input type="number" id="prize-input" placeholder="Örn: 10.5" step="0.1" class="input-field">
+            <button onclick="updatePrize()" class="btn-main">Havuzu Güncelle</button>
+        </div>
+
+        <div class="card">
+            <h3>Bilet Sıfırlama</h3>
+            <p style="font-size: 12px; opacity: 0.7;">Tüm kullanıcıların biletlerini manuel olarak temizler.</p>
+            <button onclick="resetTicketsManual()" class="btn-main" style="background: var(--red);">Tüm Biletleri Söndür</button>
+        </div>
+        
+        <button onclick="location.href='dashboard.html'" class="btn-main" style="margin-top: 20px; opacity: 0.7;">Geri Dön</button>
+    </div>
+
+    <script>
+        // 86 Bot Kullanıcı Ekleme
+        async function addFakeUsers(amount) {
+            if(!confirm(amount + " adet gerçekçi kullanıcı eklenecek. Onaylıyor musun?")) return;
+            const { error } = await supabaseClient.rpc('generate_fake_results', { count_to_add: amount });
+            if(error) {
+                alert("Hata: " + error.message);
+            } else {
+                alert("İşlem Başarılı! Sıralama listesi canlandırıldı.");
+            }
+        }
+
+        // Ödül Güncelleme
+        async function updatePrize() {
+            const val = document.getElementById('prize-input').value;
+            const { error } = await supabaseClient.from('settings').update({ total_prize: parseFloat(val) }).eq('id', 1);
+            if(!error) alert("Ödül havuzu güncellendi!");
+        }
+
+        // Manuel Bilet Sıfırlama
+        async function resetTicketsManual() {
+            if(!confirm("Tüm kullanıcıların biletleri silinecek!")) return;
+            const { error } = await supabaseClient.from('profiles').update({ has_ticket: false }).neq('telegram_id', 0);
+            if(!error) alert("Tüm biletler sıfırlandı!");
+        }
+
+        // Manuel Sıralama Temizleme
+        async function clearResultsManual() {
+            if(!confirm("Tüm sıralama tablosu boşaltılacak!")) return;
+            const { error } = await supabaseClient.from('results').delete().neq('id', 0);
+            if(!error) alert("Sıralama temizlendi!");
+        }
+    </script>
+</body>
+</html>
