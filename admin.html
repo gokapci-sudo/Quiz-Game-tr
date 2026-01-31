@@ -15,6 +15,7 @@
         .modern-input:focus { border-color: var(--yellow); outline: none; }
         .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .reward-card { background: linear-gradient(135deg, rgba(254, 203, 46, 0.1) 0%, rgba(14, 22, 33, 1) 100%); border: 1px solid var(--yellow); }
+        /* Yeni stil eklemesi */
         .admin-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-left: 15px; }
     </style>
 </head>
@@ -88,9 +89,7 @@
             <button onclick="sendAnn()" class="btn-sub" style="margin-top:10px; background: #2481cc; color: white;">DUYURUYU PAYLAŞ</button>
         </section>
 
-        <button onclick="location.href='kullanici.html'" class="btn-main" style="background: #ffffff; color: #000000; font-weight: bold; margin-bottom: 15px;">👥 KULLANICILARI YÖNET</button>
-
-        <button onclick="location.href='rekabet.html'" class="btn-main" style="background: var(--blue); color: #ffffff; font-weight: bold; margin-bottom: 25px; border: none;">🔥 REKABET YÖNETİMİ</button>
+        <button onclick="location.href='kullanici.html'" class="btn-main" style="background: #ffffff; color: #000000; font-weight: bold; margin-bottom: 25px;">👥 KULLANICILARI YÖNET</button>
     </div>
 
     <script>
@@ -176,7 +175,7 @@
             const os = [document.getElementById('o0').value, document.getElementById('o1').value, document.getElementById('o2').value, document.getElementById('o3').value];
             const co = parseInt(document.getElementById('co').value);
             
-            if(!q || os some(o => !o)) return tg.showAlert("Lütfen tüm alanları doldurun!");
+            if(!q || os.some(o => !o)) return tg.showAlert("Lütfen tüm alanları doldurun!");
 
             const { error } = await supabaseClient.from('questions').insert([{ 
                 question_text: q, 
