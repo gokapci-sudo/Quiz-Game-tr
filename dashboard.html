@@ -37,7 +37,10 @@
 
         <div class="card" style="margin-top: 10px; background: rgba(36, 129, 204, 0.05); border-style: dashed;">
             <h3 style="font-size: 11px; opacity: 0.6; margin-bottom: 8px; text-align: center; letter-spacing: 1px;">🕒 YARIŞMA SAATLERİ</h3>
-            <div id="race-schedule" style="display: flex; justify-content: center; gap: 12px; font-weight: bold; color: var(--accent); font-size: 15px;">
+            <div id="race-schedule" style="display: flex; justify-content: center; gap: 12px; font-weight: bold; color: var(--accent); font-size: 15px; margin-bottom: 8px;">
+            </div>
+            <div id="next-race-timer" style="text-align: center; font-size: 12px; font-family: monospace; opacity: 0.9;">
+                Sonraki Yarışmaya: <span id="timer-text" style="color: var(--yellow); font-weight: bold;">--:--:--</span>
             </div>
         </div>
 
@@ -102,7 +105,6 @@
                     document.getElementById('withdraw-btn').classList.remove('hidden');
                 }
 
-                // --- REFERANS KONTROLÜ (Yeni Eklendi) ---
                 checkReferral(profile, user.id);
             }
 
@@ -118,25 +120,64 @@
                 document.getElementById('p3-reward').innerText = (total * 0.2).toFixed(2);
 
                 checkRaceTime(settings.race_times);
-                setInterval(() => checkRaceTime(settings.race_times), 10000);
+                // Geri sayımı başlat
+                updateCountdown(settings.race_times);
+                setInterval(() => {
+                    checkRaceTime(settings.race_times);
+                    updateCountdown(settings.race_times);
+                }, 1000);
             }
         }
 
-        // REFERANS İŞLEME FONKSİYONU
+        function updateCountdown(raceTimesString) {
+            const now = new Date();
+            const times = raceTimesString.split(',').map(t => t.trim());
+            let nextRace = null;
+
+            // Bugünün yarışmalarını kontrol et
+            for (let t of times) {
+                const [h, m] = t.split(':').map(Number);
+                const raceDate = new Date();
+                raceDate.setHours(h, m, 0, 0);
+                
+                if (raceDate > now) {
+                    nextRace = raceDate;
+                    break;
+                }
+            }
+
+            // Eğer bugün başka yarışma kalmadıysa yarının ilk yarışmasını al
+            if (!nextRace) {
+                const [h, m] = times[0].split(':').map(Number);
+                nextRace = new Date();
+                nextRace.setDate(nextRace.getDate() + 1);
+                nextRace.setHours(h, m, 0, 0);
+            }
+
+            const diff = nextRace - now;
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+
+            const timerSpan = document.getElementById('timer-text');
+            timerSpan.innerText = 
+                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            // Son 10 saniye kırmızı yap
+            if (diff <= 10000) {
+                timerSpan.style.color = "var(--red)";
+            } else {
+                timerSpan.style.color = "var(--yellow)";
+            }
+        }
+
         async function checkReferral(profile, userId) {
             const startParam = tgApp.initDataUnsafe?.start_param; 
-
-            // Eğer linkte ID varsa, bu kullanıcı yeni davet edilmişse ve kendi linkine tıklamamışsa
             if (startParam && !profile.referred_by && startParam != userId) {
                 const inviterId = parseInt(startParam);
-                
-                // 1. Davet edenin sayısını artır (RPC fonksiyonu ile)
                 const { error: rpcError } = await supabaseClient.rpc('increment_referral', { target_id: inviterId });
-
                 if (!rpcError) {
-                    // 2. Bu kullanıcının profilini "davet edildi" olarak güncelle
                     await supabaseClient.from('profiles').update({ referred_by: inviterId }).eq('telegram_id', userId);
-                    console.log("Davet başarıyla işlendi!");
                 }
             }
         }
