@@ -15,7 +15,7 @@
         </div>
 
         <div style="margin-top: -10px; margin-bottom: 20px; text-align: center; background: rgba(0, 152, 234, 0.1); border-radius: 15px; padding: 10px; border: 1px solid rgba(0, 152, 234, 0.2);">
-            <small style="font-size: 9px; opacity: 0.6; letter-spacing: 1px; display: block; margin-bottom: 3px;">CANLI TONCOIN FİYATI</small>
+            <small style="font-size: 9px; opacity: 0.6; letter-spacing: 1px; display: block; margin-bottom: 3px;">CANLI TONCOIN FİYATI (BINANCE)</small>
             <div id="ton-price" style="font-size: 16px; font-weight: bold; color: var(--yellow);">₺0.00</div>
         </div>
 
@@ -33,14 +33,23 @@
             const { count } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
             document.getElementById('big-counter').innerText = (1388 + (count || 0)).toLocaleString();
 
-            // Canlı TON Fiyatı Çekme
+            // Canlı TON Fiyatı Çekme (Binance API Garantili Yöntem)
             try {
-                const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=try');
-                const data = await res.json();
-                const price = data['the-open-network'].try;
-                document.getElementById('ton-price').innerText = "1 TON = ₺" + price.toLocaleString('tr-TR');
+                // TON/USDT ve USDT/TRY fiyatlarını paralel çekiyoruz
+                const [tonRes, usdtRes] = await Promise.all([
+                    fetch('https://api.binance.com/api/v3/ticker/price?symbol=TONUSDT'),
+                    fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDTTRY')
+                ]);
+                
+                const tonData = await tonRes.json();
+                const usdtData = await usdtRes.json();
+                
+                const priceTRY = parseFloat(tonData.price) * parseFloat(usdtData.price);
+                
+                document.getElementById('ton-price').innerText = "1 TON = ₺" + priceTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             } catch (e) {
-                document.getElementById('ton-price').innerText = "Fiyat yüklenemedi";
+                document.getElementById('ton-price').innerText = "Fiyat güncelleniyor...";
+                console.error("Binance Hatası:", e);
             }
 
             // Giriş İşlemi
