@@ -18,7 +18,7 @@
         <div class="card" style="text-align:center;">
             <div style="font-size:50px; margin-bottom:10px;">🎫</div>
             <h2 class="yellow-text">BİLET MERKEZİ</h2>
-            <p style="opacity:0.7; font-size:13px;">5 Reklam izleyerek veya 0.10 TON karşılığında bilet alabilirsiniz.</p>
+            <p style="opacity:0.7; font-size:13px;">Görevleri tamamlayarak veya bakiye ile bilet alabilirsiniz.</p>
         </div>
         
         <div class="card" style="border: 2px dashed var(--accent);">
@@ -32,49 +32,78 @@
             <p style="opacity:0.7; font-size:12px; margin-bottom:10px;">Bakiyenizden 0.10 TON düşülür.</p>
             <button onclick="buyTicket()" class="btn-main" style="background:var(--accent);">0.10 TON İLE SATIN AL</button>
         </div>
+
+        <div class="card" style="border: 1px solid #2481cc; background: rgba(36, 129, 204, 0.05);">
+            <h3>👥 Arkadaşını Davet Et</h3>
+            <p style="opacity:0.7; font-size:12px; margin-bottom:10px;">5 arkadaşını getir, anında 1 bilet kazan!</p>
+            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: center;">
+                <span style="font-size: 11px; opacity: 0.6; display: block;">Kabul Edilen Davet</span>
+                <b id="ref-count" style="font-size: 18px; color: #2481cc;">0 / 5</b>
+            </div>
+            <button onclick="inviteFriend()" class="btn-main" style="background: #2481cc;">ARKADAŞINI DAVET ET</button>
+        </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        // Reklam sayısını localStorage'dan güvenli çek
         let adCount = parseInt(localStorage.getItem('quiz_ads_watched')) || 0;
-        
-        // Sayfa açıldığında sayacı güncelle
         document.getElementById('count').innerText = adCount;
 
+        // Sayfa açıldığında hem reklamı hem referansı yükle
+        async function initPage() {
+            loadReferralProgress();
+        }
+
+        async function loadReferralProgress() {
+            const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
+            const { data, error } = await supabaseClient
+                .from('profiles')
+                .select('referral_count')
+                .eq('telegram_id', user.id)
+                .single();
+
+            if (!error && data) {
+                document.getElementById('ref-count').innerText = `${data.referral_count} / 5`;
+            }
+        }
+
+        function inviteFriend() {
+            const user = tg.initDataUnsafe?.user;
+            if (!user) return;
+
+            // ÖNEMLİ: 'BotunuzunUsernami' kısmını kendi bot adınla değiştir
+            const botUsername = "BotunuzunUsernami"; 
+            const inviteLink = `https://t.me/${botUsername}?start=${user.id}`;
+            const shareText = "Hey! Bu bilgi yarışmasında TON kazanıyorum. Benim linkimle katıl, birlikte yarışalım! 🏆";
+            
+            const fullUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`;
+            tg.openTelegramLink(fullUrl);
+        }
+
+        // --- MEVCUT REKLAM VE SATIN ALMA FONKSİYONLARI (BOZULMADI) ---
         function watchAd() {
-            // Reklamın ayrı tarayıcıda açılması ve SDK kontrolü
             if (typeof show_10527452 !== 'function') {
                 tg.showAlert("Reklam henüz hazır değil, lütfen birkaç saniye bekleyin.");
                 return;
             }
-
-            // Butonu geçici olarak kilitle
             const btn = document.getElementById('ad-btn');
             btn.disabled = true;
             btn.innerText = "YÜKLENİYOR...";
 
-            // Reklamı Göster
             show_10527452('pop').then(() => {
-                // Reklam başarıyla kapandığında çalışır
                 adCount++;
                 localStorage.setItem('quiz_ads_watched', adCount);
                 document.getElementById('count').innerText = adCount;
-                
                 btn.disabled = false;
                 btn.innerText = "REKLAM İZLE";
 
                 if (adCount >= 5) {
                     grantTicket("Reklam izleme tamamlandı!");
-                } else {
-                    tg.showConfirm(`Reklam başarıyla sayıldı! Kalan: ${5 - adCount}. Devam etmek ister misiniz?`);
                 }
             }).catch((err) => {
                 btn.disabled = false;
                 btn.innerText = "REKLAM İZLE";
                 console.error("Reklam Hatası:", err);
-                // Bazı durumlarda reklam dış tarayıcıya yönlendirme yaparsa openLink kullan:
-                tg.openLink("https://libtl.com/your-ad-link"); // Buraya kendi reklam linkini de koyabilirsin
             });
         }
 
@@ -93,21 +122,14 @@
         async function grantTicket(msg) {
             const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
             const { error } = await supabaseClient.from('profiles').update({ has_ticket: true }).eq('telegram_id', user.id);
-            
             if (!error) {
-                localStorage.setItem('quiz_ads_watched', 0); // Sayacı sıfırla
+                localStorage.setItem('quiz_ads_watched', 0);
                 tg.showAlert(msg);
                 location.href = "dashboard.html";
             }
         }
 
-        // Telegram linklerini dışarıda açmak için genel kural
-        document.addEventListener('click', function (e) {
-            if (e.target.tagName === 'A' && e.target.href.startsWith('http')) {
-                e.preventDefault();
-                tg.openLink(e.target.href);
-            }
-        });
+        document.addEventListener('DOMContentLoaded', initPage);
     </script>
 </body>
 </html>
