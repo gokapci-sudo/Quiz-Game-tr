@@ -49,13 +49,12 @@
         let adCount = parseInt(localStorage.getItem('quiz_ads_watched')) || 0;
         document.getElementById('count').innerText = adCount;
 
-        // Sayfa açıldığında hem reklamı hem referansı yükle
         async function initPage() {
             loadReferralProgress();
         }
 
         async function loadReferralProgress() {
-            const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
+            const user = tg.initDataUnsafe?.user || { id: 0 };
             const { data, error } = await supabaseClient
                 .from('profiles')
                 .select('referral_count')
@@ -71,19 +70,19 @@
             const user = tg.initDataUnsafe?.user;
             if (!user) return;
 
-            // ÖNEMLİ: 'BotunuzunUsernami' kısmını kendi bot adınla değiştir
-            const botUsername = "BotunuzunUsernami"; 
-            const inviteLink = `https://t.me/${botUsername}?start=${user.id}`;
-            const shareText = "Hey! Bu bilgi yarışmasında TON kazanıyorum. Benim linkimle katıl, birlikte yarışalım! 🏆";
+            // ÖNEMLİ: 'BotunuzunUsernami/OyunAdin' kısmını kendi Telegram Web App linkinle değiştir
+            // Örn: MyQuizBot/play
+            const webAppUrl = "BotunuzunUsernami/OyunAdin"; 
+            const inviteLink = `https://t.me/${webAppUrl}?startapp=${user.id}`;
+            const shareText = "Hey! Bu bilgi yarışmasında TON kazanıyorum. Gel birlikte yarışalım! 🏆";
             
             const fullUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`;
             tg.openTelegramLink(fullUrl);
         }
 
-        // --- MEVCUT REKLAM VE SATIN ALMA FONKSİYONLARI (BOZULMADI) ---
         function watchAd() {
             if (typeof show_10527452 !== 'function') {
-                tg.showAlert("Reklam henüz hazır değil, lütfen birkaç saniye bekleyin.");
+                tg.showAlert("Reklam henüz hazır değil.");
                 return;
             }
             const btn = document.getElementById('ad-btn');
@@ -100,27 +99,26 @@
                 if (adCount >= 5) {
                     grantTicket("Reklam izleme tamamlandı!");
                 }
-            }).catch((err) => {
+            }).catch(() => {
                 btn.disabled = false;
                 btn.innerText = "REKLAM İZLE";
-                console.error("Reklam Hatası:", err);
             });
         }
 
         async function buyTicket() {
-            const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
-            const { data: p, error } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', user.id).single();
+            const user = tg.initDataUnsafe?.user || { id: 0 };
+            const { data: p } = await supabaseClient.from('profiles').select('balance').eq('telegram_id', user.id).single();
 
             if (p && p.balance >= 0.10) {
                 const { error: upErr } = await supabaseClient.from('profiles').update({ balance: p.balance - 0.10 }).eq('telegram_id', user.id);
                 if (!upErr) grantTicket("Bilet satın alındı!");
             } else {
-                tg.showAlert("Bakiyeniz yetersiz (Min: 0.10 TON).");
+                tg.showAlert("Bakiyeniz yetersiz.");
             }
         }
 
         async function grantTicket(msg) {
-            const user = tg.initDataUnsafe?.user || { id: APP_CONFIG.adminID };
+            const user = tg.initDataUnsafe?.user || { id: 0 };
             const { error } = await supabaseClient.from('profiles').update({ has_ticket: true }).eq('telegram_id', user.id);
             if (!error) {
                 localStorage.setItem('quiz_ads_watched', 0);
