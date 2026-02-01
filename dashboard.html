@@ -115,9 +115,9 @@
                 
                 const total = parseFloat(settings.total_prize);
                 document.getElementById('total-prize-amount').innerText = total.toFixed(2) + " TON";
-                document.getElementById('p1-reward').innerText = (total * 0.5).toFixed(2);
-                document.getElementById('p2-reward').innerText = (total * 0.3).toFixed(2);
-                document.getElementById('p3-reward').innerText = (total * 0.2).toFixed(2);
+                document.getElementById('p1-reward').innerText = (total * 0.50).toFixed(2);
+                document.getElementById('p2-reward').innerText = (total * 0.35).toFixed(2);
+                document.getElementById('p3-reward').innerText = (total * 0.15).toFixed(2);
 
                 checkRaceTime(settings.race_times);
                 // Geri sayımı başlat
