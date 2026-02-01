@@ -31,7 +31,7 @@
         async function init() {
             // Katılımcı Sayısı
             const { count } = await supabaseClient.from('profiles').select('*', { count: 'exact', head: true }).eq('has_ticket', true);
-            document.getElementById('big-counter').innerText = (1388 + (count || 0)).toLocaleString();
+            document.getElementById('big-counter').innerText = (3989 + (count || 0)).toLocaleString();
 
             // Canlı TON Fiyatı Çekme (Binance API Garantili Yöntem)
             try {
